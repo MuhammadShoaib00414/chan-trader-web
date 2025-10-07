@@ -1,0 +1,1473 @@
+name: Authentication
+description: 'Register a new user account with the provided information.'
+endpoints:
+  -
+    httpMethods:
+      - POST
+    uri: api/register
+    metadata:
+      groupName: Authentication
+      groupDescription: 'Register a new user account with the provided information.'
+      subgroup: ''
+      subgroupDescription: ''
+      title: 'Register a new user'
+      description: ''
+      authenticated: false
+      deprecated: false
+      custom: []
+    headers:
+      Content-Type: multipart/form-data
+      Accept: application/json
+    urlParameters: []
+    cleanUrlParameters: []
+    queryParameters: []
+    cleanQueryParameters: []
+    bodyParameters:
+      first_name:
+        name: first_name
+        description: "User's first name."
+        required: true
+        example: John
+        type: string
+        enumValues: []
+        exampleWasSpecified: true
+        nullable: true
+        custom: []
+      last_name:
+        name: last_name
+        description: "User's last name."
+        required: true
+        example: Doe
+        type: string
+        enumValues: []
+        exampleWasSpecified: true
+        nullable: true
+        custom: []
+      email:
+        name: email
+        description: "User's email address."
+        required: true
+        example: john@example.com
+        type: string
+        enumValues: []
+        exampleWasSpecified: true
+        nullable: false
+        custom: []
+      password:
+        name: password
+        description: "User's password (min 8 characters)."
+        required: true
+        example: password123
+        type: string
+        enumValues: []
+        exampleWasSpecified: true
+        nullable: false
+        custom: []
+      avatar:
+        name: avatar
+        description: "optional User's profile picture. Must be an image file (jpeg, png, jpg, gif) and max 1MB."
+        required: false
+        example: null
+        type: file
+        enumValues: []
+        exampleWasSpecified: false
+        nullable: true
+        custom: []
+      grant_type:
+        name: grant_type
+        description: 'OAuth grant type.'
+        required: true
+        example: password
+        type: string
+        enumValues: []
+        exampleWasSpecified: true
+        nullable: false
+        custom: []
+      client_id:
+        name: client_id
+        description: 'OAuth client ID.'
+        required: true
+        example: '1'
+        type: string
+        enumValues: []
+        exampleWasSpecified: true
+        nullable: false
+        custom: []
+      client_secret:
+        name: client_secret
+        description: 'OAuth client secret.'
+        required: true
+        example: your-client-secret
+        type: string
+        enumValues: []
+        exampleWasSpecified: true
+        nullable: false
+        custom: []
+      password_confirmation:
+        name: password_confirmation
+        description: 'Password confirmation.'
+        required: true
+        example: password123
+        type: string
+        enumValues: []
+        exampleWasSpecified: true
+        nullable: false
+        custom: []
+    cleanBodyParameters:
+      first_name: John
+      last_name: Doe
+      email: john@example.com
+      password: password123
+      grant_type: password
+      client_id: '1'
+      client_secret: your-client-secret
+      password_confirmation: password123
+    fileParameters:
+      avatar: null
+    responses:
+      -
+        status: 200
+        content: |-
+          {
+            "success": true,
+            "message": "User registered successfully",
+            "data": {
+              "user": {
+                "id": 1,
+                "first_name": "John",
+                "last_name": "Doe",
+                "email": "john@example.com",
+                "avatar": "http://localhost/storage/avatars/example.jpg",
+                "email_verified_at": null,
+                "created_at": "2024-01-01T00:00:00.000000Z",
+                "updated_at": "2024-01-01T00:00:00.000000Z"
+              },
+              "access_token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9...",
+              "token_type": "Bearer",
+              "expires_in": 31536000,
+              "refresh_token": "def50200...",
+              "otp": "1234",
+              "message": "Please check your email for OTP verification code."
+            }
+          }
+        headers: []
+        description: success
+        custom: []
+      -
+        status: 422
+        content: |-
+          {
+            "success": false,
+            "message": "The given data was invalid.",
+            "data": {
+              "email": ["The email has already been taken."]
+            }
+          }
+        headers: []
+        description: 'validation error'
+        custom: []
+    responseFields: []
+    auth: []
+    controller: null
+    method: null
+    route: null
+    custom: []
+  -
+    httpMethods:
+      - POST
+    uri: api/login
+    metadata:
+      groupName: Authentication
+      groupDescription: 'Authenticate a user and return an access token.'
+      subgroup: ''
+      subgroupDescription: ''
+      title: 'Login user and create token'
+      description: ''
+      authenticated: false
+      deprecated: false
+      custom: []
+    headers:
+      Content-Type: application/json
+      Accept: application/json
+    urlParameters: []
+    cleanUrlParameters: []
+    queryParameters: []
+    cleanQueryParameters: []
+    bodyParameters:
+      email:
+        name: email
+        description: "User's email address."
+        required: true
+        example: john@example.com
+        type: string
+        enumValues: []
+        exampleWasSpecified: true
+        nullable: false
+        custom: []
+      password:
+        name: password
+        description: "User's password."
+        required: true
+        example: password123
+        type: string
+        enumValues: []
+        exampleWasSpecified: true
+        nullable: false
+        custom: []
+      grant_type:
+        name: grant_type
+        description: 'OAuth grant type.'
+        required: true
+        example: password
+        type: string
+        enumValues: []
+        exampleWasSpecified: true
+        nullable: false
+        custom: []
+      client_id:
+        name: client_id
+        description: 'OAuth client ID.'
+        required: true
+        example: '1'
+        type: string
+        enumValues: []
+        exampleWasSpecified: true
+        nullable: false
+        custom: []
+      client_secret:
+        name: client_secret
+        description: 'OAuth client secret.'
+        required: true
+        example: your-client-secret
+        type: string
+        enumValues: []
+        exampleWasSpecified: true
+        nullable: false
+        custom: []
+    cleanBodyParameters:
+      email: john@example.com
+      password: password123
+      grant_type: password
+      client_id: '1'
+      client_secret: your-client-secret
+    fileParameters: []
+    responses:
+      -
+        status: 200
+        content: |-
+          {
+            "success": true,
+            "message": "User logged in successfully",
+            "data": {
+              "user": {
+                "id": 1,
+                "first_name": "John",
+                "last_name": "Doe",
+                "email": "john@example.com",
+                "avatar": "http://localhost/storage/avatars/example.jpg",
+                "email_verified_at": "2024-01-01T00:00:00.000000Z",
+                "created_at": "2024-01-01T00:00:00.000000Z",
+                "updated_at": "2024-01-01T00:00:00.000000Z"
+              },
+              "access_token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9...",
+              "token_type": "Bearer",
+              "expires_in": 31536000,
+              "refresh_token": "def50200..."
+            }
+          }
+        headers: []
+        description: success
+        custom: []
+      -
+        status: 401
+        content: |-
+          {
+            "success": false,
+            "message": "The provided credentials are incorrect.",
+            "data": null
+          }
+        headers: []
+        description: 'invalid credentials'
+        custom: []
+      -
+        status: 403
+        content: |-
+          {
+            "success": false,
+            "message": "Email not verified. Please verify your email first.",
+            "data": {
+              "verification_required": true,
+              "email": "john@example.com",
+              "otp": "1234",
+              "instructions": "A new OTP has been sent to your email address."
+            }
+          }
+        headers: []
+        description: 'email not verified'
+        custom: []
+    responseFields: []
+    auth: []
+    controller: null
+    method: null
+    route: null
+    custom: []
+  -
+    httpMethods:
+      - POST
+    uri: api/refresh
+    metadata:
+      groupName: Authentication
+      groupDescription: 'Refresh an expired access token using a refresh token.'
+      subgroup: ''
+      subgroupDescription: ''
+      title: 'Refresh token'
+      description: ''
+      authenticated: false
+      deprecated: false
+      custom: []
+    headers:
+      Content-Type: application/json
+      Accept: application/json
+    urlParameters: []
+    cleanUrlParameters: []
+    queryParameters: []
+    cleanQueryParameters: []
+    bodyParameters:
+      refresh_token:
+        name: refresh_token
+        description: 'Valid refresh token.'
+        required: true
+        example: def50200...
+        type: string
+        enumValues: []
+        exampleWasSpecified: true
+        nullable: false
+        custom: []
+      grant_type:
+        name: grant_type
+        description: 'OAuth grant type.'
+        required: true
+        example: refresh_token
+        type: string
+        enumValues: []
+        exampleWasSpecified: true
+        nullable: false
+        custom: []
+      client_id:
+        name: client_id
+        description: 'OAuth client ID.'
+        required: true
+        example: '1'
+        type: string
+        enumValues: []
+        exampleWasSpecified: true
+        nullable: false
+        custom: []
+      client_secret:
+        name: client_secret
+        description: 'OAuth client secret.'
+        required: true
+        example: your-client-secret
+        type: string
+        enumValues: []
+        exampleWasSpecified: true
+        nullable: false
+        custom: []
+    cleanBodyParameters:
+      refresh_token: def50200...
+      grant_type: refresh_token
+      client_id: '1'
+      client_secret: your-client-secret
+    fileParameters: []
+    responses:
+      -
+        status: 200
+        content: |-
+          {
+            "success": true,
+            "message": "Token refreshed successfully",
+            "data": {
+              "access_token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9...",
+              "token_type": "Bearer",
+              "expires_in": 31536000,
+              "refresh_token": "def50200..."
+            }
+          }
+        headers: []
+        description: success
+        custom: []
+      -
+        status: 401
+        content: |-
+          {
+            "success": false,
+            "message": "Token refresh failed: The refresh token is invalid.",
+            "data": null
+          }
+        headers: []
+        description: 'invalid refresh token'
+        custom: []
+    responseFields: []
+    auth: []
+    controller: null
+    method: null
+    route: null
+    custom: []
+  -
+    httpMethods:
+      - POST
+    uri: api/password/reset
+    metadata:
+      groupName: Authentication
+      groupDescription: ''
+      subgroup: |-
+        Password Management
+
+        Reset user password using the reset token from OTP verification.
+      subgroupDescription: ''
+      title: 'Reset Password'
+      description: ''
+      authenticated: false
+      deprecated: false
+      custom: []
+    headers:
+      Content-Type: application/json
+      Accept: application/json
+    urlParameters: []
+    cleanUrlParameters: []
+    queryParameters: []
+    cleanQueryParameters: []
+    bodyParameters:
+      email:
+        name: email
+        description: "User's email address."
+        required: true
+        example: john@example.com
+        type: string
+        enumValues: []
+        exampleWasSpecified: true
+        nullable: false
+        custom: []
+      reset_token:
+        name: reset_token
+        description: 'Reset token from OTP verification.'
+        required: true
+        example: abc123def456
+        type: string
+        enumValues: []
+        exampleWasSpecified: true
+        nullable: false
+        custom: []
+      password:
+        name: password
+        description: 'New password (min 8 characters).'
+        required: true
+        example: newpassword123
+        type: string
+        enumValues: []
+        exampleWasSpecified: true
+        nullable: false
+        custom: []
+      password_confirmation:
+        name: password_confirmation
+        description: 'Password confirmation.'
+        required: true
+        example: newpassword123
+        type: string
+        enumValues: []
+        exampleWasSpecified: true
+        nullable: false
+        custom: []
+    cleanBodyParameters:
+      email: john@example.com
+      reset_token: abc123def456
+      password: newpassword123
+      password_confirmation: newpassword123
+    fileParameters: []
+    responses:
+      -
+        status: 200
+        content: |-
+          {
+            "success": true,
+            "message": "Password has been reset successfully",
+            "data": null
+          }
+        headers: []
+        description: success
+        custom: []
+      -
+        status: 400
+        content: |-
+          {
+            "success": false,
+            "message": "Invalid reset token. Please request a new password reset.",
+            "data": null
+          }
+        headers: []
+        description: 'invalid token'
+        custom: []
+      -
+        status: 404
+        content: |-
+          {
+            "success": false,
+            "message": "User not found",
+            "data": null
+          }
+        headers: []
+        description: 'user not found'
+        custom: []
+    responseFields: []
+    auth: []
+    controller: null
+    method: null
+    route: null
+    custom: []
+  -
+    httpMethods:
+      - POST
+    uri: api/auth/google
+    metadata:
+      groupName: Authentication
+      groupDescription: ''
+      subgroup: |-
+        Social Login
+
+        Authenticate a user using Google OAuth.
+      subgroupDescription: ''
+      title: 'Login with Google'
+      description: ''
+      authenticated: false
+      deprecated: false
+      custom: []
+    headers:
+      Content-Type: application/json
+      Accept: application/json
+    urlParameters: []
+    cleanUrlParameters: []
+    queryParameters: []
+    cleanQueryParameters: []
+    bodyParameters:
+      idToken:
+        name: idToken
+        description: 'Google ID token from client.'
+        required: true
+        example: eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...
+        type: string
+        enumValues: []
+        exampleWasSpecified: true
+        nullable: false
+        custom: []
+      grant_type:
+        name: grant_type
+        description: 'optional OAuth grant type.'
+        required: false
+        example: password
+        type: string
+        enumValues: []
+        exampleWasSpecified: true
+        nullable: true
+        custom: []
+      client_id:
+        name: client_id
+        description: 'OAuth client ID.'
+        required: true
+        example: '1'
+        type: string
+        enumValues: []
+        exampleWasSpecified: true
+        nullable: false
+        custom: []
+      client_secret:
+        name: client_secret
+        description: 'OAuth client secret.'
+        required: true
+        example: your-client-secret
+        type: string
+        enumValues: []
+        exampleWasSpecified: true
+        nullable: false
+        custom: []
+    cleanBodyParameters:
+      idToken: eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...
+      grant_type: password
+      client_id: '1'
+      client_secret: your-client-secret
+    fileParameters: []
+    responses:
+      -
+        status: 200
+        content: |-
+          {
+            "success": true,
+            "message": "Google login successful",
+            "data": {
+              "user": {
+                "id": 1,
+                "first_name": "John",
+                "last_name": "Doe",
+                "email": "john@gmail.com",
+                "avatar": "https://lh3.googleusercontent.com/a/example.jpg",
+                "google_id": "123456789",
+                "social_provider": "google",
+                "email_verified_at": "2024-01-01T00:00:00.000000Z"
+              },
+              "access_token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9...",
+              "token_type": "Bearer",
+              "expires_in": 31536000,
+              "refresh_token": "def50200..."
+            }
+          }
+        headers: []
+        description: success
+        custom: []
+      -
+        status: 401
+        content: |-
+          {
+            "success": false,
+            "message": "Invalid Google token",
+            "data": null
+          }
+        headers: []
+        description: 'invalid token'
+        custom: []
+    responseFields: []
+    auth: []
+    controller: null
+    method: null
+    route: null
+    custom: []
+  -
+    httpMethods:
+      - POST
+    uri: api/auth/apple
+    metadata:
+      groupName: Authentication
+      groupDescription: ''
+      subgroup: |-
+        Social Login
+
+        Authenticate a user using Apple Sign In.
+      subgroupDescription: ''
+      title: 'Login with Apple'
+      description: ''
+      authenticated: false
+      deprecated: false
+      custom: []
+    headers:
+      Content-Type: application/json
+      Accept: application/json
+    urlParameters: []
+    cleanUrlParameters: []
+    queryParameters: []
+    cleanQueryParameters: []
+    bodyParameters:
+      identityToken:
+        name: identityToken
+        description: 'Apple identity token from client.'
+        required: true
+        example: eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...
+        type: string
+        enumValues: []
+        exampleWasSpecified: true
+        nullable: false
+        custom: []
+      authorizationCode:
+        name: authorizationCode
+        description: 'optional Apple authorization code.'
+        required: false
+        example: c1234567890abcdef
+        type: string
+        enumValues: []
+        exampleWasSpecified: true
+        nullable: true
+        custom: []
+      grant_type:
+        name: grant_type
+        description: 'optional OAuth grant type.'
+        required: false
+        example: password
+        type: string
+        enumValues: []
+        exampleWasSpecified: true
+        nullable: true
+        custom: []
+      client_id:
+        name: client_id
+        description: 'OAuth client ID.'
+        required: true
+        example: '1'
+        type: string
+        enumValues: []
+        exampleWasSpecified: true
+        nullable: false
+        custom: []
+      client_secret:
+        name: client_secret
+        description: 'OAuth client secret.'
+        required: true
+        example: your-client-secret
+        type: string
+        enumValues: []
+        exampleWasSpecified: true
+        nullable: false
+        custom: []
+    cleanBodyParameters:
+      identityToken: eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...
+      authorizationCode: c1234567890abcdef
+      grant_type: password
+      client_id: '1'
+      client_secret: your-client-secret
+    fileParameters: []
+    responses:
+      -
+        status: 200
+        content: |-
+          {
+            "success": true,
+            "message": "Apple login successful",
+            "data": {
+              "user": {
+                "id": 1,
+                "first_name": "John",
+                "last_name": "Doe",
+                "email": "john@privaterelay.appleid.com",
+                "apple_id": "000123.abc123def456",
+                "social_provider": "apple",
+                "email_verified_at": "2024-01-01T00:00:00.000000Z"
+              },
+              "access_token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9...",
+              "token_type": "Bearer",
+              "expires_in": 31536000,
+              "refresh_token": "def50200..."
+            }
+          }
+        headers: []
+        description: success
+        custom: []
+      -
+        status: 401
+        content: |-
+          {
+            "success": false,
+            "message": "Invalid Apple token",
+            "data": null
+          }
+        headers: []
+        description: 'invalid token'
+        custom: []
+    responseFields: []
+    auth: []
+    controller: null
+    method: null
+    route: null
+    custom: []
+  -
+    httpMethods:
+      - POST
+    uri: api/auth/check-user
+    metadata:
+      groupName: Authentication
+      groupDescription: ''
+      subgroup: |-
+        Social Login
+
+        Check if a user exists based on their social login token (Google/Apple).
+      subgroupDescription: ''
+      title: 'Check if user exists based on social login token'
+      description: ''
+      authenticated: false
+      deprecated: false
+      custom: []
+    headers:
+      Content-Type: application/json
+      Accept: application/json
+    urlParameters: []
+    cleanUrlParameters: []
+    queryParameters: []
+    cleanQueryParameters: []
+    bodyParameters:
+      token:
+        name: token
+        description: 'Social login token (Google ID token or Apple identity token).'
+        required: true
+        example: eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...
+        type: string
+        enumValues: []
+        exampleWasSpecified: true
+        nullable: false
+        custom: []
+      provider:
+        name: provider
+        description: 'Social provider.'
+        required: true
+        example: google
+        type: string
+        enumValues: []
+        exampleWasSpecified: true
+        nullable: false
+        custom: []
+      grant_type:
+        name: grant_type
+        description: 'optional OAuth grant type.'
+        required: false
+        example: password
+        type: string
+        enumValues: []
+        exampleWasSpecified: true
+        nullable: true
+        custom: []
+      client_id:
+        name: client_id
+        description: 'OAuth client ID.'
+        required: true
+        example: '1'
+        type: string
+        enumValues: []
+        exampleWasSpecified: true
+        nullable: false
+        custom: []
+      client_secret:
+        name: client_secret
+        description: 'OAuth client secret.'
+        required: true
+        example: your-client-secret
+        type: string
+        enumValues: []
+        exampleWasSpecified: true
+        nullable: false
+        custom: []
+    cleanBodyParameters:
+      token: eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...
+      provider: google
+      grant_type: password
+      client_id: '1'
+      client_secret: your-client-secret
+    fileParameters: []
+    responses:
+      -
+        status: 200
+        content: |-
+          {
+            "success": true,
+            "message": "User found",
+            "data": {
+              "user": {
+                "id": 1,
+                "first_name": "John",
+                "last_name": "Doe",
+                "email": "john@gmail.com",
+                "avatar": "https://lh3.googleusercontent.com/a/example.jpg",
+                "google_id": "123456789",
+                "social_provider": "google"
+              },
+              "access_token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9...",
+              "token_type": "Bearer",
+              "expires_in": 31536000,
+              "refresh_token": "def50200..."
+            }
+          }
+        headers: []
+        description: 'user found'
+        custom: []
+      -
+        status: 200
+        content: |-
+          {
+            "success": true,
+            "message": "User not found",
+            "data": null
+          }
+        headers: []
+        description: 'user not found'
+        custom: []
+      -
+        status: 400
+        content: |-
+          {
+            "success": false,
+            "message": "Invalid Google token",
+            "data": null
+          }
+        headers: []
+        description: 'invalid token'
+        custom: []
+    responseFields: []
+    auth: []
+    controller: null
+    method: null
+    route: null
+    custom: []
+  -
+    httpMethods:
+      - POST
+    uri: api/otp/email/send
+    metadata:
+      groupName: Authentication
+      groupDescription: ''
+      subgroup: |-
+        OTP Verification
+
+        Send a verification OTP to the user's email address.
+      subgroupDescription: ''
+      title: 'Send OTP for email verification after registration'
+      description: ''
+      authenticated: false
+      deprecated: false
+      custom: []
+    headers:
+      Content-Type: application/json
+      Accept: application/json
+    urlParameters: []
+    cleanUrlParameters: []
+    queryParameters: []
+    cleanQueryParameters: []
+    bodyParameters:
+      email:
+        name: email
+        description: "User's email address."
+        required: true
+        example: john@example.com
+        type: string
+        enumValues: []
+        exampleWasSpecified: true
+        nullable: false
+        custom: []
+    cleanBodyParameters:
+      email: john@example.com
+    fileParameters: []
+    responses:
+      -
+        status: 200
+        content: |-
+          {
+            "success": true,
+            "message": "Verification code has been sent to your email",
+            "data": {
+              "message": "Verification code has been sent to your email",
+              "email": "john@example.com",
+              "otp": "1234"
+            }
+          }
+        headers: []
+        description: success
+        custom: []
+      -
+        status: 400
+        content: |-
+          {
+            "success": false,
+            "message": "Email already verified",
+            "data": null
+          }
+        headers: []
+        description: 'already verified'
+        custom: []
+      -
+        status: 404
+        content: |-
+          {
+            "success": false,
+            "message": "User not found",
+            "data": null
+          }
+        headers: []
+        description: 'user not found'
+        custom: []
+    responseFields: []
+    auth: []
+    controller: null
+    method: null
+    route: null
+    custom: []
+  -
+    httpMethods:
+      - POST
+    uri: api/otp/email/verify
+    metadata:
+      groupName: Authentication
+      groupDescription: ''
+      subgroup: |-
+        OTP Verification
+
+        Verify user's email address using the OTP sent to their email.
+      subgroupDescription: ''
+      title: 'Verify email with OTP after registration'
+      description: ''
+      authenticated: false
+      deprecated: false
+      custom: []
+    headers:
+      Content-Type: application/json
+      Accept: application/json
+    urlParameters: []
+    cleanUrlParameters: []
+    queryParameters: []
+    cleanQueryParameters: []
+    bodyParameters:
+      email:
+        name: email
+        description: "User's email address."
+        required: true
+        example: john@example.com
+        type: string
+        enumValues: []
+        exampleWasSpecified: true
+        nullable: false
+        custom: []
+      otp:
+        name: otp
+        description: '4-digit OTP code.'
+        required: true
+        example: '1234'
+        type: string
+        enumValues: []
+        exampleWasSpecified: true
+        nullable: false
+        custom: []
+      grant_type:
+        name: grant_type
+        description: 'optional OAuth grant type.'
+        required: false
+        example: password
+        type: string
+        enumValues: []
+        exampleWasSpecified: true
+        nullable: false
+        custom: []
+      client_id:
+        name: client_id
+        description: 'optional OAuth client ID.'
+        required: false
+        example: '1'
+        type: string
+        enumValues: []
+        exampleWasSpecified: true
+        nullable: false
+        custom: []
+      client_secret:
+        name: client_secret
+        description: 'optional OAuth client secret.'
+        required: false
+        example: your-client-secret
+        type: string
+        enumValues: []
+        exampleWasSpecified: true
+        nullable: false
+        custom: []
+      password:
+        name: password
+        description: "optional User's password (required for token generation)."
+        required: false
+        example: password123
+        type: string
+        enumValues: []
+        exampleWasSpecified: true
+        nullable: false
+        custom: []
+    cleanBodyParameters:
+      email: john@example.com
+      otp: '1234'
+      grant_type: password
+      client_id: '1'
+      client_secret: your-client-secret
+      password: password123
+    fileParameters: []
+    responses:
+      -
+        status: 200
+        content: |-
+          {
+            "success": true,
+            "message": "Email verified successfully",
+            "data": {
+              "user": {
+                "id": 1,
+                "first_name": "John",
+                "last_name": "Doe",
+                "email": "john@example.com",
+                "email_verified_at": "2024-01-01T00:00:00.000000Z"
+              },
+              "access_token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9...",
+              "token_type": "Bearer",
+              "expires_in": 31536000,
+              "refresh_token": "def50200..."
+            }
+          }
+        headers: []
+        description: success
+        custom: []
+      -
+        status: 400
+        content: |-
+          {
+            "success": false,
+            "message": "Invalid OTP",
+            "data": null
+          }
+        headers: []
+        description: 'invalid otp'
+        custom: []
+      -
+        status: 404
+        content: |-
+          {
+            "success": false,
+            "message": "User not found",
+            "data": null
+          }
+        headers: []
+        description: 'user not found'
+        custom: []
+    responseFields: []
+    auth: []
+    controller: null
+    method: null
+    route: null
+    custom: []
+  -
+    httpMethods:
+      - POST
+    uri: api/otp/password/send
+    metadata:
+      groupName: Authentication
+      groupDescription: ''
+      subgroup: |-
+        OTP Verification
+
+        Send a password reset OTP to the user's email address.
+      subgroupDescription: ''
+      title: 'Send OTP for password reset'
+      description: ''
+      authenticated: false
+      deprecated: false
+      custom: []
+    headers:
+      Content-Type: application/json
+      Accept: application/json
+    urlParameters: []
+    cleanUrlParameters: []
+    queryParameters: []
+    cleanQueryParameters: []
+    bodyParameters:
+      email:
+        name: email
+        description: "User's email address."
+        required: true
+        example: john@example.com
+        type: string
+        enumValues: []
+        exampleWasSpecified: true
+        nullable: false
+        custom: []
+    cleanBodyParameters:
+      email: john@example.com
+    fileParameters: []
+    responses:
+      -
+        status: 200
+        content: |-
+          {
+            "success": true,
+            "message": "Password reset code has been sent to your email",
+            "data": {
+              "message": "Password reset code has been sent to your email",
+              "email": "john@example.com",
+              "otp": "1234"
+            }
+          }
+        headers: []
+        description: success
+        custom: []
+      -
+        status: 400
+        content: |-
+          {
+            "success": false,
+            "message": "Please verify your email first. A new verification code has been sent to your email.",
+            "data": {
+              "message": "Please verify your email first. A new verification code has been sent to your email.",
+              "email": "john@example.com",
+              "requires_email_verification": true,
+              "otp": "1234"
+            }
+          }
+        headers: []
+        description: 'email not verified'
+        custom: []
+      -
+        status: 404
+        content: |-
+          {
+            "success": false,
+            "message": "User not found",
+            "data": null
+          }
+        headers: []
+        description: 'user not found'
+        custom: []
+    responseFields: []
+    auth: []
+    controller: null
+    method: null
+    route: null
+    custom: []
+  -
+    httpMethods:
+      - POST
+    uri: api/otp/password/verify
+    metadata:
+      groupName: Authentication
+      groupDescription: ''
+      subgroup: |-
+        OTP Verification
+
+        Verify the OTP for password reset and get a reset token.
+      subgroupDescription: ''
+      title: 'Verify OTP for password reset'
+      description: ''
+      authenticated: false
+      deprecated: false
+      custom: []
+    headers:
+      Content-Type: application/json
+      Accept: application/json
+    urlParameters: []
+    cleanUrlParameters: []
+    queryParameters: []
+    cleanQueryParameters: []
+    bodyParameters:
+      email:
+        name: email
+        description: "User's email address."
+        required: true
+        example: john@example.com
+        type: string
+        enumValues: []
+        exampleWasSpecified: true
+        nullable: false
+        custom: []
+      otp:
+        name: otp
+        description: '4-digit OTP code.'
+        required: true
+        example: '1234'
+        type: string
+        enumValues: []
+        exampleWasSpecified: true
+        nullable: false
+        custom: []
+    cleanBodyParameters:
+      email: john@example.com
+      otp: '1234'
+    fileParameters: []
+    responses:
+      -
+        status: 200
+        content: |-
+          {
+            "success": true,
+            "message": "OTP verified successfully",
+            "data": {
+              "user": {
+                "id": 1,
+                "first_name": "John",
+                "last_name": "Doe",
+                "email": "john@example.com"
+              },
+              "reset_token": "abc123def456ghi789"
+            }
+          }
+        headers: []
+        description: success
+        custom: []
+      -
+        status: 400
+        content: |-
+          {
+            "success": false,
+            "message": "Invalid OTP",
+            "data": null
+          }
+        headers: []
+        description: 'invalid otp'
+        custom: []
+      -
+        status: 400
+        content: |-
+          {
+            "success": false,
+            "message": "Please verify your email first",
+            "data": null
+          }
+        headers: []
+        description: 'email not verified'
+        custom: []
+    responseFields: []
+    auth: []
+    controller: null
+    method: null
+    route: null
+    custom: []
+  -
+    httpMethods:
+      - POST
+    uri: api/password/change
+    metadata:
+      groupName: Authentication
+      groupDescription: ''
+      subgroup: |-
+        Password Management
+
+        Change the authenticated user's password.
+      subgroupDescription: ''
+      title: 'Change user password'
+      description: ''
+      authenticated: true
+      deprecated: false
+      custom: []
+    headers:
+      Authorization: 'Bearer YOUR_ACCESS_TOKEN'
+      Content-Type: application/json
+      Accept: application/json
+    urlParameters: []
+    cleanUrlParameters: []
+    queryParameters: []
+    cleanQueryParameters: []
+    bodyParameters:
+      current_password:
+        name: current_password
+        description: 'Current password.'
+        required: true
+        example: oldpassword123
+        type: string
+        enumValues: []
+        exampleWasSpecified: true
+        nullable: false
+        custom: []
+      new_password:
+        name: new_password
+        description: 'New password (min 8 characters).'
+        required: true
+        example: newpassword123
+        type: string
+        enumValues: []
+        exampleWasSpecified: true
+        nullable: false
+        custom: []
+      new_password_confirmation:
+        name: new_password_confirmation
+        description: 'New password confirmation.'
+        required: true
+        example: newpassword123
+        type: string
+        enumValues: []
+        exampleWasSpecified: true
+        nullable: false
+        custom: []
+    cleanBodyParameters:
+      current_password: oldpassword123
+      new_password: newpassword123
+      new_password_confirmation: newpassword123
+    fileParameters: []
+    responses:
+      -
+        status: 200
+        content: |-
+          {
+            "success": true,
+            "message": "Password changed successfully",
+            "data": {
+              "message": "Password changed successfully. Please log in again."
+            }
+          }
+        headers: []
+        description: success
+        custom: []
+      -
+        status: 422
+        content: |-
+          {
+            "success": false,
+            "message": "The given data was invalid.",
+            "data": {
+              "current_password": ["The current password is incorrect."]
+            }
+          }
+        headers: []
+        description: 'validation error'
+        custom: []
+    responseFields: []
+    auth:
+      - headers
+      - Authorization
+      - 'Bearer 3V5EgbkvZcDPa166h8fd4ae'
+    controller: null
+    method: null
+    route: null
+    custom: []
+  -
+    httpMethods:
+      - GET
+    uri: api/user
+    metadata:
+      groupName: Authentication
+      groupDescription: ''
+      subgroup: |-
+        User Management
+
+        Get the currently authenticated user's information.
+      subgroupDescription: ''
+      title: 'Get authenticated user'
+      description: ''
+      authenticated: true
+      deprecated: false
+      custom: []
+    headers:
+      Authorization: 'Bearer YOUR_ACCESS_TOKEN'
+      Content-Type: application/json
+      Accept: application/json
+    urlParameters: []
+    cleanUrlParameters: []
+    queryParameters: []
+    cleanQueryParameters: []
+    bodyParameters: []
+    cleanBodyParameters: []
+    fileParameters: []
+    responses:
+      -
+        status: 200
+        content: |-
+          {
+            "id": 1,
+            "first_name": "John",
+            "last_name": "Doe",
+            "email": "john@example.com",
+            "avatar": "http://localhost/storage/avatars/example.jpg",
+            "email_verified_at": "2024-01-01T00:00:00.000000Z",
+            "created_at": "2024-01-01T00:00:00.000000Z",
+            "updated_at": "2024-01-01T00:00:00.000000Z"
+          }
+        headers: []
+        description: success
+        custom: []
+      -
+        status: 401
+        content: |-
+          {
+            "message": "Unauthenticated."
+          }
+        headers: []
+        description: unauthenticated
+        custom: []
+    responseFields: []
+    auth:
+      - headers
+      - Authorization
+      - 'Bearer 3V5EgbkvZcDPa166h8fd4ae'
+    controller: null
+    method: null
+    route: null
+    custom: []
