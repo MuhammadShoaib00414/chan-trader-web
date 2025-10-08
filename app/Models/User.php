@@ -43,6 +43,15 @@ class User extends Authenticatable
     ];
 
     /**
+     * The accessors to append to the model's array form.
+     *
+     * @var list<string>
+     */
+    protected $appends = [
+        'name',
+    ];
+
+    /**
      * The attributes that should be hidden for serialization.
      *
      * @var list<string>
@@ -88,5 +97,13 @@ class User extends Authenticatable
     public static function findByEmailForSocial(string $email): ?User
     {
         return static::where('email', $email)->first();
+    }
+
+    /**
+     * Get the user's full name.
+     */
+    public function getNameAttribute(): string
+    {
+        return trim($this->first_name.' '.$this->last_name);
     }
 }
