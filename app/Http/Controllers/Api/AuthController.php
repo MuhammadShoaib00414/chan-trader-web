@@ -100,12 +100,6 @@ class AuthController extends AppBaseController
                 // Generate and save OTP
                 $otp = $this->generateAndSaveOTP($user, 'verification');
 
-                // Log OTP for development
-                Log::info('OTP Generated for Registration', [
-                    'email' => $user->email,
-                    'otp' => $otp,
-                ]);
-
                 // Token generation
                 $tokenRequest = new Request;
                 $tokenRequest->merge([
@@ -210,12 +204,6 @@ class AuthController extends AppBaseController
             if (! $user->email_verified_at) {
                 // Generate and send new OTP
                 $otp = $this->generateAndSaveOTP($user, 'verification');
-
-                // Log OTP for development
-                Log::info('OTP Generated for Login (Email Not Verified)', [
-                    'email' => $user->email,
-                    'otp' => $otp,
-                ]);
 
                 return $this->errorResponse('Email not verified. Please verify your email first.', 403, [
                     'verification_required' => true,
@@ -330,13 +318,6 @@ class AuthController extends AppBaseController
             if ($type === OtpType::EMAIL_VERIFICATION && $isVerified && $user->pending_email) {
                 $otp = $this->generateAndSaveOTP($user, OtpType::EMAIL_VERIFICATION->value, $user->pending_email);
 
-                // Log OTP for development
-                Log::info('OTP Generated for Pending Email Verification', [
-                    'email' => $user->email,
-                    'pending_email' => $user->pending_email,
-                    'otp' => $otp,
-                ]);
-
                 return $this->successResponse([
                     'user' => new UserResource($user),
                     'pending_email' => $user->pending_email,
@@ -354,13 +335,6 @@ class AuthController extends AppBaseController
             if ($type->requiresVerifiedEmail() && ! $isVerified) {
                 $otp = $this->generateAndSaveOTP($user, OtpType::EMAIL_VERIFICATION->value);
 
-                // Log OTP for development
-                Log::info('OTP Generated (Email Verification Required)', [
-                    'email' => $user->email,
-                    'otp' => $otp,
-                    'requested_type' => $type->value,
-                ]);
-
                 return $this->successResponse([
                     'message' => 'Please verify your email first. A new verification code has been sent to your email.',
                     'email' => $user->email,
@@ -371,13 +345,6 @@ class AuthController extends AppBaseController
 
             // Proceed with the original OTP request
             $otp = $this->generateAndSaveOTP($user, $type->value);
-
-            // Log OTP for development
-            Log::info('OTP Generated', [
-                'email' => $user->email,
-                'otp' => $otp,
-                'type' => $type->value,
-            ]);
 
             return $this->successResponse([
                 'message' => $type->getMessage(),
