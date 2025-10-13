@@ -1329,7 +1329,7 @@ endpoints:
       deprecated: false
       custom: []
     headers:
-      Authorization: 'Bearer YOUR_ACCESS_TOKEN'
+      Authorization: 'Bearer {YOUR_AUTH_TOKEN}'
       Content-Type: application/json
       Accept: application/json
     urlParameters: []
@@ -1403,7 +1403,7 @@ endpoints:
     auth:
       - headers
       - Authorization
-      - 'Bearer 3V5EgbkvZcDPa166h8fd4ae'
+      - 'Bearer bVf3Eved6Pgc1k86Z4a5hDa'
     controller: null
     method: null
     route: null
@@ -1426,7 +1426,7 @@ endpoints:
       deprecated: false
       custom: []
     headers:
-      Authorization: 'Bearer YOUR_ACCESS_TOKEN'
+      Authorization: 'Bearer {YOUR_AUTH_TOKEN}'
       Content-Type: application/json
       Accept: application/json
     urlParameters: []
@@ -1466,7 +1466,7 @@ endpoints:
     auth:
       - headers
       - Authorization
-      - 'Bearer 3V5EgbkvZcDPa166h8fd4ae'
+      - 'Bearer ZDgevc6P4akbV53Ed1fa6h8'
     controller: null
     method: null
     route: null

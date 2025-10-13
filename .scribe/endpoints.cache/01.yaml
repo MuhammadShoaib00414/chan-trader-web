@@ -14,10 +14,11 @@ endpoints:
       subgroupDescription: ''
       title: 'Issue an access token.'
       description: ''
-      authenticated: false
+      authenticated: true
       deprecated: false
       custom: []
     headers:
+      Authorization: 'Bearer {YOUR_AUTH_TOKEN}'
       Content-Type: application/json
       Accept: application/json
     urlParameters: []
@@ -29,7 +30,10 @@ endpoints:
     fileParameters: []
     responses: []
     responseFields: []
-    auth: []
+    auth:
+      - headers
+      - Authorization
+      - 'Bearer 386cvhgekfE4VP1aDba6Z5d'
     controller: null
     method: null
     route: null
