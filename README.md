@@ -98,7 +98,8 @@ php artisan db:seed
 ### Passport Setup
 
 ```bash
-# (Optional) Create a personal access client
+php artisan passport:keys
+#Create a personal access client
 php artisan passport:client --password
 ```
 
