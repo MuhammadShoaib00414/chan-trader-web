@@ -1,22 +1,26 @@
 <?php
 
-use App\Http\Controllers\Api\AuthController;
-use App\Http\Controllers\Api\PasswordResetController;
-use App\Http\Resources\UserResource;
-use Illuminate\Http\Request;
+use App\Http\Controllers\Api\Auth\LoginController;
+use App\Http\Controllers\Api\Auth\OtpController;
+use App\Http\Controllers\Api\Auth\PasswordController;
+use App\Http\Controllers\Api\Auth\RegisterController;
+use App\Http\Controllers\Api\Auth\SocialLoginController;
+use App\Http\Controllers\Api\UserController;
 use Illuminate\Support\Facades\Route;
 
 // ********************* Auth routes *********************
 
-Route::post('/register', [AuthController::class, 'register']);
-Route::post('/login', [AuthController::class, 'login']);
-Route::post('/refresh', [AuthController::class, 'refresh']);
+// Registration
+Route::post('/register', [RegisterController::class, 'register']);
+
+// Login/Logout
+Route::post('/login', [LoginController::class, 'login']);
+Route::post('/refresh', [LoginController::class, 'refresh']);
+
 /**
  * OAuth Token Endpoint (Internal)
  *
  * @group Internal
- *
- * @subgroup OAuth
  *
  * Laravel Passport OAuth2 token endpoint for generating access tokens.
  * This is an internal endpoint used by the auth system and should not be called directly by clients.
@@ -25,56 +29,32 @@ Route::post('/refresh', [AuthController::class, 'refresh']);
  * @hideFromAPIDocumentation
  */
 Route::post('/oauth/token', [\Laravel\Passport\Http\Controllers\AccessTokenController::class, 'issueToken']);
-Route::post('/password/reset', [PasswordResetController::class, 'resetPassword']);
 
 // Social login routes
-Route::post('/auth/google', [AuthController::class, 'googleLogin']);
-Route::post('/auth/apple', [AuthController::class, 'appleLogin']);
-Route::post('/auth/check-user', [AuthController::class, 'checkUser']);
+Route::post('/auth/google', [SocialLoginController::class, 'googleLogin']);
+Route::post('/auth/apple', [SocialLoginController::class, 'appleLogin']);
+Route::post('/auth/check-user', [SocialLoginController::class, 'checkUser']);
 
+// OTP routes
 Route::prefix('otp')->group(function () {
-    // Email verification
-    Route::post('/email/send', [AuthController::class, 'sendEmailVerificationOTP']);
-    Route::post('/email/verify', [AuthController::class, 'verifyEmail']);
-
-    // Password reset
-    Route::post('/password/send', [AuthController::class, 'sendPasswordResetOTP']);
-    Route::post('/password/verify', [AuthController::class, 'verifyPasswordResetOTP']);
+    Route::post('/email/send', [OtpController::class, 'sendEmailVerificationOTP']);
+    Route::post('/password/send', [OtpController::class, 'sendPasswordResetOTP']);
+    Route::post('/email/verify', [OtpController::class, 'verifyEmail']);
+    Route::post('/password/verify', [OtpController::class, 'verifyPasswordResetOTP']);
 });
+
+// Password management
+Route::post('/password/reset', [PasswordController::class, 'resetPassword']);
 
 // Password change (requires authentication)
-Route::middleware('auth:api')->group(function () {
-    Route::post('/password/change', [AuthController::class, 'changePassword'])
+Route::middleware(['auth:api', 'verified'])->group(function () {
+    Route::post('/password/change', [PasswordController::class, 'changePassword'])
         ->middleware('throttle:5,1'); // Limit to 5 attempts per minute
+
+    // ********************* End Auth routes *********************
+
+    Route::group(['prefix' => 'user'], function () {
+        Route::get('/', [UserController::class, 'me']);
+        Route::post('/logout', [LoginController::class, 'logout']);
+    });
 });
-
-// ********************* End Auth routes *********************
-
-/**
- * Get authenticated user
- *
- * @group Authentication
- *
- * @subgroup User Management
- *
- * Get the currently authenticated user's information.
- *
- * @response 200 scenario="success" {
- *   "id": 1,
- *   "first_name": "John",
- *   "last_name": "Doe",
- *   "email": "john@example.com",
- *   "avatar": "http://localhost/storage/avatars/example.jpg",
- *   "email_verified_at": "2024-01-01T00:00:00.000000Z",
- *   "created_at": "2024-01-01T00:00:00.000000Z",
- *   "updated_at": "2024-01-01T00:00:00.000000Z"
- * }
- * @response 401 scenario="unauthenticated" {
- *   "message": "Unauthenticated."
- * }
- *
- * @authenticated
- */
-Route::get('/user', function (Request $request) {
-    return UserResource::make($request->user());
-})->middleware('auth:api');

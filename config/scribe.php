@@ -18,7 +18,9 @@ return [
 
             'include' => [],
 
-            'exclude' => [],
+            'exclude' => [
+                'api/oauth/token',
+            ],
         ],
     ],
 
@@ -57,7 +59,7 @@ return [
         'extra_info' => 'You can retrieve your token by using the <b>Login</b> endpoint.',
     ],
 
-    'intro_text' => <<<INTRO
+    'intro_text' => <<<'INTRO'
         This documentation aims to provide all the information you need to work with the API.
 
         <aside>
