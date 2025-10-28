@@ -5,6 +5,7 @@ namespace App\Traits;
 use App\Mail\SendOtpMail;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 
 trait OtpTrait
@@ -12,19 +13,26 @@ trait OtpTrait
     /**
      * Generate and save OTP for a user
      */
-    protected function generateAndSaveOTP($user, $type = 'verification', $email = null)
+    protected function generateAndSaveOTP($user, $type = 'verification')
     {
         // Generate 4 digit OTP
         $otp = str_pad(random_int(0, 9999), 4, '0', STR_PAD_LEFT);
 
         // Save OTP and expiry time (15 minutes from now)
         $user->update([
-            'otp' => Hash::make($otp),
-            'otp_expires_at' => Carbon::now()->addMinutes(15),
+            'otp' => $otp,
+            'otp_expires_at' => Carbon::now()->addMinutes(config('app.otp_expire_time')),
         ]);
 
         // Send OTP email
-        Mail::to($email ?? $user->email)->send(new SendOtpMail($otp, $type));
+        Mail::to($user->email)->send(new SendOtpMail($otp, $type));
+
+        // Log OTP for development purposes
+        Log::info('OTP Generated', [
+            'email' => $user->email,
+            'type' => $type,
+            'expires_at' => Carbon::now()->addMinutes(config('app.otp_expire_time'))->toDateTimeString(),
+        ]);
 
         return $otp;
     }

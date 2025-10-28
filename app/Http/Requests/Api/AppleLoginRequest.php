@@ -41,8 +41,6 @@ class AppleLoginRequest extends FormRequest
             'identityToken.required' => 'Apple identity token is required.',
             'identityToken.string' => 'Apple identity token must be a string.',
             'authorizationCode.string' => 'Apple authorization code must be a string.',
-            'is_customer.required' => 'User type (customer/provider) is required.',
-            'is_customer.boolean' => 'User type must be true for customer or false for provider.',
             'grant_type.in' => 'Grant type must be one of: password, client_credentials, authorization_code.',
             'client_id.required' => 'Client ID is required.',
             'client_secret.required' => 'Client secret is required.',

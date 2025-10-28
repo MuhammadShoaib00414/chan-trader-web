@@ -45,7 +45,7 @@
         <div class="otp-code">{{ $otp }}</div>
     </div>
 
-    <p>Please use this code to {{ $type == 'verification' ? 'verify your email address' : 'reset your password' }}. This code will expire in 15 minutes.</p>
+    <p>Please use this code to {{ $type == 'verification' ? 'verify your email address' : 'reset your password' }}. This code will expire in {{ config('app.otp_expire_time') }} minutes.</p>
 
     <p class="expiry-note">If you didn't request this code, please ignore this email.</p>
 
