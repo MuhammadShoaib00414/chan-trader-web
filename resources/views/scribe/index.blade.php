@@ -1,7 +1,7 @@
 <!doctype html>
 <html>
 <head>
-    <title>Herd API Documentation</title>
+    <title>Laravel API Documentation</title>
     <meta charset="utf-8"/>
     <meta
         name="viewport"
