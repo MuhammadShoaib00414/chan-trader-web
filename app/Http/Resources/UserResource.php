@@ -18,6 +18,7 @@ class UserResource extends JsonResource
             'id' => $this->id,
             'first_name' => $this->first_name,
             'last_name' => $this->last_name,
+            'name' => $this->name,
             'email' => $this->email,
             'pending_email' => $this->pending_email,
             'avatar' => $this->avatar ? asset('storage/'.$this->avatar) : null,
@@ -26,6 +27,18 @@ class UserResource extends JsonResource
             'social_provider' => $this->social_provider,
             'status' => $this->status,
             'email_verified_at' => $this->email_verified_at,
+            'roles' => $this->whenLoaded('roles', function () {
+                return $this->roles->map(function ($role) {
+                    return [
+                        'id' => $role->id,
+                        'name' => $role->name,
+                        'permissions' => $role->permissions->pluck('name'),
+                    ];
+                });
+            }),
+            'permissions' => $this->whenLoaded('roles', function () {
+                return $this->getAllPermissions()->pluck('name');
+            }),
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
         ];

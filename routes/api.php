@@ -57,4 +57,18 @@ Route::middleware(['auth:api', 'verified'])->group(function () {
         Route::get('/', [UserController::class, 'me']);
         Route::post('/logout', [LoginController::class, 'logout']);
     });
+
+    // ********************* User Management *********************
+    Route::apiResource('users', UserController::class);
+    Route::post('users/{user}/roles', [UserController::class, 'assignRoles']);
+    Route::post('users/{user}/permissions', [UserController::class, 'assignPermissions']);
+
+    // ********************* Role Management *********************
+    Route::apiResource('roles', \App\Http\Controllers\Api\RoleController::class);
+    Route::get('roles-permissions', [\App\Http\Controllers\Api\RoleController::class, 'permissions']);
+
+    // ********************* Permission Management *********************
+    Route::get('permissions', [\App\Http\Controllers\Api\PermissionController::class, 'index']);
+    Route::get('permissions/grouped', [\App\Http\Controllers\Api\PermissionController::class, 'grouped']);
+    Route::get('permissions/{permission}', [\App\Http\Controllers\Api\PermissionController::class, 'show']);
 });

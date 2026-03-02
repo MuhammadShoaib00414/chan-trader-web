@@ -17,7 +17,8 @@
         "laravel/passport": "^13.0",
         "laravel/tinker": "^2.10.1",
         "laravel/wayfinder": "^0.1.9",
-        "opcodesio/log-viewer": "^3.19"
+        "opcodesio/log-viewer": "^3.19",
+        "spatie/laravel-permission": "^7.2"
     },
     "require-dev": {
         "barryvdh/laravel-debugbar": "^3.16",
