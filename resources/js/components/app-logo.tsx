@@ -1,22 +1,15 @@
+import AppLogoIcon from './app-logo-icon';
+
 export default function AppLogo() {
     return (
         <>
-            {/* Collapsed only: circular CH icon — hidden when sidebar is expanded */}
-            <div
-                className="size-8 shrink-0 hidden group-data-[collapsible=icon]:block"
-                role="img"
-                aria-label="Chan Traders Hub"
-                style={{
-                    backgroundImage: 'url(/logo/Admin.svg)',
-                    backgroundSize: 'auto 32px',
-                    backgroundRepeat: 'no-repeat',
-                    backgroundPosition: 'left center',
-                }}
-            />
-
-            {/* Expanded: full "CHAN TRADERS HUB" wordmark */}
-            <div className="ml-1 flex items-center group-data-[collapsible=icon]:hidden">
-                <img src="/logo/Admin.svg" alt="Chan Traders Hub" className="h-7 w-auto" />
+            <div className="flex aspect-square size-8 items-center justify-center rounded-md bg-sidebar-primary text-sidebar-primary-foreground">
+                <AppLogoIcon className="size-5 fill-current text-white dark:text-black" />
+            </div>
+            <div className="ml-1 grid flex-1 text-left text-sm">
+                <span className="mb-0.5 truncate leading-tight font-semibold">
+                    Laravel Starter Kit
+                </span>
             </div>
         </>
     );
