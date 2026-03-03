@@ -59,12 +59,65 @@ export default function Register() {
                             </div>
 
                             <div className="grid gap-2">
+                                <Label htmlFor="phone_number">Phone Number</Label>
+                                <Input
+                                    id="phone_number"
+                                    type="text"
+                                    required
+                                    tabIndex={3}
+                                    autoComplete="tel"
+                                    name="phone_number"
+                                    placeholder="03XXXXXXXXX"
+                                />
+                                <InputError message={errors.phone_number} />
+                            </div>
+
+                            <div className="grid gap-2">
+                                <Label htmlFor="shop_name">Shop Name</Label>
+                                <Input
+                                    id="shop_name"
+                                    type="text"
+                                    required
+                                    tabIndex={4}
+                                    name="shop_name"
+                                    placeholder="Your shop or business name"
+                                />
+                                <InputError message={errors.shop_name} />
+                            </div>
+
+                            <div className="grid gap-2">
+                                <Label htmlFor="city_district">City / District</Label>
+                                <Input
+                                    id="city_district"
+                                    type="text"
+                                    required
+                                    tabIndex={5}
+                                    name="city_district"
+                                    placeholder="City or district"
+                                />
+                                <InputError message={errors.city_district} />
+                            </div>
+
+                            <div className="grid gap-2">
+                                <Label htmlFor="address">Complete Address</Label>
+                                <Input
+                                    id="address"
+                                    type="text"
+                                    required
+                                    tabIndex={6}
+                                    name="address"
+                                    placeholder="Street, building, etc."
+                                />
+                                <InputError message={errors.address} />
+                            </div>
+
+                            <div className="grid gap-2">
                                 <Label htmlFor="password">Password</Label>
                                 <Input
                                     id="password"
                                     type="password"
                                     required
-                                    tabIndex={3}
+                                    tabIndex={7}
                                     autoComplete="new-password"
                                     name="password"
                                     placeholder="Password"
@@ -80,7 +133,7 @@ export default function Register() {
                                     id="password_confirmation"
                                     type="password"
                                     required
-                                    tabIndex={4}
+                                    tabIndex={8}
                                     autoComplete="new-password"
                                     name="password_confirmation"
                                     placeholder="Confirm password"

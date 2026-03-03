@@ -1,6 +1,13 @@
 <?php
 
+use Knuckles\Scribe\Config\AuthIn;
+use Knuckles\Scribe\Config\Defaults;
 use Knuckles\Scribe\Extracting\Strategies;
+
+use function Knuckles\Scribe\Config\configureStrategy;
+use function Knuckles\Scribe\Config\removeStrategies;
+
+// Only the most common configs are shown. See the https://scribe.knuckles.wtf/laravel/reference/config for all.
 
 return [
     'title' => config('app.name').' API Documentation',
@@ -103,6 +110,9 @@ return [
         'models_source' => ['factoryCreate', 'factoryMake', 'databaseFirst'],
     ],
 
+    // Force JSON body format instead of multipart/form-data
+    'force_json_body' => true,
+
     'strategies' => [
         'metadata' => [
             Strategies\Metadata\GetFromDocBlocks::class,
@@ -123,7 +133,7 @@ return [
             Strategies\Headers\GetFromHeaderAttribute::class,
             Strategies\Headers\GetFromHeaderTag::class,
             [
-                'override',
+                'static_data',
                 [
                     'Content-Type' => 'application/json',
                     'Accept' => 'application/json',

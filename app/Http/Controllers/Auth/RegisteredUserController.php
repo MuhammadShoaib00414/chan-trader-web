@@ -34,13 +34,30 @@ class RegisteredUserController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|string|lowercase|email|max:255|unique:'.User::class,
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
+            'phone_number' => ['required','regex:/^03\d{9}$/'],
+            'shop_name' => 'required|string|max:255',
+            'city_district' => 'required|string|max:255',
+            'address' => 'required|string',
         ]);
 
+        // split full name into first/last
+        $parts = preg_split('/\s+/', trim($request->name), 2);
+        $first = $parts[0] ?? '';
+        $last = $parts[1] ?? '';
+
         $user = User::create([
-            'name' => $request->name,
+            'first_name' => $first,
+            'last_name' => $last,
             'email' => $request->email,
             'password' => Hash::make($request->password),
+            'phone_number' => $request->phone_number,
+            'shop_name' => $request->shop_name,
+            'city_district' => $request->city_district,
+            'address' => $request->address,
         ]);
+
+        // set default role for web registration as well
+        $user->assignRole('user');
 
         event(new Registered($user));
 

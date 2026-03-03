@@ -25,8 +25,9 @@ class LoginRequest extends FormRequest
             'email' => 'required|email',
             'password' => 'required',
             'grant_type' => 'required',
-            'client_id' => 'required',
-            'client_secret' => 'required',
+            // client ID/secret may be omitted if defaults are configured
+            'client_id' => 'sometimes',
+            'client_secret' => 'sometimes',
         ];
     }
 }

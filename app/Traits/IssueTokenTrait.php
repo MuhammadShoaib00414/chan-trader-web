@@ -9,10 +9,14 @@ trait IssueTokenTrait
 {
     public function issueToken(Request $request, $scope = '*')
     {
+        // use provided credentials or fall back to environment/config values
+        $clientId = $request->client_id ?? config('passport.password_grant_client_id');
+        $clientSecret = $request->client_secret ?? config('passport.password_grant_client_secret');
+
         $tokenRequest = Request::create('/oauth/token', 'POST', [
             'grant_type' => $request->grant_type,
-            'client_id' => $request->client_id,
-            'client_secret' => $request->client_secret,
+            'client_id' => $clientId,
+            'client_secret' => $clientSecret,
             'username' => $request->username ?? $request->email,
             'password' => $request->password,
             'scope' => $request->grant_type === 'refresh_token' ? null : $scope,

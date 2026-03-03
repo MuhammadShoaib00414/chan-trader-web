@@ -43,6 +43,11 @@ class User extends Authenticatable implements MustVerifyEmail
         'status',
         'otp',
         'otp_expires_at',
+        // new registration fields
+        'phone_number',
+        'shop_name',
+        'city_district',
+        'address',
     ];
 
     /**

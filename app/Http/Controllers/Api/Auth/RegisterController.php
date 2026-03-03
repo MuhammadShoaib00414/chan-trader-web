@@ -6,29 +6,28 @@ use App\Http\Controllers\AppBaseController;
 use App\Http\Requests\Api\RegisterRequest;
 use App\Http\Resources\UserResource;
 use App\Models\User;
-use App\Traits\IssueTokenTrait;
 use App\Traits\OtpTrait;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class RegisterController extends AppBaseController
 {
-    use IssueTokenTrait, OtpTrait;
+    use OtpTrait;
 
     /**
-     * Register user
+     * Register user (assigns the `user` role by default)
      *
      * @group Auth
      *
-     * @bodyParam first_name string required User's first name. Example: John
-     * @bodyParam last_name string required User's last name. Example: Doe
+     * @bodyParam full_name string required User's full name. Example: John Doe
      * @bodyParam email string required User's email address. Example: john@example.com
+     * @bodyParam phone_number string required User's phone number in Pakistan format. Example: 03001234567
      * @bodyParam password string required User's password (min 8 characters). Example: password123
      * @bodyParam password_confirmation string required Password confirmation. Example: password123
+     * @bodyParam shop_name string required Name of the user's shop or business. Example: "Ali Store"
+     * @bodyParam city_district string required City or district of the user. Example: Lahore
+     * @bodyParam address string required Complete address of the user. Example: "123 Main Street, Lahore"
      * @bodyParam avatar file optional User's profile picture. Must be an image file (jpeg, png, jpg, gif) and max 1MB.
-     * @bodyParam grant_type string required OAuth grant type. Example: password
-     * @bodyParam client_id string required OAuth client ID. Example: 1
-     * @bodyParam client_secret string required OAuth client secret. Example: your-client-secret
      *
      * @response 200 scenario="success" {
      *   "success": true,
@@ -40,15 +39,15 @@ class RegisterController extends AppBaseController
      *       "first_name": "John",
      *       "last_name": "Doe",
      *       "email": "john@example.com",
+     *       "phone_number": "03001234567",
+     *       "shop_name": "Ali Store",
+     *       "city_district": "Lahore",
+     *       "address": "123 Main Street, Lahore",
      *       "avatar": "http://localhost/storage/avatars/example.jpg",
      *       "email_verified_at": null,
      *       "created_at": "2024-01-01T00:00:00.000000Z",
      *       "updated_at": "2024-01-01T00:00:00.000000Z"
      *     },
-     *     "access_token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9...",
-     *     "token_type": "Bearer",
-     *     "expires_in": 31536000,
-     *     "refresh_token": "def50200...",
      *     "otp": "1234",
      *   }
      * }
@@ -65,12 +64,18 @@ class RegisterController extends AppBaseController
     public function register(RegisterRequest $request)
     {
         $response = DB::transaction(function () use ($request) {
+            // split full name into first/last (leave last blank if only one word)
+            $nameParts = preg_split('/\s+/', trim($request->full_name), 2);
             $userData = [
-                'first_name' => $request->first_name,
-                'last_name' => $request->last_name,
+                'first_name' => $nameParts[0] ?? '',
+                'last_name' => $nameParts[1] ?? '',
                 'email' => $request->email,
                 'password' => $request->password, // Password is automatically hashed by model casting
                 'status' => User::STATUS_ACTIVE,
+                'phone_number' => $request->phone_number,
+                'shop_name' => $request->shop_name,
+                'city_district' => $request->city_district,
+                'address' => $request->address,
             ];
 
             // Handle avatar upload if provided
@@ -80,35 +85,23 @@ class RegisterController extends AppBaseController
 
             $user = User::create($userData);
 
+            // assign a default role
+            $user->assignRole('user');
+            // ensure roles relation is loaded for response
+            $user->load('roles');
+
             // Generate and save OTP
             $otp = $this->generateAndSaveOTP($user, 'verification');
 
-            // Token generation
-            $tokenRequest = new Request;
-            $tokenRequest->merge([
-                'grant_type' => 'password',
-                'client_id' => $request->client_id,
-                'client_secret' => $request->client_secret,
-                'username' => $request->email,
-                'password' => $request->password,
-                'scope' => '',
-            ]);
-
-            $tokenResponse = $this->issueToken($tokenRequest);
-
+            // only send otp; token creation happens after verification
             return [
                 'user' => $user,
-                'token' => $tokenResponse,
                 'otp' => $otp,
             ];
         });
 
         return $this->successResponse([
             'user' => new UserResource($response['user']),
-            'access_token' => $response['token']['access_token'],
-            'token_type' => $response['token']['token_type'],
-            'expires_in' => $response['token']['expires_in'],
-            'refresh_token' => $response['token']['refresh_token'],
             'otp' => $response['otp'],
         ], 'User registered successfully. Please check your email for OTP verification code.');
     }

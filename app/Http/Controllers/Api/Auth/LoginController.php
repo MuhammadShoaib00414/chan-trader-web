@@ -24,8 +24,7 @@ class LoginController extends AppBaseController
      * @bodyParam email string required User's email address. Example: john@example.com
      * @bodyParam password string required User's password. Example: password123
      * @bodyParam grant_type string required OAuth grant type. Example: password
-     * @bodyParam client_id string required OAuth client ID. Example: 1
-     * @bodyParam client_secret string required OAuth client secret. Example: your-client-secret
+     * These requests no longer require the client ID/secret if defaults are configured in the environment.
      *
      * @response 200 scenario="success" {
      *   "success": true,
@@ -124,8 +123,7 @@ class LoginController extends AppBaseController
      * @group Auth
      *
      * @bodyParam grant_type string required OAuth grant type. Example: refresh_token
-     * @bodyParam client_id string required OAuth client ID. Example: 1
-     * @bodyParam client_secret string required OAuth client secret. Example: your-client-secret
+     * These requests no longer require the client ID/secret if defaults are configured in the environment.
      * @bodyParam refresh_token string required Valid refresh token. Example: def50200...
      *
      * @response 200 scenario="success" {

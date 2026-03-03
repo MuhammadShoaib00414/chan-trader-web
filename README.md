@@ -130,7 +130,7 @@ npm run dev
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| POST | `/api/register` | User registration |
+| POST | `/api/register` | User registration (requires full_name, email, phone_number, password, password_confirmation, shop_name, city_district, address). Returns only an OTP for verification; new accounts are assigned the **user** role by default. |
 | POST | `/api/login` | User login |
 | POST | `/api/refresh` | Refresh access token |
 | GET | `/api/user` | Get authenticated user |
