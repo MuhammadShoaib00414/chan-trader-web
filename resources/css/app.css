@@ -141,3 +141,124 @@
         @apply bg-background text-foreground;
     }
 }
+
+/* ─── Auth page – Red / Black / White trading theme ──────────── */
+.auth-page-bg {
+    position: relative;
+    background-color: #09090b;
+    background-image:
+        radial-gradient(ellipse 65% 50% at 10% 45%, rgba(255, 58, 61, 0.08) 0%, transparent 65%),
+        radial-gradient(ellipse 65% 50% at 90% 55%, rgba(255, 58, 61, 0.05) 0%, transparent 65%),
+        radial-gradient(ellipse 50% 40% at 50% 100%, rgba(255, 30, 30, 0.06) 0%, transparent 60%);
+    overflow: hidden;
+}
+
+.auth-card {
+    background: rgba(10, 9, 9, 0.9);
+    border: 1px solid rgba(255, 58, 61, 0.45);
+    border-radius: 1.25rem;
+    padding: 2.5rem 2rem;
+    box-shadow:
+        0 0 0 1px rgba(255, 58, 61, 0.08),
+        0 0 40px rgba(255, 58, 61, 0.18),
+        0 0 80px rgba(255, 58, 61, 0.07),
+        inset 0 0 35px rgba(255, 58, 61, 0.03);
+    backdrop-filter: blur(16px);
+}
+
+/* Logo – render original SVG colors (red #FF3A3D visible on dark bg) */
+.auth-logo {
+    opacity: 1;
+}
+
+.auth-title {
+    color: #ffffff;
+    text-shadow: 0 0 18px rgba(255, 58, 61, 0.3);
+}
+
+.auth-description {
+    color: rgba(200, 200, 210, 0.6);
+}
+
+/* Inputs inside auth card */
+.auth-card input[data-slot="input"] {
+    background: rgba(255, 255, 255, 0.04) !important;
+    border-color: rgba(255, 255, 255, 0.12) !important;
+    color: #f0f0f5 !important;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.auth-card input[data-slot="input"]::placeholder {
+    color: rgba(200, 200, 215, 0.35);
+}
+
+.auth-card input[data-slot="input"]:focus-visible {
+    border-color: rgba(255, 58, 61, 0.6) !important;
+    box-shadow: 0 0 0 3px rgba(255, 58, 61, 0.12) !important;
+    outline: none !important;
+}
+
+/* Labels inside auth card */
+.auth-card label {
+    color: #e0e0e8;
+    font-weight: 500;
+}
+
+/* Submit button */
+.auth-card button[type="submit"] {
+    background: #ff3a3d !important;
+    color: #ffffff !important;
+    border: none !important;
+    font-weight: 700;
+    font-size: 0.95rem;
+    letter-spacing: 0.025em;
+    box-shadow: 0 4px 22px rgba(255, 58, 61, 0.4);
+    transition: box-shadow 0.2s, transform 0.12s, background 0.2s;
+    height: 2.75rem;
+    border-radius: 0.5rem;
+}
+
+.auth-card button[type="submit"]:hover:not(:disabled) {
+    background: #e62c2f !important;
+    box-shadow: 0 6px 30px rgba(255, 58, 61, 0.55);
+    transform: translateY(-1px);
+}
+
+.auth-card button[type="submit"]:active:not(:disabled) {
+    transform: translateY(0);
+    box-shadow: 0 2px 14px rgba(255, 58, 61, 0.4);
+}
+
+/* Text links inside auth card */
+.auth-card a {
+    color: #ff3a3d !important;
+    text-decoration-color: rgba(255, 58, 61, 0.35) !important;
+    transition: color 0.15s;
+}
+
+.auth-card a:hover {
+    color: #ff6b6e !important;
+    text-decoration-color: rgba(255, 107, 110, 0.55) !important;
+}
+
+/* Muted text inside auth card */
+.auth-card .text-muted-foreground {
+    color: rgba(175, 175, 190, 0.6) !important;
+}
+
+/* Checkbox inside auth card */
+.auth-card [data-slot="checkbox"] {
+    border-color: rgba(255, 255, 255, 0.2) !important;
+    background: transparent !important;
+}
+
+.auth-card [data-slot="checkbox"][data-state="checked"] {
+    background: #ff3a3d !important;
+    border-color: #ff3a3d !important;
+}
+
+/* Input error text */
+.auth-card [data-slot="input-error"],
+.auth-card .text-destructive {
+    color: #ff8080 !important;
+}
