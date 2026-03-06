@@ -156,7 +156,6 @@ npm run dev
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| POST | `/api/auth/google` | Google OAuth login |
 | POST | `/api/auth/apple` | Apple OAuth login |
 | POST | `/api/auth/check-user` | Check user existence |
 

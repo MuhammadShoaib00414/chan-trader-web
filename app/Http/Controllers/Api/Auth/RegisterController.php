@@ -31,25 +31,8 @@ class RegisterController extends AppBaseController
      *
      * @response 200 scenario="success" {
      *   "success": true,
-     *   "message": "User registered successfully. Please check your email for OTP verification code.",
-     *   "data": {
-     *     "user": {
-     *       "id": 1,
-     *       "full_name": "John Doe",
-     *       "first_name": "John",
-     *       "last_name": "Doe",
-     *       "email": "john@example.com",
-     *       "phone_number": "03001234567",
-     *       "shop_name": "Ali Store",
-     *       "city_district": "Lahore",
-     *       "address": "123 Main Street, Lahore",
-     *       "avatar": "http://localhost/storage/avatars/example.jpg",
-     *       "email_verified_at": null,
-     *       "created_at": "2024-01-01T00:00:00.000000Z",
-     *       "updated_at": "2024-01-01T00:00:00.000000Z"
-     *     },
-     *     "otp": "1234",
-     *   }
+     *   "message": "OTP has been sent. Please check your email to verify your account.",
+     *   "data": null
      * }
      * @response 422 scenario="validation error" {
      *   "success": false,
@@ -63,7 +46,7 @@ class RegisterController extends AppBaseController
      */
     public function register(RegisterRequest $request)
     {
-        $response = DB::transaction(function () use ($request) {
+        DB::transaction(function () use ($request) {
             // split full name into first/last (leave last blank if only one word)
             $nameParts = preg_split('/\s+/', trim($request->full_name), 2);
             $userData = [
@@ -71,7 +54,7 @@ class RegisterController extends AppBaseController
                 'last_name' => $nameParts[1] ?? '',
                 'email' => $request->email,
                 'password' => $request->password, // Password is automatically hashed by model casting
-                'status' => User::STATUS_ACTIVE,
+                'status' => User::STATUS_INACTIVE,
                 'phone_number' => $request->phone_number,
                 'shop_name' => $request->shop_name,
                 'city_district' => $request->city_district,
@@ -87,22 +70,14 @@ class RegisterController extends AppBaseController
 
             // assign a default role
             $user->assignRole('user');
-            // ensure roles relation is loaded for response
-            $user->load('roles');
 
             // Generate and save OTP
-            $otp = $this->generateAndSaveOTP($user, 'verification');
-
-            // only send otp; token creation happens after verification
-            return [
-                'user' => $user,
-                'otp' => $otp,
-            ];
+            $this->generateAndSaveOTP($user, 'verification');
         });
 
-        return $this->successResponse([
-            'user' => new UserResource($response['user']),
-            'otp' => $response['otp'],
-        ], 'User registered successfully. Please check your email for OTP verification code.');
+        return $this->successResponse(
+            null,
+            'OTP has been sent. Please check your email to verify your account.'
+        );
     }
 }

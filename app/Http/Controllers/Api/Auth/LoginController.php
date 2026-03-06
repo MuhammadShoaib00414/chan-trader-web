@@ -23,8 +23,7 @@ class LoginController extends AppBaseController
      *
      * @bodyParam email string required User's email address. Example: john@example.com
      * @bodyParam password string required User's password. Example: password123
-     * @bodyParam grant_type string required OAuth grant type. Example: password
-     * These requests no longer require the client ID/secret if defaults are configured in the environment.
+     * Grant type is handled on the server.
      *
      * @response 200 scenario="success" {
      *   "success": true,
@@ -122,8 +121,7 @@ class LoginController extends AppBaseController
      *
      * @group Auth
      *
-     * @bodyParam grant_type string required OAuth grant type. Example: refresh_token
-     * These requests no longer require the client ID/secret if defaults are configured in the environment.
+     * Grant type is handled on the server.
      * @bodyParam refresh_token string required Valid refresh token. Example: def50200...
      *
      * @response 200 scenario="success" {
@@ -146,6 +144,7 @@ class LoginController extends AppBaseController
      */
     public function refresh(RefreshTokenRequest $request)
     {
+        $request->merge(['grant_type' => 'refresh_token']);
         $tokenResponse = $this->issueToken($request);
 
         return $this->successResponse([

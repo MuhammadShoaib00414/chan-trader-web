@@ -24,7 +24,7 @@ class VerifyEmailRequest extends FormRequest
         return [
             'email' => [
                 'required',
-                'email',
+                'email:rfc,dns',
                 function ($attribute, $value, $fail) {
                     $query = \App\Models\User::where(function ($q) use ($value) {
                         $q->where('email', $value)
@@ -37,10 +37,6 @@ class VerifyEmailRequest extends FormRequest
                 },
             ],
             'otp' => 'required|digits:4',
-            'grant_type' => 'required',
-            'client_id' => 'required',
-            'client_secret' => 'required',
-            'password' => 'required',
         ];
     }
 }

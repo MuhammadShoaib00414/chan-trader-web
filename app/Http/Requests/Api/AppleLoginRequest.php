@@ -25,8 +25,6 @@ class AppleLoginRequest extends FormRequest
             'identityToken' => 'required|string',
             'authorizationCode' => 'nullable|string',
             'grant_type' => 'nullable|string|in:password,client_credentials,authorization_code',
-            'client_id' => 'required|string',
-            'client_secret' => 'required|string',
         ];
     }
 
@@ -42,8 +40,6 @@ class AppleLoginRequest extends FormRequest
             'identityToken.string' => 'Apple identity token must be a string.',
             'authorizationCode.string' => 'Apple authorization code must be a string.',
             'grant_type.in' => 'Grant type must be one of: password, client_credentials, authorization_code.',
-            'client_id.required' => 'Client ID is required.',
-            'client_secret.required' => 'Client secret is required.',
         ];
     }
 }

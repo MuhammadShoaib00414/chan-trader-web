@@ -23,10 +23,8 @@ class CheckUserRequest extends FormRequest
     {
         return [
             'token' => 'required|string',
-            'provider' => 'required|string|in:google,apple',
+            'provider' => 'required|string|in:apple',
             'grant_type' => 'nullable|string|in:password,client_credentials,authorization_code',
-            'client_id' => 'required|string',
-            'client_secret' => 'required|string',
         ];
     }
 
@@ -41,7 +39,7 @@ class CheckUserRequest extends FormRequest
             'token.required' => 'Social login token is required.',
             'token.string' => 'Social login token must be a string.',
             'provider.required' => 'Social provider is required.',
-            'provider.in' => 'Provider must be either google or apple.',
+            'provider.in' => 'Provider must be apple.',
         ];
     }
 }

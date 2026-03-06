@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Api\Auth;
 use App\Http\Controllers\AppBaseController;
 use App\Http\Requests\Api\AppleLoginRequest;
 use App\Http\Requests\Api\CheckUserRequest;
-use App\Http\Requests\Api\GoogleLoginRequest;
 use App\Http\Resources\UserResource;
 use App\Models\User;
 use App\Traits\IssueTokenTrait;
@@ -17,104 +16,7 @@ class SocialLoginController extends AppBaseController
 {
     use IssueTokenTrait;
 
-    /**
-     * Login with Google
-     *
-     * @group Social
-     *
-     * @bodyParam idToken string required Google ID token from client. Example: eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...
-     * @bodyParam grant_type string optional OAuth grant type. Example: password
-     * @bodyParam client_id string required OAuth client ID. Example: 1
-     * @bodyParam client_secret string required OAuth client secret. Example: your-client-secret
-     *
-     * @response 200 scenario="success" {
-     *   "success": true,
-     *   "message": "Google login successful",
-     *   "data": {
-     *     "user": {
-     *       "id": 1,
-     *       "full_name": "John Doe",
-     *       "first_name": "John",
-     *       "last_name": "Doe",
-     *       "email": "john@gmail.com",
-     *       "avatar": "https://lh3.googleusercontent.com/a/example.jpg",
-     *       "google_id": "123456789",
-     *       "social_provider": "google",
-     *       "email_verified_at": "2024-01-01T00:00:00.000000Z"
-     *     },
-     *     "access_token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9...",
-     *     "token_type": "Bearer",
-     *     "expires_in": 31536000,
-     *     "refresh_token": "def50200..."
-     *   }
-     * }
-     * @response 401 scenario="invalid token" {
-     *   "success": false,
-     *   "message": "Invalid Google token",
-     *   "data": null
-     * }
-     *
-     * @unauthenticated
-     */
-    public function googleLogin(GoogleLoginRequest $request)
-    {
-        // Verify Google ID token
-        $googleUser = $this->verifyGoogleToken($request->idToken);
-
-        if (! $googleUser) {
-            return $this->errorResponse('Invalid Google token', 401);
-        }
-
-        // Check if user exists with Google ID
-        $user = User::findByGoogleId($googleUser['sub']);
-
-        if (! $user) {
-            // Check if user exists with email
-            $user = User::findByEmailForSocial($googleUser['email']);
-
-            if ($user) {
-                // Link Google account to existing user
-                $user->update([
-                    'google_id' => $googleUser['sub'],
-                    'social_provider' => User::SOCIAL_PROVIDER_GOOGLE,
-                ]);
-            } else {
-                // Create new user
-                $user = $this->createUserFromGoogle($googleUser, $request->is_customer);
-            }
-        }
-
-        // Generate token using Passport OAuth2 (same as login/register)
-        $tokenRequest = new Request([
-            'grant_type' => $request->grant_type ?? 'password',
-            'client_id' => $request->client_id,
-            'client_secret' => $request->client_secret,
-            'username' => $user->email,
-            'password' => 'social_login_temp_'.time(), // Temporary password for social login
-            'scope' => '',
-        ]);
-
-        // Temporarily set a known password for OAuth2 flow
-        $originalPassword = $user->password;
-        $tempPassword = 'social_login_temp_'.time();
-        $user->password = $tempPassword; // Password is automatically hashed by model casting
-        $user->save();
-
-        $tokenRequest->merge(['password' => $tempPassword]);
-        $tokenResponse = $this->issueToken($tokenRequest);
-
-        // Restore original password
-        $user->password = $originalPassword;
-        $user->save();
-
-        return $this->successResponse([
-            'user' => new UserResource($user),
-            'access_token' => $tokenResponse['access_token'],
-            'token_type' => $tokenResponse['token_type'],
-            'expires_in' => $tokenResponse['expires_in'],
-            'refresh_token' => $tokenResponse['refresh_token'] ?? null,
-        ], 'Google login successful');
-    }
+    // Google login functionality removed
 
     /**
      * Login with Apple
@@ -239,10 +141,10 @@ class SocialLoginController extends AppBaseController
      * @group Social
      *
      * @bodyParam token string required Social login token (Google ID token or Apple identity token). Example: eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...
-     * @bodyParam provider string required Social provider. Example: google
+     * @bodyParam provider string required Social provider. Example: apple
      * @bodyParam grant_type string optional OAuth grant type. Example: password
-     * @bodyParam client_id string required OAuth client ID. Example: 1
-     * @bodyParam client_secret string required OAuth client secret. Example: your-client-secret
+     * @bodyParam client_id string deprecated
+     * @bodyParam client_secret string deprecated
      *
      * @response 200 scenario="user found" {
      *   "success": true,
@@ -283,16 +185,7 @@ class SocialLoginController extends AppBaseController
         $provider = $request->provider;
 
         // Verify token and extract user data
-        if ($provider === 'google') {
-            $tokenData = $this->verifyGoogleToken($token);
-            if (! $tokenData) {
-                return $this->errorResponse('Invalid Google token', 400);
-            }
-
-            // Find user by Google ID or email
-            $user = User::findByGoogleId($tokenData['sub'])
-                ?? User::findByEmailForSocial($tokenData['email']);
-        } elseif ($provider === 'apple') {
+        if ($provider === 'apple') {
             $tokenData = $this->verifyAppleToken($token);
             if (! $tokenData) {
                 return $this->errorResponse('Invalid Apple token', 400);
@@ -342,32 +235,7 @@ class SocialLoginController extends AppBaseController
         }
     }
 
-    /**
-     * Verify Google ID token
-     */
-    private function verifyGoogleToken(string $idToken): ?array
-    {
-        // For now, we'll decode without verification for development
-        // In production, you should implement proper JWT verification
-        $tks = explode('.', $idToken);
-
-        if (count($tks) !== 3) {
-            return null;
-        }
-
-        $payload = json_decode(JWT::urlsafeB64Decode($tks[1]), true);
-
-        if (! $payload || ! isset($payload['sub']) || ! isset($payload['email'])) {
-            return null;
-        }
-
-        // Basic validation
-        if ($payload['iss'] !== 'https://accounts.google.com' && $payload['iss'] !== 'accounts.google.com') {
-            return null;
-        }
-
-        return $payload;
-    }
+    // Google token verification removed
 
     /**
      * Verify Apple identity token

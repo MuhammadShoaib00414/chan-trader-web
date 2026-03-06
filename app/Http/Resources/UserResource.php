@@ -23,7 +23,6 @@ class UserResource extends JsonResource
             'email' => $this->email,
             'pending_email' => $this->pending_email,
             'avatar' => $this->avatar ? asset('storage/'.$this->avatar) : null,
-            'google_id' => $this->google_id,
             'apple_id' => $this->apple_id,
             'social_provider' => $this->social_provider,
             'status' => $this->status,

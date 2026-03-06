@@ -31,9 +31,9 @@ class SendOtpMail extends Mailable implements ShouldQueue
      */
     public function envelope(): Envelope
     {
-        return new Envelope(
-            subject: ucfirst($this->type).' OTP',
-        );
+        $label = str_replace('-', ' ', (string) $this->type);
+        $label = ucwords($label);
+        return new Envelope(subject: $label.' OTP');
     }
 
     /**
@@ -41,9 +41,11 @@ class SendOtpMail extends Mailable implements ShouldQueue
      */
     public function content(): Content
     {
-        return new Content(
-            view: 'emails.send-otp',
-        );
+        $view = $this->type === 'verification'
+            ? 'emails.otp-verification'
+            : 'emails.otp-password-reset';
+
+        return new Content(view: $view);
     }
 
     /**

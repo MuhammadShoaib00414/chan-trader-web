@@ -60,5 +60,8 @@ class DatabaseSeeder extends Seeder
         $this->command->info('Super Admin: admin@example.com / password');
         $this->command->info('Admin: manager@example.com / password');
         $this->command->info('User: test@example.com / password');
+
+        // Seed catalog basics
+        $this->call(AdminCatalogSeeder::class);
     }
 }

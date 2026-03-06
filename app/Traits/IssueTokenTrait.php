@@ -9,17 +9,22 @@ trait IssueTokenTrait
 {
     public function issueToken(Request $request, $scope = '*')
     {
-        // use provided credentials or fall back to environment/config values
-        $clientId = $request->client_id ?? config('passport.password_grant_client_id');
-        $clientSecret = $request->client_secret ?? config('passport.password_grant_client_secret');
+        $clientId = config('passport.password_grant_client_id');
+        $clientSecret = config('passport.password_grant_client_secret');
+        $grantType = $request->grant_type ?: 'password';
+
+        if (! $clientId || ! $clientSecret) {
+            Log::error('OAuth client credentials missing in config(passport.*).');
+            throw new \Exception('OAuth client credentials are not configured on the server.');
+        }
 
         $tokenRequest = Request::create('/oauth/token', 'POST', [
-            'grant_type' => $request->grant_type,
+            'grant_type' => $grantType,
             'client_id' => $clientId,
             'client_secret' => $clientSecret,
             'username' => $request->username ?? $request->email,
             'password' => $request->password,
-            'scope' => $request->grant_type === 'refresh_token' ? null : $scope,
+            'scope' => $grantType === 'refresh_token' ? null : $scope,
             'refresh_token' => $request->refresh_token ?? null,
         ], [], [], [
             'HTTP_Accept' => 'application/json',

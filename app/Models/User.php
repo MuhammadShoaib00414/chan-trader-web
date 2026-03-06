@@ -21,8 +21,6 @@ class User extends Authenticatable implements MustVerifyEmail
 
     const STATUS_INACTIVE = 0;
 
-    const SOCIAL_PROVIDER_GOOGLE = 'google';
-
     const SOCIAL_PROVIDER_APPLE = 'apple';
 
     /**
@@ -37,7 +35,6 @@ class User extends Authenticatable implements MustVerifyEmail
         'pending_email',
         'password',
         'avatar',
-        'google_id',
         'apple_id',
         'social_provider',
         'status',
@@ -85,13 +82,7 @@ class User extends Authenticatable implements MustVerifyEmail
         ];
     }
 
-    /**
-     * Find user by Google ID
-     */
-    public static function findByGoogleId(string $googleId): ?User
-    {
-        return static::where('google_id', $googleId)->first();
-    }
+    // Google login support removed
 
     /**
      * Find user by Apple ID

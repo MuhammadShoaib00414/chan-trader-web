@@ -145,7 +145,7 @@ class OtpController extends AppBaseController
     {
         return $this->sendOTP($request, OtpType::PASSWORD_RESET);
     }
-
+    
     /**
      * Verify email with OTP
      *
@@ -153,28 +153,11 @@ class OtpController extends AppBaseController
      *
      * @bodyParam email string required User's email address. Example: john@example.com
      * @bodyParam otp string required 4-digit OTP code. Example: 1234
-     * @bodyParam grant_type string optional OAuth grant type. Example: password
-     * @bodyParam client_id string optional OAuth client ID. Example: 1
-     * @bodyParam client_secret string optional OAuth client secret. Example: your-client-secret
-     * @bodyParam password string optional User's password (required for token generation). Example: password123
      *
      * @response 200 scenario="success" {
      *   "success": true,
-     *   "message": "Email verified successfully",
-     *   "data": {
-     *     "user": {
-     *       "id": 1,
-     *       "full_name": "John Doe",
-     *       "first_name": "John",
-     *       "last_name": "Doe",
-     *       "email": "john@example.com",
-     *       "email_verified_at": "2024-01-01T00:00:00.000000Z"
-     *     },
-     *     "access_token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9...",
-     *     "token_type": "Bearer",
-     *     "expires_in": 31536000,
-     *     "refresh_token": "def50200..."
-     *   }
+     *   "message": "Account verified successfully",
+     *   "data": null
      * }
      * @response 404 scenario="user not found" {
      *   "success": false,
@@ -225,28 +208,16 @@ class OtpController extends AppBaseController
             Mail::to($user->email)->send(new WelcomeEmail($user));
         }
 
+        // Approve/activate the account
+        $user->status = User::STATUS_ACTIVE;
         $user->otp = null;
         $user->otp_expires_at = null;
         $user->save();
 
-        $tokenRequest = new Request([
-            'grant_type' => $request->grant_type ?? 'password',
-            'client_id' => $request->client_id,
-            'client_secret' => $request->client_secret,
-            'username' => $request->email,
-            'password' => $request->password,
-            'scope' => '',
-        ]);
-
-        $tokenResponse = $this->issueToken($tokenRequest);
-
-        return $this->successResponse([
-            'user' => new UserResource($user),
-            'access_token' => $tokenResponse['access_token'],
-            'token_type' => $tokenResponse['token_type'],
-            'expires_in' => $tokenResponse['expires_in'],
-            'refresh_token' => $tokenResponse['refresh_token'],
-        ], 'Email verified successfully');
+        return $this->successResponse(
+            null,
+            'Account verified successfully'
+        );
     }
 
     /**

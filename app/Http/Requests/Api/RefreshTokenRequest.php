@@ -23,9 +23,6 @@ class RefreshTokenRequest extends FormRequest
     {
         return [
             'refresh_token' => 'required',
-            'grant_type' => 'required|in:refresh_token,password',
-            'client_id' => 'sometimes',
-            'client_secret' => 'sometimes',
         ];
     }
 }

@@ -31,7 +31,6 @@ Route::post('/refresh', [LoginController::class, 'refresh']);
 Route::post('/oauth/token', [\Laravel\Passport\Http\Controllers\AccessTokenController::class, 'issueToken']);
 
 // Social login routes
-Route::post('/auth/google', [SocialLoginController::class, 'googleLogin']);
 Route::post('/auth/apple', [SocialLoginController::class, 'appleLogin']);
 Route::post('/auth/check-user', [SocialLoginController::class, 'checkUser']);
 

@@ -2,8 +2,14 @@
 
 namespace App\Providers;
 
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 use Laravel\Passport\Passport;
+use Spatie\Permission\Models\Permission;
+use Spatie\Permission\Models\Role;
+use App\Policies\RolePolicy;
+use App\Policies\PermissionPolicy;
+use Illuminate\Support\Facades\Schema;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -31,5 +37,10 @@ class AppServiceProvider extends ServiceProvider
 
         // Refresh token expires in 7 days (7 * 24 hours = 10080 minutes)
         Passport::refreshTokensExpireIn(now()->addMinutes(10080));
+
+        Gate::policy(Role::class, RolePolicy::class);
+        Gate::policy(Permission::class, PermissionPolicy::class);
+
+        Schema::defaultStringLength(191);
     }
 }

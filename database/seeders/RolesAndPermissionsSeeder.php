@@ -35,12 +35,29 @@ class RolesAndPermissionsSeeder extends Seeder
             'view permissions',
             'assign permissions',
 
-            // Content management (example)
-            'view content',
-            'create content',
-            'edit content',
-            'delete content',
-            'publish content',
+            // Admin modules
+            'stores.view',
+            'stores.approve',
+            'stores.suspend',
+            'stores.manage_staff',
+            'categories.manage',
+            'brands.manage',
+            'products.view',
+            'products.create',
+            'products.update',
+            'products.delete',
+            'products.publish',
+            'orders.view',
+            'orders.update',
+            'orders.refund',
+            'payments.view',
+            'payments.capture',
+            'shipments.view',
+            'shipments.update',
+            'reviews.moderate',
+            'coupons.manage',
+            'banners.manage',
+            'pages.manage',
 
             // Settings
             'view settings',
@@ -65,27 +82,43 @@ class RolesAndPermissionsSeeder extends Seeder
             'edit users',
             'view roles',
             'view permissions',
-            'view content',
-            'create content',
-            'edit content',
-            'delete content',
-            'publish content',
+            'stores.view',
+            'stores.approve',
+            'stores.suspend',
+            'categories.manage',
+            'brands.manage',
+            'products.view',
+            'products.create',
+            'products.update',
+            'products.delete',
+            'products.publish',
+            'orders.view',
+            'orders.update',
+            'payments.view',
+            'shipments.view',
+            'shipments.update',
+            'reviews.moderate',
+            'coupons.manage',
+            'banners.manage',
+            'pages.manage',
             'view settings',
         ]);
 
         // Editor - can manage content
         $editor = Role::firstOrCreate(['name' => 'editor']);
         $editor->syncPermissions([
-            'view content',
-            'create content',
-            'edit content',
-            'publish content',
+            'categories.manage',
+            'brands.manage',
+            'products.view',
+            'products.create',
+            'products.update',
+            'products.publish',
         ]);
 
         // User - basic permissions
         $user = Role::firstOrCreate(['name' => 'user']);
         $user->syncPermissions([
-            'view content',
+            //
         ]);
 
         $this->command->info('Roles and permissions created successfully!');
