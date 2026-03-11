@@ -9,6 +9,13 @@ use Illuminate\Http\Request;
 
 class PaymentController extends Controller
 {
+    public function __construct()
+    {
+        $this->middleware('permission:payments.view')->only(['index']);
+        $this->middleware('permission:payments.capture')->only(['store']);
+        $this->middleware('permission:orders.refund')->only(['refund']);
+    }
+
     public function index(Request $request)
     {
         $query = Payment::query();

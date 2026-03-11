@@ -16,6 +16,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 class OtpController extends AppBaseController
@@ -189,11 +190,21 @@ class OtpController extends AppBaseController
             return $this->errorResponse('Email already verified', 400);
         }
 
+        // log incoming OTP attempt
+        Log::info('Email verification OTP attempt', [
+            'email' => $request->email,
+            'otp' => $request->otp,
+            'pending_verification' => $isVerifyingPendingEmail,
+        ]);
+
         [$isValid, $error] = $this->verifyUserOTP($user, $request->otp);
 
         if (! $isValid) {
+            Log::warning('Email verification failed', ['email' => $request->email, 'reason' => $error]);
             return $this->errorResponse($error, 400);
         }
+
+        Log::info('Email verification succeeded', ['email' => $request->email]);
 
         // If verifying pending email, update the main email
         if ($isVerifyingPendingEmail) {
@@ -263,11 +274,20 @@ class OtpController extends AppBaseController
             return $this->errorResponse('Please verify your email first', 400);
         }
 
+        // log attempt
+        Log::info('Password reset OTP attempt', [
+            'email' => $request->email,
+            'otp' => $request->otp,
+        ]);
+
         [$isValid, $error] = $this->verifyUserOTP($user, $request->otp);
 
         if (! $isValid) {
+            Log::warning('Password reset OTP failed', ['email' => $request->email, 'reason' => $error]);
             return $this->errorResponse($error, 400);
         }
+
+        Log::info('Password reset OTP succeeded', ['email' => $request->email]);
 
         // Generate reset token
         $reset_token = Str::random(60);

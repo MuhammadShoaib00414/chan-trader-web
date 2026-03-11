@@ -10,6 +10,11 @@ use Illuminate\Validation\Rule;
 
 class ProductAttributeController extends Controller
 {
+    public function __construct()
+    {
+        $this->middleware('permission:products.update')->only(['store', 'update', 'destroy']);
+    }
+
     public function store(Request $request, Product $product)
     {
         $validated = $request->validate([

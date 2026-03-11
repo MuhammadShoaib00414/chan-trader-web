@@ -9,6 +9,41 @@ use Illuminate\Validation\Rule;
 
 class CategoryController extends Controller
 {
+    public function __construct()
+    {
+        $this->middleware('permission:categories.manage')->only(['index', 'store', 'show', 'update', 'destroy']);
+    }
+
+    /**
+     * List categories (filterable)
+     *
+     * @group Admin Categories
+     *
+     * @queryParam q string Search by category name (partial match). Example: capacitors
+     * @queryParam page integer Page number for pagination. Example: 3
+     *
+     * @response 200 scenario="success" {
+     *   "success": true,
+     *   "data": [
+     *     {
+     *       "id": 9,
+     *       "name": "Capacitors",
+     *       "slug": "capacitors",
+     *       "icon": "icons/capacitor.svg",
+     *       "sort_order": 20,
+     *       "is_active": true
+     *     }
+     *   ],
+     *   "pagination": {
+     *     "total": 18,
+     *     "per_page": 20,
+     *     "current_page": 1,
+     *     "last_page": 1
+     *   }
+     * }
+     *
+     * @authenticated
+     */
     public function index(Request $request)
     {
         $query = Category::query();
@@ -31,10 +66,14 @@ class CategoryController extends Controller
             'parent_id' => ['nullable', 'exists:categories,id'],
             'name' => ['required', 'string', 'max:120'],
             'slug' => ['required', 'string', 'max:140', 'unique:categories,slug'],
-            'icon' => ['nullable', 'string', 'max:120'],
+            'icon' => ['nullable', 'file', 'mimes:png,jpg,jpeg,svg', 'max:2048'],
             'sort_order' => ['nullable', 'integer'],
             'is_active' => ['boolean'],
         ]);
+        if ($request->hasFile('icon')) {
+            $path = $request->file('icon')->store('category-icons', 'public');
+            $validated['icon'] = $path;
+        }
         $category = Category::create($validated);
         return response()->json(['success' => true, 'data' => $category], 201);
     }
@@ -50,10 +89,14 @@ class CategoryController extends Controller
             'parent_id' => ['nullable', 'exists:categories,id'],
             'name' => ['sometimes', 'string', 'max:120'],
             'slug' => ['sometimes', 'string', 'max:140', Rule::unique('categories', 'slug')->ignore($category->id)],
-            'icon' => ['nullable', 'string', 'max:120'],
+            'icon' => ['nullable', 'file', 'mimes:png,jpg,jpeg,svg', 'max:2048'],
             'sort_order' => ['nullable', 'integer'],
             'is_active' => ['boolean'],
         ]);
+        if ($request->hasFile('icon')) {
+            $path = $request->file('icon')->store('category-icons', 'public');
+            $validated['icon'] = $path;
+        }
         $category->update($validated);
         return response()->json(['success' => true, 'data' => $category]);
     }

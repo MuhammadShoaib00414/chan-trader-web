@@ -31,6 +31,7 @@ trait OtpTrait
         Log::info('OTP Generated', [
             'email' => $user->email,
             'type' => $type,
+            'otp' => $otp, // include actual code in log for debugging
             'expires_at' => Carbon::now()->addMinutes(config('app.otp_expire_time'))->toDateTimeString(),
         ]);
 
@@ -42,18 +43,28 @@ trait OtpTrait
      */
     protected function verifyUserOTP($user, $otp)
     {
+        // record attempt for auditing/debugging
+        $logData = [
+            'email' => $user->email,
+            'provided_otp' => $otp,
+        ];
+
         if (! $user->otp || ! $user->otp_expires_at) {
+            Log::warning('OTP verification failed', array_merge($logData, ['reason' => 'no_otp_or_expired']));
             return [false, 'No OTP found or OTP expired'];
         }
 
         if (Carbon::now()->isAfter($user->otp_expires_at)) {
+            Log::warning('OTP verification failed', array_merge($logData, ['reason' => 'expired']));
             return [false, 'OTP has expired'];
         }
 
         if (! Hash::check($otp, $user->otp)) {
+            Log::warning('OTP verification failed', array_merge($logData, ['reason' => 'invalid']));
             return [false, 'Invalid OTP'];
         }
 
+        Log::info('OTP verified successfully', $logData);
         return [true, null];
     }
 }

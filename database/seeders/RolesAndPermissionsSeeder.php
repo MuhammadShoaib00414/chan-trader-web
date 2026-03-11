@@ -95,6 +95,8 @@ class RolesAndPermissionsSeeder extends Seeder
             'orders.view',
             'orders.update',
             'payments.view',
+            'payments.capture',
+            'orders.refund',
             'shipments.view',
             'shipments.update',
             'reviews.moderate',

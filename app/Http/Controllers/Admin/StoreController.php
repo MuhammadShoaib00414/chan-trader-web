@@ -9,6 +9,14 @@ use Illuminate\Validation\Rule;
 
 class StoreController extends Controller
 {
+    public function __construct()
+    {
+        $this->middleware('permission:stores.view')->only(['index', 'show']);
+        $this->middleware('permission:stores.manage_staff')->only(['store', 'update']);
+        $this->middleware('permission:stores.approve')->only(['approve']);
+        $this->middleware('permission:stores.suspend')->only(['suspend']);
+    }
+
     public function index(Request $request)
     {
         $query = Store::query();

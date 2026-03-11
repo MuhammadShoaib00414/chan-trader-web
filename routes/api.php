@@ -7,6 +7,9 @@ use App\Http\Controllers\Api\Auth\RegisterController;
 use App\Http\Controllers\Api\Auth\SocialLoginController;
 use App\Http\Controllers\Api\UserController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Api\App\CategoryController as AppCategoryController;
+use App\Http\Controllers\Api\App\BrandController as AppBrandController;
+use App\Http\Controllers\Api\App\ProductController as AppProductController;
 
 // ********************* Auth routes *********************
 
@@ -44,6 +47,13 @@ Route::prefix('otp')->group(function () {
 
 // Password management
 Route::post('/password/reset', [PasswordController::class, 'resetPassword']);
+
+// Public APP APIs (mobile/web app)
+Route::prefix('app')->group(function () {
+    Route::get('/categories', [AppCategoryController::class, 'index']);
+    Route::get('/brands', [AppBrandController::class, 'index']);
+    Route::get('/products', [AppProductController::class, 'index']);
+});
 
 // Password change (requires authentication)
 Route::middleware(['auth:api', 'verified'])->group(function () {

@@ -214,14 +214,46 @@ Route::middleware(['auth', 'verified'])->group(function () {
             return Inertia::render('admin/stores/index', ['items' => $items]);
         })->middleware('permission:stores.view');
 
-        Route::get('categories', function () {
-            $items = Category::orderBy('sort_order')->orderBy('name')->get();
-            return Inertia::render('admin/categories/index', ['items' => $items]);
+        Route::get('categories', function (Request $request) {
+            $query = Category::query()->orderBy('sort_order')->orderBy('name');
+            if ($request->filled('q')) {
+                $q = $request->string('q')->toString();
+                $query->where('name', 'like', "%{$q}%");
+            }
+            $categories = $query->paginate(20)->withQueryString();
+            return Inertia::render('admin/categories/index', [
+                'items' => $categories->items(),
+                'pagination' => [
+                    'total' => $categories->total(),
+                    'per_page' => $categories->perPage(),
+                    'current_page' => $categories->currentPage(),
+                    'last_page' => $categories->lastPage(),
+                ],
+                'filters' => [
+                    'q' => $request->get('q'),
+                ],
+            ]);
         })->middleware('permission:categories.manage');
 
-        Route::get('brands', function () {
-            $items = Brand::orderBy('name')->get();
-            return Inertia::render('admin/brands/index', ['items' => $items]);
+        Route::get('brands', function (Request $request) {
+            $query = Brand::query()->orderBy('name');
+            if ($request->filled('q')) {
+                $q = $request->string('q')->toString();
+                $query->where('name', 'like', "%{$q}%");
+            }
+            $brands = $query->paginate(20)->withQueryString();
+            return Inertia::render('admin/brands/index', [
+                'items' => $brands->items(),
+                'pagination' => [
+                    'total' => $brands->total(),
+                    'per_page' => $brands->perPage(),
+                    'current_page' => $brands->currentPage(),
+                    'last_page' => $brands->lastPage(),
+                ],
+                'filters' => [
+                    'q' => $request->get('q'),
+                ],
+            ]);
         })->middleware('permission:brands.manage');
 
         Route::get('products', function (Request $request) {

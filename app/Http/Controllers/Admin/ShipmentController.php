@@ -10,6 +10,11 @@ use Illuminate\Validation\Rule;
 
 class ShipmentController extends Controller
 {
+    public function __construct()
+    {
+        $this->middleware('permission:shipments.update')->only(['store', 'update']);
+    }
+
     public function store(Request $request, Order $order)
     {
         $validated = $request->validate([

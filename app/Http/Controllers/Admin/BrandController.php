@@ -9,6 +9,39 @@ use Illuminate\Validation\Rule;
 
 class BrandController extends Controller
 {
+    public function __construct()
+    {
+        $this->middleware('permission:brands.manage')->only(['index', 'store', 'show', 'update', 'destroy']);
+    }
+
+    /**
+     * List brands (filterable)
+     *
+     * @group Admin Brands
+     *
+     * @queryParam q string Search by brand name (partial match). Example: texas
+     * @queryParam page integer Page number for pagination. Example: 1
+     *
+     * @response 200 scenario="success" {
+     *   "success": true,
+     *   "data": [
+     *     {
+     *       "id": 5,
+     *       "name": "Texas Instruments",
+     *       "slug": "texas-instruments",
+     *       "logo": "logos/ti.png"
+     *     }
+     *   ],
+     *   "pagination": {
+     *     "total": 42,
+     *     "per_page": 20,
+     *     "current_page": 1,
+     *     "last_page": 3
+     *   }
+     * }
+     *
+     * @authenticated
+     */
     public function index(Request $request)
     {
         $query = Brand::query();

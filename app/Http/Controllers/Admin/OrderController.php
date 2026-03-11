@@ -10,6 +10,12 @@ use Illuminate\Validation\Rule;
 
 class OrderController extends Controller
 {
+    public function __construct()
+    {
+        $this->middleware('permission:orders.view')->only(['index', 'show', 'timeline']);
+        $this->middleware('permission:orders.update')->only(['updateStatus']);
+    }
+
     public function index(Request $request)
     {
         $query = Order::query();

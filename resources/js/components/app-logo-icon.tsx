@@ -1,6 +1,6 @@
-import { SVGAttributes } from 'react';
+import { ImgHTMLAttributes } from 'react';
 
-export default function AppLogoIcon(props: SVGAttributes<SVGElement>) {
+export default function AppLogoIcon(props: ImgHTMLAttributes<HTMLImageElement>) {
     return (
         <img {...props} src="/logo.svg" alt="App Logo" />
     );

@@ -9,6 +9,11 @@ use Illuminate\Http\Request;
 
 class ProductImageController extends Controller
 {
+    public function __construct()
+    {
+        $this->middleware('permission:products.update')->only(['store', 'destroy', 'primary']);
+    }
+
     public function store(Request $request, Product $product)
     {
         $validated = $request->validate([
