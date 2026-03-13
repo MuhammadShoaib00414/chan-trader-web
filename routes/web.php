@@ -14,9 +14,7 @@ use Inertia\Inertia;
 use Illuminate\Support\Facades\Mail;
 
 Route::get('/', function () {
-    return auth()->check()
-        ? to_route('dashboard')
-        : to_route('login');
+    return response('OK', 200);
 })->name('home');
 
 Route::middleware(['auth', 'verified'])->group(function () {
@@ -140,6 +138,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->middleware('permission:edit roles');
         Route::delete('roles/{role}', [\App\Http\Controllers\Api\RoleController::class, 'destroy'])
             ->middleware('permission:delete roles');
+
+        // Permissions (session-auth for tests and Inertia)
+        Route::get('permissions', [\App\Http\Controllers\Api\PermissionController::class, 'index']);
+        Route::get('permissions/grouped', [\App\Http\Controllers\Api\PermissionController::class, 'grouped']);
+        Route::get('permissions/{permission}', [\App\Http\Controllers\Api\PermissionController::class, 'show']);
 
         Route::prefix('admin')->group(function () {
             Route::post('vendors', [\App\Http\Controllers\Admin\VendorController::class, 'store'])

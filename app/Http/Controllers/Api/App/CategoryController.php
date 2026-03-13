@@ -24,7 +24,7 @@ class CategoryController extends AppBaseController
      *         "id": 9,
      *         "name": "Capacitors",
      *         "slug": "capacitors",
-     *         "icon": "category-icons/capacitors.svg",
+     *         "image": "category-icons/capacitors.svg",
      *         "is_active": true
      *       }
      *     ]
@@ -40,7 +40,7 @@ class CategoryController extends AppBaseController
             $q = $request->string('q')->toString();
             $query->where('name', 'like', "%{$q}%");
         }
-        $items = $query->get(['id', 'name', 'slug', 'icon', 'is_active']);
+        $items = $query->get(['id', 'name', 'slug', 'image', 'is_active']);
 
         return $this->successResponse(['items' => $items], 'Categories retrieved');
     }

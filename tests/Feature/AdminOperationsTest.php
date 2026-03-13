@@ -19,10 +19,16 @@ it('allows admin to create a product variant', function () {
         'name' => 'Main Store',
         'slug' => 'main-store',
     ]);
+    $category = \App\Models\Category::create([
+        'name' => 'Ops Category',
+        'slug' => 'ops-category',
+        'is_active' => true,
+        'sort_order' => 1,
+    ]);
 
     $product = \App\Models\Product::create([
         'store_id' => $store->id,
-        'category_id' => 1,
+        'category_id' => $category->id,
         'name' => 'Test Product',
         'slug' => 'test-product-'.Str::random(5),
         'sku' => 'SKU-'.Str::random(6),
@@ -50,10 +56,16 @@ it('allows admin to update order status', function () {
         'name' => 'Ops Store',
         'slug' => 'ops-store',
     ]);
+    $category = \App\Models\Category::create([
+        'name' => 'Ops Category',
+        'slug' => 'ops-category-2',
+        'is_active' => true,
+        'sort_order' => 1,
+    ]);
 
     $product = Product::create([
         'store_id' => $store->id,
-        'category_id' => 1,
+        'category_id' => $category->id,
         'name' => 'Order Prod',
         'slug' => 'order-prod-'.Str::random(5),
         'sku' => 'SKU-'.Str::random(6),

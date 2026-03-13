@@ -20,12 +20,20 @@ trait OtpTrait
 
         // Save OTP and expiry time (15 minutes from now)
         $user->update([
-            'otp' => $otp,
+            'otp' => Hash::make($otp),
             'otp_expires_at' => Carbon::now()->addMinutes(config('app.otp_expire_time')),
         ]);
 
         // Send OTP email
-        Mail::to($user->email)->send(new SendOtpMail($otp, $type));
+        try {
+            Mail::to($user->email)->send(new SendOtpMail($otp, $type));
+        } catch (\Throwable $e) {
+            Log::error('Failed to send OTP email', [
+                'email' => $user->email,
+                'type' => $type,
+                'error' => $e->getMessage(),
+            ]);
+        }
 
         // Log OTP for development purposes
         Log::info('OTP Generated', [
