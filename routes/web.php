@@ -14,7 +14,10 @@ use Inertia\Inertia;
 use Illuminate\Support\Facades\Mail;
 
 Route::get('/', function () {
-    return response('OK', 200);
+    if (auth()->check()) {
+        return redirect()->route('dashboard');
+    }
+    return redirect()->route('login');
 })->name('home');
 
 Route::middleware(['auth', 'verified'])->group(function () {

@@ -6,6 +6,7 @@ export function csrfToken(): string {
 export function requestJson(method: string, url: string, data?: unknown) {
   return fetch(url, {
     method,
+    credentials: 'same-origin',
     headers: {
       'Content-Type': 'application/json',
       Accept: 'application/json',
@@ -23,6 +24,7 @@ export const delJson = (url: string, data?: unknown) => requestJson('DELETE', ur
 export function requestForm(method: string, url: string, form: FormData) {
   return fetch(url, {
     method,
+    credentials: 'same-origin',
     headers: {
       Accept: 'application/json',
       'X-Requested-With': 'XMLHttpRequest',
