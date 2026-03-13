@@ -1,21 +1,20 @@
-// Components
 import PasswordResetLinkController from '@/actions/App/Http/Controllers/Auth/PasswordResetLinkController';
-import { login } from '@/routes';
-import { Form, Head } from '@inertiajs/react';
+import { Form, Head, Link } from '@inertiajs/react';
 import { LoaderCircle } from 'lucide-react';
 
 import InputError from '@/components/input-error';
-import TextLink from '@/components/text-link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import AuthLayout from '@/layouts/auth-layout';
+import { login } from '@/routes';
 
 export default function ForgotPassword({ status }: { status?: string }) {
     return (
         <AuthLayout
             title="Forgot password"
             description="Enter your email to receive a password reset link"
+            layout="split"
         >
             <Head title="Forgot password" />
 
@@ -26,6 +25,7 @@ export default function ForgotPassword({ status }: { status?: string }) {
             )}
 
             <div className="space-y-6">
+               
                 <Form {...PasswordResetLinkController.store.form()}>
                     {({ processing, errors }) => (
                         <>
@@ -58,11 +58,16 @@ export default function ForgotPassword({ status }: { status?: string }) {
                         </>
                     )}
                 </Form>
-
-                <div className="space-x-1 text-center text-sm text-muted-foreground">
-                    <span>Or, return to</span>
-                    <TextLink href={login()}>log in</TextLink>
+                 <div className="flex items-center justify-center">
+                    <Link
+                        href={login()}
+                        className="inline-flex items-center text-sm text-muted-foreground hover:text-[#FF3A3D]"
+                    >
+                        <span className="mr-1">←</span> Back to sign
+                    </Link>
                 </div>
+
+                
             </div>
         </AuthLayout>
     );

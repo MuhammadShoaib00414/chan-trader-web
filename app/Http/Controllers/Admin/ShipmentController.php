@@ -31,19 +31,21 @@ class ShipmentController extends Controller
             'status' => 'pending',
             'cost' => $validated['cost'] ?? 0,
         ]);
+
         return response()->json(['success' => true, 'data' => $shipment], 201);
     }
 
     public function update(Request $request, Shipment $shipment)
     {
         $validated = $request->validate([
-            'status' => ['sometimes', Rule::in(['pending','shipped','in_transit','delivered','failed','returned'])],
+            'status' => ['sometimes', Rule::in(['pending', 'shipped', 'in_transit', 'delivered', 'failed', 'returned'])],
             'carrier' => ['nullable', 'string', 'max:80'],
             'tracking_no' => ['nullable', 'string', 'max:120'],
             'shipped_at' => ['nullable', 'date'],
             'delivered_at' => ['nullable', 'date'],
         ]);
         $shipment->update($validated);
+
         return response()->json(['success' => true, 'data' => $shipment]);
     }
 }

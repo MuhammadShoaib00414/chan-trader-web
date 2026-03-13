@@ -33,4 +33,12 @@ export function requestForm(method: string, url: string, form: FormData) {
 }
 
 export const postForm = (url: string, form: FormData) => requestForm('POST', url, form)
-export const patchForm = (url: string, form: FormData) => requestForm('PATCH', url, form)
+/**
+ * Important:
+ * Most PHP setups don't handle multipart file uploads for true PATCH/PUT requests.
+ * Use method spoofing (POST + _method=PATCH) so `$request->hasFile()` works reliably.
+ */
+export const patchForm = (url: string, form: FormData) => {
+  if (!form.has('_method')) form.append('_method', 'PATCH')
+  return requestForm('POST', url, form)
+}

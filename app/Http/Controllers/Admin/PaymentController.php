@@ -23,6 +23,7 @@ class PaymentController extends Controller
             $query->where('order_id', (int) $request->get('order_id'));
         }
         $items = $query->latest()->paginate(20);
+
         return response()->json(['success' => true, 'data' => $items->items(), 'pagination' => [
             'total' => $items->total(),
             'per_page' => $items->perPage(),
@@ -47,6 +48,7 @@ class PaymentController extends Controller
             'paid_at' => now(),
         ]);
         $order->update(['payment_status' => 'paid']);
+
         return response()->json(['success' => true, 'data' => $payment], 201);
     }
 
@@ -64,6 +66,7 @@ class PaymentController extends Controller
             'paid_at' => now(),
         ]);
         $order->update(['payment_status' => 'refunded']);
+
         return response()->json(['success' => true, 'data' => $payment]);
     }
 }

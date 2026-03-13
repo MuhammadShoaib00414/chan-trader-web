@@ -19,6 +19,8 @@ import {
 import { SetPermissionsDialog } from '@/components/set-permissions-dialog';
 import { router } from '@inertiajs/react';
 import { Edit, MoreHorizontal, Trash2 } from 'lucide-react';
+import { useState } from 'react';
+import { ToastStack } from './ui/toast-stack';
 
 interface Role {
     id: number;
@@ -38,6 +40,13 @@ interface RolesTableProps {
 }
 
 export function RolesTable({ roles, allPermissions }: RolesTableProps) {
+    const [toasts, setToasts] = useState<Array<{ id: number; title: string; variant: 'success' | 'error' }>>([]);
+    const dismissToast = (id: number) => setToasts((ts) => ts.filter((t) => t.id !== id));
+    const showToast = (title: string, variant: 'success' | 'error' = 'success') => {
+        const id = Date.now() + Math.floor(Math.random() * 1000);
+        setToasts((ts) => [...ts, { id, title, variant }]);
+        setTimeout(() => dismissToast(id), 2500);
+    };
     const handleDelete = (roleId: number) => {
         if (confirm('Are you sure you want to delete this role?')) {
             router.delete(`/api/roles/${roleId}`, {
@@ -114,6 +123,7 @@ export function RolesTable({ roles, allPermissions }: RolesTableProps) {
                                     <SetPermissionsDialog
                                         role={role}
                                         allPermissions={allPermissions}
+                                        onSaved={(msg) => showToast(msg, 'success')}
                                     />
                                     <DropdownMenu>
                                         <DropdownMenuTrigger asChild>
@@ -153,6 +163,7 @@ export function RolesTable({ roles, allPermissions }: RolesTableProps) {
                     ))}
                 </TableBody>
             </Table>
+            <ToastStack toasts={toasts} onDismiss={dismissToast} />
         </div>
     );
 }

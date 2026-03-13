@@ -53,7 +53,7 @@ class ProductController extends AppBaseController
     {
         $query = Product::query()
             ->with(['images' => function ($q) {
-                $q->where('is_primary', true)->select('id','product_id','path','is_primary');
+                $q->where('is_primary', true)->select('id', 'product_id', 'path', 'is_primary');
             }])
             ->with(['store:id,name', 'category:id,name']);
 
@@ -71,8 +71,8 @@ class ProductController extends AppBaseController
             $query->where('store_id', (int) $request->get('store_id'));
         }
 
-        $sortBy = in_array($request->get('sort_by'), ['created_at','price','name']) ? $request->get('sort_by') : 'created_at';
-        $sortDir = in_array($request->get('sort_dir'), ['asc','desc']) ? $request->get('sort_dir') : 'desc';
+        $sortBy = in_array($request->get('sort_by'), ['created_at', 'price', 'name']) ? $request->get('sort_by') : 'created_at';
+        $sortDir = in_array($request->get('sort_dir'), ['asc', 'desc']) ? $request->get('sort_dir') : 'desc';
         $perPage = max(1, (int) ($request->get('per_page') ?? 20));
 
         $products = $query->orderBy($sortBy, $sortDir)->paginate($perPage)->withQueryString();
@@ -84,7 +84,9 @@ class ProductController extends AppBaseController
                 'slug' => $p->slug,
                 'sku' => $p->sku,
                 'price' => $p->price,
-                'thumb' => optional($p->images->first())->path,
+                'thumb' => $p->feature_image ?: optional($p->images->first())->path,
+                'feature_image' => $p->feature_image,
+                'top_image' => $p->top_image,
                 'has_primary_image' => $p->images->isNotEmpty(),
                 'store' => $p->store ? ['id' => $p->store->id, 'name' => $p->store->name] : null,
                 'category' => $p->category ? ['id' => $p->category->id, 'name' => $p->category->name] : null,

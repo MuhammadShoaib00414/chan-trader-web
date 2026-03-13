@@ -122,6 +122,7 @@ class LoginController extends AppBaseController
      * @group Auth
      *
      * Grant type is handled on the server.
+     *
      * @bodyParam refresh_token string required Valid refresh token. Example: def50200...
      *
      * @response 200 scenario="success" {

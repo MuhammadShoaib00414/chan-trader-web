@@ -50,6 +50,7 @@ class BrandController extends Controller
             $query->where('name', 'like', "%{$q}%");
         }
         $brands = $query->orderBy('name')->paginate(20);
+
         return response()->json(['success' => true, 'data' => $brands->items(), 'pagination' => [
             'total' => $brands->total(),
             'per_page' => $brands->perPage(),
@@ -60,14 +61,26 @@ class BrandController extends Controller
 
     public function store(Request $request)
     {
-        $validated = $request->validate([
+        $rules = [
             'name' => ['required', 'string', 'max:120', 'unique:brands,name'],
             'slug' => ['required', 'string', 'max:140', 'unique:brands,slug'],
-            'logo' => ['nullable', 'string', 'max:255'],
+            'sort_order' => ['nullable', 'integer'],
             'description' => ['nullable', 'string'],
-        ]);
+        ];
+        $rules['logo'] = $request->hasFile('logo')
+            ? ['nullable', 'file', 'mimes:png,jpg,jpeg,svg', 'max:2048']
+            : ['nullable', 'string', 'max:255'];
+        $validated = $request->validate($rules);
+        if ($request->hasFile('logo')) {
+            $path = $request->file('logo')->store('brand-logos', 'public');
+            $validated['logo'] = $path;
+        }
+        if (! array_key_exists('sort_order', $validated) || $validated['sort_order'] === null) {
+            $validated['sort_order'] = (Brand::max('sort_order') ?? 0) + 1;
+        }
         $brand = Brand::create($validated);
-        return response()->json(['success' => true, 'data' => $brand], 201);
+
+        return response()->json(['success' => true, 'message' => 'Brand created.', 'data' => $brand], 201);
     }
 
     public function show(Brand $brand)
@@ -77,19 +90,29 @@ class BrandController extends Controller
 
     public function update(Request $request, Brand $brand)
     {
-        $validated = $request->validate([
+        $rules = [
             'name' => ['sometimes', 'string', 'max:120', Rule::unique('brands', 'name')->ignore($brand->id)],
             'slug' => ['sometimes', 'string', 'max:140', Rule::unique('brands', 'slug')->ignore($brand->id)],
-            'logo' => ['nullable', 'string', 'max:255'],
+            'sort_order' => ['nullable', 'integer'],
             'description' => ['nullable', 'string'],
-        ]);
+        ];
+        $rules['logo'] = $request->hasFile('logo')
+            ? ['nullable', 'file', 'mimes:png,jpg,jpeg,svg', 'max:2048']
+            : ['nullable', 'string', 'max:255'];
+        $validated = $request->validate($rules);
+        if ($request->hasFile('logo')) {
+            $path = $request->file('logo')->store('brand-logos', 'public');
+            $validated['logo'] = $path;
+        }
         $brand->update($validated);
-        return response()->json(['success' => true, 'data' => $brand]);
+
+        return response()->json(['success' => true, 'message' => 'Brand updated.', 'data' => $brand]);
     }
 
     public function destroy(Brand $brand)
     {
         $brand->delete();
-        return response()->json(['success' => true]);
+
+        return response()->json(['success' => true, 'message' => 'Brand deleted.']);
     }
 }

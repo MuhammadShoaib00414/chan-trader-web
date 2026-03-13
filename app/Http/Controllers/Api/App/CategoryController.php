@@ -40,7 +40,8 @@ class CategoryController extends AppBaseController
             $q = $request->string('q')->toString();
             $query->where('name', 'like', "%{$q}%");
         }
-        $items = $query->get(['id','name','slug','icon','is_active']);
+        $items = $query->get(['id', 'name', 'slug', 'icon', 'is_active']);
+
         return $this->successResponse(['items' => $items], 'Categories retrieved');
     }
 }

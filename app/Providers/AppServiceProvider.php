@@ -2,14 +2,14 @@
 
 namespace App\Providers;
 
+use App\Policies\PermissionPolicy;
+use App\Policies\RolePolicy;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\ServiceProvider;
 use Laravel\Passport\Passport;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
-use App\Policies\RolePolicy;
-use App\Policies\PermissionPolicy;
-use Illuminate\Support\Facades\Schema;
 
 class AppServiceProvider extends ServiceProvider
 {

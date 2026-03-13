@@ -66,6 +66,7 @@ class UserController extends AppBaseController
             'last_name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email',
             'password' => 'required|string|min:8|confirmed',
+            'role' => 'nullable|string|exists:roles,name',
             'roles' => 'array',
             'roles.*' => 'exists:roles,name',
             'status' => 'boolean',
@@ -80,8 +81,10 @@ class UserController extends AppBaseController
             'email_verified_at' => now(),
         ]);
 
-        if (isset($validated['roles'])) {
-            $user->assignRole($validated['roles']);
+        $roleName = $validated['role']
+            ?? (isset($validated['roles']) && is_array($validated['roles']) ? ($validated['roles'][0] ?? null) : null);
+        if ($roleName) {
+            $user->assignRole($roleName);
         }
 
         return $this->successResponse([
@@ -113,6 +116,7 @@ class UserController extends AppBaseController
             'last_name' => 'sometimes|string|max:255',
             'email' => ['sometimes', 'email', Rule::unique('users')->ignore($user->id)],
             'password' => 'sometimes|string|min:8|confirmed',
+            'role' => 'nullable|string|exists:roles,name',
             'roles' => 'sometimes|array',
             'roles.*' => 'exists:roles,name',
             'status' => 'sometimes|boolean',
@@ -124,8 +128,12 @@ class UserController extends AppBaseController
 
         $user->update(collect($validated)->except('roles')->toArray());
 
-        if (isset($validated['roles'])) {
-            $user->syncRoles($validated['roles']);
+        if (isset($validated['role']) || isset($validated['roles'])) {
+            $roleName = $validated['role']
+                ?? (isset($validated['roles']) && is_array($validated['roles']) ? ($validated['roles'][0] ?? null) : null);
+            if ($roleName) {
+                $user->syncRoles([$roleName]);
+            }
         }
 
         return $this->successResponse([
@@ -153,11 +161,12 @@ class UserController extends AppBaseController
         $this->authorize('update', $user);
 
         $validated = $request->validate([
-            'roles' => 'required|array',
+            'roles' => 'required|array|min:1',
             'roles.*' => 'exists:roles,name',
         ]);
 
-        $user->syncRoles($validated['roles']);
+        $single = array_values($validated['roles'])[0];
+        $user->syncRoles([$single]);
 
         return $this->successResponse([
             'user' => new UserResource($user->fresh()->load('roles.permissions')),

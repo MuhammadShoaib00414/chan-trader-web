@@ -35,13 +35,14 @@ class RoleController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|unique:roles,name',
             'permissions' => 'array',
-            'permissions.*' => 'exists:permissions,name',
         ]);
 
         $role = Role::create(['name' => $validated['name']]);
 
         if (isset($validated['permissions'])) {
-            $role->givePermissionTo($validated['permissions']);
+            $expanded = $this->expandPermissionAliases($validated['permissions']);
+            $final = Permission::whereIn('name', $expanded)->pluck('name')->all();
+            $role->givePermissionTo($final);
         }
 
         return response()->json([
@@ -74,13 +75,14 @@ class RoleController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|unique:roles,name,'.$role->id,
             'permissions' => 'array',
-            'permissions.*' => 'exists:permissions,name',
         ]);
 
         $role->update(['name' => $validated['name']]);
 
         if (isset($validated['permissions'])) {
-            $role->syncPermissions($validated['permissions']);
+            $expanded = $this->expandPermissionAliases($validated['permissions']);
+            $final = Permission::whereIn('name', $expanded)->pluck('name')->all();
+            $role->syncPermissions($final);
         }
 
         return response()->json([
@@ -116,5 +118,78 @@ class RoleController extends Controller
             'success' => true,
             'data' => $permissions,
         ]);
+    }
+
+    /**
+     * Expand UI-space permissions into internal dotted permissions used in middleware.
+     *
+     * @param array<string> $names
+     * @return array<string>
+     */
+    protected function expandPermissionAliases(array $names): array
+    {
+        $aliasMap = [
+            // Stores
+            'view stores' => ['stores.view'],
+            'create stores' => ['stores.manage_staff'],
+            'edit stores' => ['stores.manage_staff'],
+            'delete stores' => ['stores.manage_staff'],
+            'approve stores' => ['stores.approve'],
+            'suspend stores' => ['stores.suspend'],
+            // Categories
+            'view categories' => ['categories.manage'],
+            'create categories' => ['categories.manage'],
+            'edit categories' => ['categories.manage'],
+            'delete categories' => ['categories.manage'],
+            // Brands
+            'view brands' => ['brands.manage'],
+            'create brands' => ['brands.manage'],
+            'edit brands' => ['brands.manage'],
+            'delete brands' => ['brands.manage'],
+            // Products
+            'view products' => ['products.view'],
+            'create products' => ['products.create'],
+            'edit products' => ['products.update', 'products.publish'],
+            'delete products' => ['products.delete'],
+            // Orders
+            'view orders' => ['orders.view'],
+            'create orders' => ['orders.view'],
+            'edit orders' => ['orders.update'],
+            'delete orders' => ['orders.refund'],
+            // Shipments
+            'view shipments' => ['shipments.view'],
+            'create shipments' => ['shipments.update'],
+            'edit shipments' => ['shipments.update'],
+            'delete shipments' => ['shipments.update'],
+            // Payments
+            'view payments' => ['payments.view'],
+            'create payments' => ['payments.capture'],
+            'edit payments' => ['payments.capture'],
+            'delete payments' => ['payments.capture'],
+            // Settings
+            'view settings' => ['view settings'],
+            'edit settings' => ['edit settings'],
+            // Users
+            'view users' => ['view users'],
+            'create users' => ['create users'],
+            'edit users' => ['edit users'],
+            'delete users' => ['delete users'],
+            // Roles
+            'view roles' => ['view roles'],
+            'create roles' => ['create roles'],
+            'edit roles' => ['edit roles'],
+            'delete roles' => ['delete roles'],
+            // Permissions
+            'view permissions' => ['view permissions'],
+        ];
+
+        $expanded = [];
+        foreach ($names as $n) {
+            $expanded[] = $n;
+            foreach ($aliasMap[$n] ?? [] as $alias) {
+                $expanded[] = $alias;
+            }
+        }
+        return array_values(array_unique($expanded));
     }
 }

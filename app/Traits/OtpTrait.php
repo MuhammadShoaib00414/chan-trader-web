@@ -51,20 +51,24 @@ trait OtpTrait
 
         if (! $user->otp || ! $user->otp_expires_at) {
             Log::warning('OTP verification failed', array_merge($logData, ['reason' => 'no_otp_or_expired']));
+
             return [false, 'No OTP found or OTP expired'];
         }
 
         if (Carbon::now()->isAfter($user->otp_expires_at)) {
             Log::warning('OTP verification failed', array_merge($logData, ['reason' => 'expired']));
+
             return [false, 'OTP has expired'];
         }
 
         if (! Hash::check($otp, $user->otp)) {
             Log::warning('OTP verification failed', array_merge($logData, ['reason' => 'invalid']));
+
             return [false, 'Invalid OTP'];
         }
 
         Log::info('OTP verified successfully', $logData);
+
         return [true, null];
     }
 }

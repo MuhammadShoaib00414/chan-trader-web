@@ -18,6 +18,8 @@ class Product extends Model
         'sku',
         'short_description',
         'description',
+        'feature_image',
+        'top_image',
         'price',
         'compare_at',
         'unit',

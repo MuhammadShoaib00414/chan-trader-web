@@ -30,6 +30,7 @@ class ProductVariantController extends Controller
             'is_active' => ['boolean'],
         ]);
         $variant = $product->variants()->create($validated);
+
         return response()->json(['success' => true, 'data' => $variant], 201);
     }
 
@@ -51,6 +52,7 @@ class ProductVariantController extends Controller
             'is_active' => ['boolean'],
         ]);
         $variant->update($validated);
+
         return response()->json(['success' => true, 'data' => $variant]);
     }
 
@@ -60,6 +62,7 @@ class ProductVariantController extends Controller
             abort(404);
         }
         $variant->delete();
+
         return response()->json(['success' => true]);
     }
 }

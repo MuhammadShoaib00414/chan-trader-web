@@ -52,6 +52,7 @@ class CategoryController extends Controller
             $query->where('name', 'like', "%{$q}%");
         }
         $categories = $query->orderBy('sort_order')->orderBy('name')->paginate(20);
+
         return response()->json(['success' => true, 'data' => $categories->items(), 'pagination' => [
             'total' => $categories->total(),
             'per_page' => $categories->perPage(),
@@ -66,16 +67,23 @@ class CategoryController extends Controller
             'parent_id' => ['nullable', 'exists:categories,id'],
             'name' => ['required', 'string', 'max:120'],
             'slug' => ['required', 'string', 'max:140', 'unique:categories,slug'],
-            'icon' => ['nullable', 'file', 'mimes:png,jpg,jpeg,svg', 'max:2048'],
+            'image' => ['nullable', 'file', 'mimes:png,jpg,jpeg,svg', 'max:2048'],
             'sort_order' => ['nullable', 'integer'],
             'is_active' => ['boolean'],
         ]);
-        if ($request->hasFile('icon')) {
-            $path = $request->file('icon')->store('category-icons', 'public');
-            $validated['icon'] = $path;
+        if ($request->hasFile('image')) {
+            $path = $request->file('image')->store('category-images', 'public');
+            $validated['image'] = $path;
+        } elseif ($request->hasFile('icon')) {
+            $path = $request->file('icon')->store('category-images', 'public');
+            $validated['image'] = $path;
+        }
+        if (! array_key_exists('sort_order', $validated) || $validated['sort_order'] === null) {
+            $validated['sort_order'] = (Category::max('sort_order') ?? 0) + 1;
         }
         $category = Category::create($validated);
-        return response()->json(['success' => true, 'data' => $category], 201);
+
+        return response()->json(['success' => true, 'message' => 'Category created.', 'data' => $category], 201);
     }
 
     public function show(Category $category)
@@ -89,21 +97,26 @@ class CategoryController extends Controller
             'parent_id' => ['nullable', 'exists:categories,id'],
             'name' => ['sometimes', 'string', 'max:120'],
             'slug' => ['sometimes', 'string', 'max:140', Rule::unique('categories', 'slug')->ignore($category->id)],
-            'icon' => ['nullable', 'file', 'mimes:png,jpg,jpeg,svg', 'max:2048'],
+            'image' => ['nullable', 'file', 'mimes:png,jpg,jpeg,svg', 'max:2048'],
             'sort_order' => ['nullable', 'integer'],
             'is_active' => ['boolean'],
         ]);
-        if ($request->hasFile('icon')) {
-            $path = $request->file('icon')->store('category-icons', 'public');
-            $validated['icon'] = $path;
+        if ($request->hasFile('image')) {
+            $path = $request->file('image')->store('category-images', 'public');
+            $validated['image'] = $path;
+        } elseif ($request->hasFile('icon')) {
+            $path = $request->file('icon')->store('category-images', 'public');
+            $validated['image'] = $path;
         }
         $category->update($validated);
-        return response()->json(['success' => true, 'data' => $category]);
+
+        return response()->json(['success' => true, 'message' => 'Category updated.', 'data' => $category]);
     }
 
     public function destroy(Category $category)
     {
         $category->delete();
-        return response()->json(['success' => true]);
+
+        return response()->json(['success' => true, 'message' => 'Category deleted.']);
     }
 }

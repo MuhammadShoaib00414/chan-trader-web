@@ -28,6 +28,7 @@ class StoreController extends Controller
             $query->where('name', 'like', "%{$q}%");
         }
         $stores = $query->latest()->paginate(20);
+
         return response()->json(['success' => true, 'data' => $stores->items(), 'pagination' => [
             'total' => $stores->total(),
             'per_page' => $stores->perPage(),
@@ -49,6 +50,7 @@ class StoreController extends Controller
             'description' => ['nullable', 'string'],
         ]);
         $store = Store::create($validated);
+
         return response()->json(['success' => true, 'data' => $store], 201);
     }
 
@@ -70,18 +72,21 @@ class StoreController extends Controller
             'status' => ['sometimes', Rule::in(['pending', 'active', 'suspended'])],
         ]);
         $store->update($validated);
+
         return response()->json(['success' => true, 'data' => $store]);
     }
 
     public function approve(Store $store)
     {
         $store->update(['status' => 'active', 'verified_at' => now()]);
+
         return response()->json(['success' => true, 'data' => $store]);
     }
 
     public function suspend(Store $store)
     {
         $store->update(['status' => 'suspended']);
+
         return response()->json(['success' => true, 'data' => $store]);
     }
 }

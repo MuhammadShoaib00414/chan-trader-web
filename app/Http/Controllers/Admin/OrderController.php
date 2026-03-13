@@ -27,12 +27,13 @@ class OrderController extends Controller
         }
         if ($request->filled('store_id')) {
             $storeId = (int) $request->get('store_id');
-            $query->whereHas('items', fn($q) => $q->where('store_id', $storeId));
+            $query->whereHas('items', fn ($q) => $q->where('store_id', $storeId));
         }
         if ($request->filled('user_id')) {
             $query->where('user_id', (int) $request->get('user_id'));
         }
         $orders = $query->latest()->paginate(20);
+
         return response()->json(['success' => true, 'data' => $orders->items(), 'pagination' => [
             'total' => $orders->total(),
             'per_page' => $orders->perPage(),
@@ -49,7 +50,7 @@ class OrderController extends Controller
     public function updateStatus(Request $request, Order $order)
     {
         $validated = $request->validate([
-            'to_status' => ['required', Rule::in(['pending','confirmed','packed','shipped','delivered','cancelled','refunded'])],
+            'to_status' => ['required', Rule::in(['pending', 'confirmed', 'packed', 'shipped', 'delivered', 'cancelled', 'refunded'])],
             'comment' => ['nullable', 'string', 'max:255'],
         ]);
         $from = $order->status;
@@ -62,12 +63,14 @@ class OrderController extends Controller
             'comment' => $validated['comment'] ?? null,
             'created_at' => now(),
         ]);
+
         return response()->json(['success' => true, 'data' => $order]);
     }
 
     public function timeline(Order $order)
     {
         $items = OrderStatusHistory::where('order_id', $order->id)->orderBy('created_at')->get();
+
         return response()->json(['success' => true, 'data' => $items]);
     }
 }

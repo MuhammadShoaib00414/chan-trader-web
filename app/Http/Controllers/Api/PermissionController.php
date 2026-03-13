@@ -67,6 +67,7 @@ class PermissionController extends Controller
         $grouped = $permissions->groupBy(function ($permission) {
             // Group by first word (e.g., "view users" -> "users")
             $parts = explode(' ', $permission->name);
+
             return count($parts) > 1 ? $parts[1] : 'other';
         });
 

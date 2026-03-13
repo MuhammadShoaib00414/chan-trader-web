@@ -13,7 +13,7 @@ return new class extends Migration
             $table->unsignedBigInteger('product_variant_id')->nullable();
             $table->foreignId('product_id')->constrained('products')->cascadeOnDelete();
             $table->integer('qty');
-            $table->enum('type', ['in','out','reserve','release','adjust']);
+            $table->enum('type', ['in', 'out', 'reserve', 'release', 'adjust']);
             $table->string('reason', 120)->nullable();
             $table->unsignedBigInteger('reference_id')->nullable();
             $table->string('reference_type', 60)->nullable();

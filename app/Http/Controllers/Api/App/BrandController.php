@@ -39,7 +39,8 @@ class BrandController extends AppBaseController
             $q = $request->string('q')->toString();
             $query->where('name', 'like', "%{$q}%");
         }
-        $items = $query->get(['id','name','slug','logo']);
+        $items = $query->get(['id', 'name', 'slug', 'logo']);
+
         return $this->successResponse(['items' => $items], 'Brands retrieved');
     }
 }

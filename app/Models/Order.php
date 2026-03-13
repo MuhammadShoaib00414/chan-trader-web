@@ -3,6 +3,9 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Models\OrderItem;
+use App\Models\Payment;
+use App\Models\Shipment;
 
 class Order extends Model
 {
@@ -20,4 +23,19 @@ class Order extends Model
         'payment_status',
         'notes',
     ];
+
+    public function items()
+    {
+        return $this->hasMany(OrderItem::class);
+    }
+
+    public function payments()
+    {
+        return $this->hasMany(Payment::class);
+    }
+
+    public function shipments()
+    {
+        return $this->hasMany(Shipment::class);
+    }
 }

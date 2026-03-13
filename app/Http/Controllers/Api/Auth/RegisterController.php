@@ -4,10 +4,8 @@ namespace App\Http\Controllers\Api\Auth;
 
 use App\Http\Controllers\AppBaseController;
 use App\Http\Requests\Api\RegisterRequest;
-use App\Http\Resources\UserResource;
 use App\Models\User;
 use App\Traits\OtpTrait;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class RegisterController extends AppBaseController

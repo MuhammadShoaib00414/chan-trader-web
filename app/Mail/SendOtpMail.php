@@ -33,6 +33,7 @@ class SendOtpMail extends Mailable implements ShouldQueue
     {
         $label = str_replace('-', ' ', (string) $this->type);
         $label = ucwords($label);
+
         return new Envelope(subject: $label.' OTP');
     }
 

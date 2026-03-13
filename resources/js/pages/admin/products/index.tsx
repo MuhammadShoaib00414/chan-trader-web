@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { postJson } from '@/lib/http';
+import { ToastStack } from '@/components/ui/toast-stack';
 
 export default function ProductsIndex() {
   type ProductItem = {
@@ -20,20 +21,56 @@ export default function ProductsIndex() {
   };
   type CategoryRef = { id: number; name: string };
   type StoreRef = { id: number; name: string };
+  type BrandRef = { id: number; name: string };
   type Pagination = { total: number; per_page: number; current_page: number; last_page: number };
-  const { props } = usePage<{ items: ProductItem[]; categories: CategoryRef[]; stores: StoreRef[]; pagination?: Pagination; filters?: { q?: string; category_id?: string; store_id?: string; sort_by?: string; sort_dir?: string } }>();
-  const items = props.items;
+  const { props } = usePage<{ items: any; categories: CategoryRef[]; stores: StoreRef[]; brands: BrandRef[]; pagination?: Pagination; filters?: { q?: string; category_id?: string; store_id?: string; sort_by?: string; sort_dir?: string } }>();
+  const rawItems = props.items;
+  const items: ProductItem[] = Array.isArray(rawItems)
+    ? rawItems
+    : Array.isArray((rawItems as any)?.data)
+      ? (rawItems as any).data
+      : [];
   const categories = props.categories;
   const stores = props.stores;
+  const brands = props.brands ?? [];
   const pagination = props.pagination;
   const filters = props.filters ?? {};
 
   const [storeId, setStoreId] = useState<number>(stores?.[0]?.id ?? 0);
   const [categoryId, setCategoryId] = useState<number>(categories?.[0]?.id ?? 0);
+  const [brandId, setBrandId] = useState<number>(brands?.[0]?.id ?? 0);
   const [name, setName] = useState('');
   const [slug, setSlug] = useState('');
   const [sku, setSku] = useState('');
   const [price, setPrice] = useState('');
+  const [toasts, setToasts] = useState<Array<{ id: number; title: string; variant: 'success' | 'error' }>>([]);
+
+  const dismissToast = (id: number) => setToasts((ts) => ts.filter((t) => t.id !== id));
+  const showToast = (title: string, variant: 'success' | 'error' = 'success') => {
+    const id = Date.now() + Math.floor(Math.random() * 1000);
+    setToasts((ts) => [...ts, { id, title, variant }]);
+    setTimeout(() => dismissToast(id), 2500);
+  };
+
+  const errorMessageFromResponse = async (res: Response): Promise<string> => {
+    try {
+      const data = (await res.json()) as any;
+      if (data?.message && typeof data.message === 'string') return data.message;
+      const firstError = data?.errors ? Object.values<any>(data.errors)?.flat()?.[0] : null;
+      if (firstError && typeof firstError === 'string') return firstError;
+      return `Request failed (${res.status}).`;
+    } catch {
+      return `Request failed (${res.status}).`;
+    }
+  };
+
+  const slugify = (s: string) =>
+    s
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9\s-]/g, '')
+      .replace(/\s+/g, '-')
+      .replace(/-+/g, '-');
 
   const submitFilters = (e: React.FormEvent) => {
     e.preventDefault();
@@ -65,6 +102,7 @@ export default function ProductsIndex() {
     const res = await postJson('/api/admin/products', {
       store_id: Number(storeId),
       category_id: Number(categoryId),
+      brand_id: brandId ? Number(brandId) : null,
       name, slug, sku,
       price: Number(price),
     });
@@ -73,8 +111,11 @@ export default function ProductsIndex() {
       setSlug('');
       setSku('');
       setPrice('');
+      showToast('Product created.', 'success');
       router.reload({ only: ['items'] });
+      return;
     }
+    showToast(await errorMessageFromResponse(res), 'error');
   };
 
   return (
@@ -133,8 +174,23 @@ export default function ProductsIndex() {
             </select>
           </div>
           <div className="md:col-span-2">
+            <label className="mb-1 block text-sm">Brand (optional)</label>
+            <select className="w-full rounded-md border px-2 py-2" value={String(brandId)} onChange={(e) => setBrandId(Number(e.target.value))}>
+              <option value={0}>None</option>
+              {brands?.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+            </select>
+          </div>
+          <div className="md:col-span-2">
             <label className="mb-1 block text-sm">Name</label>
-            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="MOSFET XYZ" />
+            <Input
+              value={name}
+              onChange={(e) => {
+                const v = e.target.value;
+                setName(v);
+                if (!slug || slug === slugify(name)) setSlug(slugify(v));
+              }}
+              placeholder="MOSFET XYZ"
+            />
           </div>
           <div>
             <label className="mb-1 block text-sm">Slug</label>
@@ -204,6 +260,7 @@ export default function ProductsIndex() {
           </div>
         )}
       </div>
+      <ToastStack toasts={toasts} onDismiss={dismissToast} />
     </AppLayout>
   );
 }

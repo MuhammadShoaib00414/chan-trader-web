@@ -18,11 +18,11 @@ class RegisterRequest extends FormRequest
         if (is_string($phone)) {
             $normalized = preg_replace('/[\s\-\(\)]/', '', $phone);
             if (str_starts_with($normalized, '+92')) {
-                $normalized = '0' . substr($normalized, 3);
+                $normalized = '0'.substr($normalized, 3);
             } elseif (str_starts_with($normalized, '0092')) {
-                $normalized = '0' . substr($normalized, 4);
+                $normalized = '0'.substr($normalized, 4);
             } elseif (str_starts_with($normalized, '92') && strlen($normalized) === 12) {
-                $normalized = '0' . substr($normalized, 2);
+                $normalized = '0'.substr($normalized, 2);
             }
             $phone = $normalized;
         }
@@ -51,7 +51,7 @@ class RegisterRequest extends FormRequest
         return [
             'full_name' => 'required|string|min:3|max:255',
             'email' => 'required|email:rfc,dns|max:255|unique:users,email',
-            'phone_number' => ['required','regex:/^03\d{9}$/','unique:users,phone_number'],
+            'phone_number' => ['required', 'regex:/^03\d{9}$/', 'unique:users,phone_number'],
             'password' => 'required|min:8|confirmed',
             // 'shop_name' => 'required|string|max:255',
             'city_district' => 'required|string|max:255',

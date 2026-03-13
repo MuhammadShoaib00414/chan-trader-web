@@ -23,6 +23,7 @@ class ProductAttributeController extends Controller
             'unit' => ['nullable', 'string', 'max:32'],
         ]);
         $attr = $product->attributes()->create($validated);
+
         return response()->json(['success' => true, 'data' => $attr], 201);
     }
 
@@ -37,6 +38,7 @@ class ProductAttributeController extends Controller
             'unit' => ['nullable', 'string', 'max:32'],
         ]);
         $attribute->update($validated);
+
         return response()->json(['success' => true, 'data' => $attribute]);
     }
 
@@ -46,6 +48,7 @@ class ProductAttributeController extends Controller
             abort(404);
         }
         $attribute->delete();
+
         return response()->json(['success' => true]);
     }
 }

@@ -15,8 +15,8 @@ use App\Traits\OtpTrait;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 
 class OtpController extends AppBaseController
@@ -146,7 +146,7 @@ class OtpController extends AppBaseController
     {
         return $this->sendOTP($request, OtpType::PASSWORD_RESET);
     }
-    
+
     /**
      * Verify email with OTP
      *
@@ -201,6 +201,7 @@ class OtpController extends AppBaseController
 
         if (! $isValid) {
             Log::warning('Email verification failed', ['email' => $request->email, 'reason' => $error]);
+
             return $this->errorResponse($error, 400);
         }
 
@@ -284,6 +285,7 @@ class OtpController extends AppBaseController
 
         if (! $isValid) {
             Log::warning('Password reset OTP failed', ['email' => $request->email, 'reason' => $error]);
+
             return $this->errorResponse($error, 400);
         }
 

@@ -1,54 +1,138 @@
 import AppLayout from '@/layouts/app-layout';
 import { Head, router, usePage } from '@inertiajs/react';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { postJson, patchJson, delJson } from '@/lib/http';
+import { postForm, patchForm, delJson } from '@/lib/http';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Pencil, Trash2, Plus } from 'lucide-react';
+import { Pencil, Trash2, Plus, ArrowUpDown, ChevronUp, ChevronDown } from 'lucide-react';
+import { ToastStack } from '@/components/ui/toast-stack';
+const slugify = (s: string) => s.toLowerCase().trim().replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-').replace(/-+/g, '-');
 
 export default function BrandsIndex() {
-  type BrandItem = { id: number; name: string; slug: string };
+  type BrandItem = { id: number; name: string; slug: string; sort_order: number; logo?: string | null };
   type Pagination = { total: number; per_page: number; current_page: number; last_page: number };
-  type PageProps = { items: BrandItem[]; pagination?: Pagination; filters?: { q?: string } };
+  type PageProps = { items: BrandItem[]; pagination?: Pagination; filters?: { q?: string; sort_by?: string; sort_dir?: 'asc' | 'desc' } };
   const { props } = usePage<PageProps>();
   const items = props.items;
   const pagination = props.pagination;
   const [query, setQuery] = useState<string>(props.filters?.q ?? '');
+  const [sortBy, setSortBy] = useState<string>(props.filters?.sort_by ?? 'name');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>(props.filters?.sort_dir ?? 'asc');
   const [addOpen, setAddOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
-  const [form, setForm] = useState<{ name: string; slug: string }>({ name: '', slug: '' });
+  const [form, setForm] = useState<{ name: string; slug: string; sort_order: string; logoFile?: File | null }>({
+    name: '',
+    slug: '',
+    sort_order: '',
+    logoFile: null,
+  });
   const [editing, setEditing] = useState<BrandItem | null>(null);
   const [deleting, setDeleting] = useState<BrandItem | null>(null);
+  const [toasts, setToasts] = useState<Array<{ id: number; title: string; variant: 'success' | 'error' }>>([]);
 
-  const resetForm = () => setForm({ name: '', slug: '' });
+  const resetForm = () => setForm({ name: '', slug: '', sort_order: '', logoFile: null });
+
+  const dismissToast = (id: number) => setToasts((ts) => ts.filter((t) => t.id !== id));
+
+  const showToast = (title: string, variant: 'success' | 'error' = 'success') => {
+    const id = Date.now() + Math.floor(Math.random() * 1000);
+    setToasts((ts) => [...ts, { id, title, variant }]);
+    setTimeout(() => {
+      dismissToast(id);
+    }, 2500);
+  };
+
+  const errorMessageFromResponse = async (res: Response): Promise<string> => {
+    try {
+      const data = (await res.json()) as any;
+      if (data?.message && typeof data.message === 'string') return data.message;
+      const firstError = data?.errors ? Object.values<any>(data.errors)?.flat()?.[0] : null;
+      if (firstError && typeof firstError === 'string') return firstError;
+      return `Request failed (${res.status}).`;
+    } catch {
+      return `Request failed (${res.status}).`;
+    }
+  };
+
+  const applyFilters = (extra?: Record<string, unknown>) => {
+    router.get(
+      '/admin/brands',
+      { q: query || undefined, sort_by: sortBy, sort_dir: sortDir, ...(extra ?? {}) },
+      { preserveScroll: true, preserveState: true }
+    );
+  };
+
+  const toggleSort = (key: string) => {
+    if (sortBy === key) {
+      const dir = sortDir === 'asc' ? 'desc' : 'asc';
+      setSortDir(dir);
+      applyFilters({ page: 1, sort_dir: dir, sort_by: key });
+    } else {
+      setSortBy(key);
+      setSortDir('asc');
+      applyFilters({ page: 1, sort_dir: 'asc', sort_by: key });
+    }
+  };
+
+  useEffect(() => {
+    setQuery(props.filters?.q ?? '');
+    setSortBy(props.filters?.sort_by ?? 'name');
+    setSortDir((props.filters?.sort_dir as 'asc' | 'desc') ?? 'asc');
+  }, [props.filters]);
 
   const addBrand = async () => {
-    const res = await postJson('/api/admin/brands', { name: form.name, slug: form.slug });
+    const fd = new FormData();
+    fd.append('name', form.name);
+    fd.append('slug', form.slug);
+    if (form.sort_order) fd.append('sort_order', form.sort_order);
+    if (form.logoFile) fd.append('logo', form.logoFile);
+    const res = await postForm('/api/admin/brands', fd);
     if (res.ok) {
       resetForm();
       setAddOpen(false);
-      router.reload({ only: ['items', 'pagination'] });
+      try {
+        const data = (await res.json()) as any;
+        showToast(data?.message ?? 'Brand created.', 'success');
+      } catch {
+        showToast('Brand created.', 'success');
+      }
+      applyFilters();
+      return;
     }
+    showToast(await errorMessageFromResponse(res), 'error');
   };
 
   const startEdit = (b: BrandItem) => {
     setEditing(b);
-    setForm({ name: b.name, slug: b.slug });
+    setForm({ name: b.name, slug: b.slug, sort_order: String(b.sort_order ?? ''), logoFile: null });
     setEditOpen(true);
   };
 
   const saveEdit = async () => {
     if (!editing) return;
-    const res = await patchJson(`/api/admin/brands/${editing.id}`, { name: form.name, slug: form.slug });
+    const fd = new FormData();
+    fd.append('name', form.name);
+    fd.append('slug', form.slug);
+    if (form.sort_order) fd.append('sort_order', form.sort_order);
+    if (form.logoFile) fd.append('logo', form.logoFile);
+    const res = await patchForm(`/api/admin/brands/${editing.id}`, fd);
     if (res.ok) {
       setEditOpen(false);
       setEditing(null);
       resetForm();
-      router.reload({ only: ['items'] });
+      try {
+        const data = (await res.json()) as any;
+        showToast(data?.message ?? 'Brand updated.', 'success');
+      } catch {
+        showToast('Brand updated.', 'success');
+      }
+      applyFilters();
+      return;
     }
+    showToast(await errorMessageFromResponse(res), 'error');
   };
 
   const startDelete = (b: BrandItem) => {
@@ -62,12 +146,20 @@ export default function BrandsIndex() {
     if (res.ok) {
       setDeleteOpen(false);
       setDeleting(null);
-      router.reload({ only: ['items', 'pagination'] });
+      try {
+        const data = (await res.json()) as any;
+        showToast(data?.message ?? 'Brand deleted.', 'success');
+      } catch {
+        showToast('Brand deleted.', 'success');
+      }
+      applyFilters();
+      return;
     }
+    showToast(await errorMessageFromResponse(res), 'error');
   };
 
   const changePage = (page: number) => {
-    router.get('/admin/brands', { page }, { preserveScroll: true, preserveState: true });
+    applyFilters({ page });
   };
 
   const canPrev = useMemo(() => (pagination ? pagination.current_page > 1 : false), [pagination]);
@@ -85,11 +177,18 @@ export default function BrandsIndex() {
               placeholder="Search brands..."
               className="w-[240px]"
             />
-            <Button variant="outline" size="sm" onClick={() => router.get('/admin/brands', { q: query }, { preserveScroll: true, preserveState: true })}>
+            <Button variant="outline" size="sm" onClick={() => applyFilters({ page: 1 })}>
               Search
             </Button>
             {query && (
-              <Button variant="ghost" size="sm" onClick={() => { setQuery(''); router.get('/admin/brands', {}, { preserveScroll: true, preserveState: true })}}>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setQuery('');
+                  applyFilters({ q: undefined, page: 1 });
+                }}
+              >
                 Clear
               </Button>
             )}
@@ -107,11 +206,28 @@ export default function BrandsIndex() {
               <div className="grid gap-3">
                 <div>
                   <label className="mb-1 block text-sm">Name</label>
-                  <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Texas Instruments" />
+                  <Input
+                    value={form.name}
+                    onChange={(e) => setForm({ ...form, name: e.target.value, slug: slugify(e.target.value) })}
+                    placeholder="Texas Instruments"
+                  />
                 </div>
                 <div>
                   <label className="mb-1 block text-sm">Slug</label>
                   <Input value={form.slug} onChange={(e) => setForm({ ...form, slug: e.target.value })} placeholder="texas-instruments" />
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm">Order</label>
+                  <Input
+                    type="number"
+                    placeholder="Auto"
+                    value={form.sort_order}
+                    onChange={(e) => setForm({ ...form, sort_order: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm">Logo</label>
+                  <Input type="file" accept=".png,.jpg,.jpeg,.svg" onChange={(e) => setForm({ ...form, logoFile: e.target.files?.[0] ?? null })} />
                 </div>
               </div>
               <DialogFooter>
@@ -121,27 +237,60 @@ export default function BrandsIndex() {
           </Dialog>
         </div>
 
-        <div className="rounded-xl border bg-card shadow-sm">
+        <div className="rounded-xl border bg-card shadow-md">
           <Table>
             <TableHeader>
               <TableRow className="bg-muted/30">
-                <TableHead className="w-12 text-xs uppercase tracking-wide">ID</TableHead>
-                <TableHead className="text-xs uppercase tracking-wide">Name</TableHead>
-                <TableHead className="text-xs uppercase tracking-wide">Slug</TableHead>
+                <TableHead className="w-16 text-xs uppercase tracking-wide">
+                  <button type="button" className="flex items-center gap-1 cursor-pointer" onClick={() => toggleSort('id')}>
+                    ID {sortBy === 'id' ? (sortDir === 'asc' ? <ChevronUp className="size-3" /> : <ChevronDown className="size-3" />) : <ArrowUpDown className="size-3" />}
+                  </button>
+                </TableHead>
+                <TableHead className="text-xs uppercase tracking-wide">
+                  <button type="button" className="flex items-center gap-1 cursor-pointer" onClick={() => toggleSort('name')}>
+                    Name {sortBy === 'name' ? (sortDir === 'asc' ? <ChevronUp className="size-3" /> : <ChevronDown className="size-3" />) : <ArrowUpDown className="size-3" />}
+                  </button>
+                </TableHead>
+                <TableHead className="text-xs uppercase tracking-wide">
+                  <button type="button" className="flex items-center gap-1 cursor-pointer" onClick={() => toggleSort('slug')}>
+                    Slug {sortBy === 'slug' ? (sortDir === 'asc' ? <ChevronUp className="size-3" /> : <ChevronDown className="size-3" />) : <ArrowUpDown className="size-3" />}
+                  </button>
+                </TableHead>
+                <TableHead className="text-xs uppercase tracking-wide">
+                  <button type="button" className="flex items-center gap-1 cursor-pointer" onClick={() => toggleSort('sort_order')}>
+                    Order {sortBy === 'sort_order' ? (sortDir === 'asc' ? <ChevronUp className="size-3" /> : <ChevronDown className="size-3" />) : <ArrowUpDown className="size-3" />}
+                  </button>
+                </TableHead>
+                <TableHead className="text-xs uppercase tracking-wide">Logo</TableHead>
                 <TableHead className="w-28 text-right text-xs uppercase tracking-wide">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {items?.map((b) => (
-                <TableRow key={b.id} className="hover:bg-muted/20">
+              {items?.map((b, i) => (
+                <TableRow
+                  key={b.id}
+                  className={i % 2 === 1 ? 'bg-muted/10 hover:bg-muted/20 cursor-pointer' : 'hover:bg-muted/20 cursor-pointer'}
+                  onClick={() => startEdit(b)}
+                >
                   <TableCell>{b.id}</TableCell>
                   <TableCell>{b.name}</TableCell>
                   <TableCell>{b.slug}</TableCell>
+                  <TableCell>{b.sort_order}</TableCell>
+                  <TableCell>
+                    {b.logo ? (
+                      <img src={`/storage/${b.logo}`} alt={b.name} className="size-8 rounded-md border object-cover" />
+                    ) : (
+                      <span className="text-xs text-muted-foreground">None</span>
+                    )}
+                  </TableCell>
                   <TableCell className="text-right">
                     <Button
                       variant="ghost"
                       size="icon"
-                      onClick={() => startEdit(b)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        startEdit(b);
+                      }}
                       title="Edit"
                       className="rounded-full border bg-blue-50 text-blue-600 hover:bg-blue-100"
                     >
@@ -150,7 +299,10 @@ export default function BrandsIndex() {
                     <Button
                       variant="ghost"
                       size="icon"
-                      onClick={() => startDelete(b)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        startDelete(b);
+                      }}
                       title="Delete"
                       className="rounded-full border bg-rose-50 text-rose-600 hover:bg-rose-100"
                     >
@@ -171,24 +323,33 @@ export default function BrandsIndex() {
               <div className="text-sm text-muted-foreground">
                 Page {pagination.current_page} of {pagination.last_page} · Total {pagination.total}
               </div>
-              <div className="flex gap-2">
+              <div className="flex items-center gap-2">
                 <Button variant="outline" size="sm" disabled={!canPrev} onClick={() => changePage((pagination?.current_page ?? 1) - 1)}>
                   Prev
                 </Button>
+                {(() => {
+                  const pages: number[] = [];
+                  const start = Math.max(1, (pagination?.current_page ?? 1) - 2);
+                  const end = Math.min(pagination!.last_page, (pagination?.current_page ?? 1) + 2);
+                  if (start > 1) pages.push(1);
+                  for (let n = start; n <= end; n++) pages.push(n);
+                  if (end < pagination!.last_page) pages.push(pagination!.last_page);
+                  return pages;
+                })().map((n, idx, arr) => {
+                  const prev = idx > 0 ? arr[idx - 1] : null;
+                  const isGap = prev !== null && n - prev! > 1;
+                  return (
+                    <div key={`${n}-${idx}`} className="flex items-center">
+                      {isGap && <span className="px-1 text-muted-foreground">…</span>}
+                      <Button variant={n === pagination!.current_page ? 'default' : 'outline'} size="sm" className="rounded-full" onClick={() => changePage(n)}>
+                        {n}
+                      </Button>
+                    </div>
+                  );
+                })}
                 <Button variant="outline" size="sm" disabled={!canNext} onClick={() => changePage((pagination?.current_page ?? 1) + 1)}>
                   Next
                 </Button>
-                {Array.from({ length: Math.min(pagination.last_page, 8) }, (_, i) => i + 1).map((n) => (
-                  <Button
-                    key={n}
-                    variant={n === pagination.current_page ? 'default' : 'outline'}
-                    size="sm"
-                    className="rounded-full"
-                    onClick={() => changePage(n)}
-                  >
-                    {n}
-                  </Button>
-                ))}
               </div>
             </div>
           )}
@@ -200,13 +361,30 @@ export default function BrandsIndex() {
               <DialogTitle>Edit Brand</DialogTitle>
             </DialogHeader>
             <div className="grid gap-3">
-              <div>
+                <div>
                 <label className="mb-1 block text-sm">Name</label>
-                <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+                <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value, slug: slugify(e.target.value) })} />
               </div>
               <div>
                 <label className="mb-1 block text-sm">Slug</label>
                 <Input value={form.slug} onChange={(e) => setForm({ ...form, slug: e.target.value })} />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm">Order</label>
+                <Input
+                  type="number"
+                  value={form.sort_order}
+                  onChange={(e) => setForm({ ...form, sort_order: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm">Logo</label>
+                <Input type="file" accept=".png,.jpg,.jpeg,.svg" onChange={(e) => setForm({ ...form, logoFile: e.target.files?.[0] ?? null })} />
+                {editing?.logo && (
+                  <div className="mt-2">
+                    <img src={`/storage/${editing.logo}`} alt={editing.name} className="size-10 rounded-md border object-cover" />
+                  </div>
+                )}
               </div>
             </div>
             <DialogFooter>
@@ -229,6 +407,7 @@ export default function BrandsIndex() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+      <ToastStack toasts={toasts} onDismiss={dismissToast} />
       </div>
     </AppLayout>
   );

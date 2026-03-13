@@ -17,7 +17,7 @@ class RolesAndPermissionsSeeder extends Seeder
         // Reset cached roles and permissions
         app()[PermissionRegistrar::class]->forgetCachedPermissions();
 
-        // Create permissions
+        // Create permissions (named per module, e.g. products.*, brands.*, categories.*)
         $permissions = [
             // User management
             'view users',
@@ -35,7 +35,10 @@ class RolesAndPermissionsSeeder extends Seeder
             'view permissions',
             'assign permissions',
 
-            // Admin modules
+            // Dashboard
+            'view dashboard',
+
+            // Catalog & store modules
             'stores.view',
             'stores.approve',
             'stores.suspend',
@@ -47,6 +50,9 @@ class RolesAndPermissionsSeeder extends Seeder
             'products.update',
             'products.delete',
             'products.publish',
+            'promotions.manage',
+
+            // Orders & operations
             'orders.view',
             'orders.update',
             'orders.refund',
@@ -54,6 +60,8 @@ class RolesAndPermissionsSeeder extends Seeder
             'payments.capture',
             'shipments.view',
             'shipments.update',
+
+            // Content / marketing modules
             'reviews.moderate',
             'coupons.manage',
             'banners.manage',
@@ -63,6 +71,40 @@ class RolesAndPermissionsSeeder extends Seeder
             'view settings',
             'edit settings',
         ];
+
+        // UI-friendly space-named permissions per module (to show modules in dialog)
+        $uiPermissions = [
+            // Dashboard
+            'view dashboard',
+            // Vendors
+            'view vendors', 'create vendors', 'edit vendors', 'delete vendors',
+            // Users
+            'view users', 'create users', 'edit users', 'delete users',
+            // Roles
+            'view roles', 'create roles', 'edit roles', 'delete roles',
+            // Permissions
+            'view permissions',
+            // Stores
+            'view stores', 'create stores', 'edit stores', 'delete stores', 'approve stores', 'suspend stores',
+            // Categories
+            'view categories', 'create categories', 'edit categories', 'delete categories',
+            // Brands
+            'view brands', 'create brands', 'edit brands', 'delete brands',
+            // Products
+            'view products', 'create products', 'edit products', 'delete products',
+            // Orders
+            'view orders', 'create orders', 'edit orders', 'delete orders',
+            // Shipments
+            'view shipments', 'create shipments', 'edit shipments', 'delete shipments',
+            // Payments
+            'view payments', 'create payments', 'edit payments', 'delete payments',
+            // Promotions
+            'view promotions', 'create promotions', 'edit promotions', 'delete promotions',
+            // Settings
+            'view settings', 'edit settings',
+        ];
+
+        $permissions = array_values(array_unique(array_merge($permissions, $uiPermissions)));
 
         foreach ($permissions as $permission) {
             Permission::firstOrCreate(['name' => $permission]);
@@ -103,10 +145,11 @@ class RolesAndPermissionsSeeder extends Seeder
             'coupons.manage',
             'banners.manage',
             'pages.manage',
+            'promotions.manage',
             'view settings',
         ]);
 
-        // Editor - can manage content
+        // Editor - can manage catalog content
         $editor = Role::firstOrCreate(['name' => 'editor']);
         $editor->syncPermissions([
             'categories.manage',
@@ -115,6 +158,17 @@ class RolesAndPermissionsSeeder extends Seeder
             'products.create',
             'products.update',
             'products.publish',
+            'promotions.manage',
+        ]);
+
+        // Vendor - restricted to managing their own catalog (Categories, Brands, Products)
+        $vendor = Role::firstOrCreate(['name' => 'vendor']);
+        $vendor->syncPermissions([
+            'categories.manage',
+            'brands.manage',
+            'products.view',
+            'products.create',
+            'products.update',
         ]);
 
         // User - basic permissions

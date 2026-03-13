@@ -3,8 +3,10 @@ import { Head, router, usePage } from '@inertiajs/react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { useState } from 'react';
-import { delJson, patchJson, postJson } from '@/lib/http';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { useMemo, useState } from 'react';
+import { delJson, patchJson, postJson, postForm } from '@/lib/http';
+import { ToastStack } from '@/components/ui/toast-stack';
 
 export default function ProductShow() {
   type Variant = { id: number; sku: string | null; price: number | null; stock: number; is_active: boolean };
@@ -16,6 +18,8 @@ export default function ProductShow() {
     slug: string;
     sku: string;
     price: number;
+    feature_image?: string | null;
+    top_image?: string | null;
     variants: Variant[];
     images: Image[];
     attributes: Attribute[];
@@ -32,6 +36,31 @@ export default function ProductShow() {
   const [aUnit, setAUnit] = useState('');
 
   const [imgPath, setImgPath] = useState('');
+  const [galleryFile, setGalleryFile] = useState<File | null>(null);
+  const galleryPreview = useMemo(() => (galleryFile ? URL.createObjectURL(galleryFile) : ''), [galleryFile]);
+  const [featureFile, setFeatureFile] = useState<File | null>(null);
+  const [topFile, setTopFile] = useState<File | null>(null);
+  const featurePreview = useMemo(() => (featureFile ? URL.createObjectURL(featureFile) : ''), [featureFile]);
+  const topPreview = useMemo(() => (topFile ? URL.createObjectURL(topFile) : ''), [topFile]);
+
+  const [toasts, setToasts] = useState<Array<{ id: number; title: string; variant: 'success' | 'error' }>>([]);
+  const dismissToast = (id: number) => setToasts((ts) => ts.filter((t) => t.id !== id));
+  const showToast = (title: string, variant: 'success' | 'error' = 'success') => {
+    const id = Date.now() + Math.floor(Math.random() * 1000);
+    setToasts((ts) => [...ts, { id, title, variant }]);
+    setTimeout(() => dismissToast(id), 2500);
+  };
+  const errorMessageFromResponse = async (res: Response): Promise<string> => {
+    try {
+      const data = (await res.json()) as any;
+      if (data?.message && typeof data.message === 'string') return data.message;
+      const firstError = data?.errors ? Object.values<any>(data.errors)?.flat()?.[0] : null;
+      if (firstError && typeof firstError === 'string') return firstError;
+      return `Request failed (${res.status}).`;
+    } catch {
+      return `Request failed (${res.status}).`;
+    }
+  };
 
   const [variantEdits, setVariantEdits] = useState<Record<number, { sku: string; price: string; stock: string }>>({});
   const [attrEdits, setAttrEdits] = useState<Record<number, { name: string; value: string; unit: string }>>({});
@@ -123,10 +152,22 @@ export default function ProductShow() {
 
   const addImage = async (e: React.FormEvent) => {
     e.preventDefault();
-    const res = await postJson(`/api/admin/products/${product.id}/images`, { path: imgPath });
+    let res;
+    if (imgPath) {
+      res = await postJson(`/api/admin/products/${product.id}/images`, { path: imgPath });
+    } else {
+      if (!galleryFile) return;
+      const form = new FormData();
+      form.append('file', galleryFile);
+      res = await postForm(`/api/admin/products/${product.id}/images`, form);
+    }
     if (res.ok) {
       setImgPath('');
+      setGalleryFile(null);
       router.reload({ only: ['product'] });
+      showToast('Gallery image uploaded.', 'success');
+    } else {
+      showToast(await errorMessageFromResponse(res), 'error');
     }
   };
 
@@ -141,14 +182,24 @@ export default function ProductShow() {
     <AppLayout breadcrumbs={[{ title: 'Products', href: '/admin/products' }, { title: product.name, href: `/admin/products/${product.id}` }]}>
       <Head title={`Product: ${product.name}`} />
       <div className="grid gap-6 p-4">
-        <div className="rounded-lg border p-4">
-          <div className="text-lg font-medium">{product.name}</div>
-          <div className="text-sm text-muted-foreground">SKU: {product.sku} • Price: ${product.price}</div>
-        </div>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <div>
+              <CardTitle className="text-lg">{product.name}</CardTitle>
+              <CardDescription>SKU: {product.sku} • Price: ${product.price}</CardDescription>
+            </div>
+            {product.feature_image && (
+              <img src={product.feature_image} alt="" className="h-16 w-16 rounded-md border object-cover" />
+            )}
+          </CardHeader>
+        </Card>
 
         <div className="grid gap-4 md:grid-cols-2">
-          <div className="rounded-lg border p-4">
-            <div className="mb-3 font-medium">Variants</div>
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Variants</CardTitle>
+            </CardHeader>
+            <CardContent>
             <form onSubmit={addVariant} className="mb-3 grid grid-cols-2 gap-2 md:grid-cols-4">
               <Input value={vSku} onChange={(e) => setVSku(e.target.value)} placeholder="Variant SKU" />
               <Input value={vPrice} onChange={(e) => setVPrice(e.target.value)} placeholder="Price" />
@@ -188,10 +239,14 @@ export default function ProductShow() {
                 ))}
               </TableBody>
             </Table>
-          </div>
+            </CardContent>
+          </Card>
 
-          <div className="rounded-lg border p-4">
-            <div className="mb-3 font-medium">Attributes</div>
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Attributes</CardTitle>
+            </CardHeader>
+            <CardContent>
             <form onSubmit={addAttribute} className="mb-3 grid grid-cols-2 gap-2 md:grid-cols-4">
               <Input value={aName} onChange={(e) => setAName(e.target.value)} placeholder="Name" />
               <Input value={aValue} onChange={(e) => setAValue(e.target.value)} placeholder="Value" />
@@ -229,21 +284,42 @@ export default function ProductShow() {
                 ))}
               </TableBody>
             </Table>
-          </div>
+            </CardContent>
+          </Card>
         </div>
 
-        <div className="rounded-lg border p-4">
-          <div className="mb-3 font-medium">Images</div>
-          <form onSubmit={addImage} className="mb-3 flex items-end gap-2">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Images</CardTitle>
+            <CardDescription>Upload gallery images or paste an existing path</CardDescription>
+          </CardHeader>
+          <CardContent>
+          <form onSubmit={addImage} className="mb-3 grid grid-cols-1 gap-3 md:grid-cols-3 md:items-end">
             <div className="flex-1">
               <Input value={imgPath} onChange={(e) => setImgPath(e.target.value)} placeholder="/images/path.png" />
             </div>
+            <div className="flex-1">
+              <input
+                id="gallery-file"
+                type="file"
+                accept=".png,.jpg,.jpeg,.webp,.svg"
+                className="w-full rounded-md border px-2 py-2"
+                onChange={(e) => setGalleryFile(e.target.files?.[0] ?? null)}
+              />
+            </div>
             <Button type="submit">Add</Button>
           </form>
+          {galleryPreview && (
+            <div className="mb-3">
+              <div className="text-sm text-muted-foreground">Preview</div>
+              <img src={galleryPreview} alt="" className="h-24 w-24 rounded-md border object-cover" />
+            </div>
+          )}
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>ID</TableHead>
+                <TableHead>Preview</TableHead>
                 <TableHead>Path</TableHead>
                 <TableHead>Primary</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
@@ -253,6 +329,9 @@ export default function ProductShow() {
               {product.images?.map((img) => (
                 <TableRow key={img.id}>
                   <TableCell>{img.id}</TableCell>
+                  <TableCell>
+                    <img src={img.path} alt="" className="h-12 w-12 rounded-md border object-cover" />
+                  </TableCell>
                   <TableCell>{img.path}</TableCell>
                   <TableCell>{img.is_primary ? 'Yes' : 'No'}</TableCell>
                   <TableCell className="text-right">
@@ -270,7 +349,79 @@ export default function ProductShow() {
               ))}
             </TableBody>
           </Table>
+          </CardContent>
+        </Card>
+
+        <div className="grid gap-4 md:grid-cols-2">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Feature Image</CardTitle>
+            </CardHeader>
+            <CardContent>
+            <div className="mb-3">
+              {featurePreview ? (
+                <img src={featurePreview} alt="" className="h-32 w-32 rounded-md border object-cover" />
+              ) : product.feature_image ? (
+                <img src={product.feature_image} alt="" className="h-32 w-32 rounded-md border object-cover" />
+              ) : (
+                <div className="text-sm text-muted-foreground">No feature image set</div>
+              )}
+            </div>
+            <div className="flex items-end gap-2">
+              <Input type="file" accept=".png,.jpg,.jpeg,.webp,.svg" onChange={(e) => setFeatureFile(e.target.files?.[0] ?? null)} />
+              <Button onClick={async () => {
+                if (!featureFile) return;
+                const form = new FormData();
+                form.append('file', featureFile);
+                const res = await postForm(`/api/admin/products/${product.id}/feature-image`, form);
+                if (res.ok) {
+                  router.reload({ only: ['product'] });
+                  showToast('Feature image uploaded.', 'success');
+                } else {
+                  showToast(await errorMessageFromResponse(res), 'error');
+                }
+              }}>
+                Upload
+              </Button>
+            </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Top Image</CardTitle>
+            </CardHeader>
+            <CardContent>
+            <div className="mb-3">
+              {topPreview ? (
+                <img src={topPreview} alt="" className="h-32 w-32 rounded-md border object-cover" />
+              ) : product.top_image ? (
+                <img src={product.top_image} alt="" className="h-32 w-32 rounded-md border object-cover" />
+              ) : (
+                <div className="text-sm text-muted-foreground">No top image set</div>
+              )}
+            </div>
+            <div className="flex items-end gap-2">
+              <Input type="file" accept=".png,.jpg,.jpeg,.webp,.svg" onChange={(e) => setTopFile(e.target.files?.[0] ?? null)} />
+              <Button onClick={async () => {
+                if (!topFile) return;
+                const form = new FormData();
+                form.append('file', topFile);
+                const res = await postForm(`/api/admin/products/${product.id}/top-image`, form);
+                if (res.ok) {
+                  router.reload({ only: ['product'] });
+                  showToast('Top image uploaded.', 'success');
+                } else {
+                  showToast(await errorMessageFromResponse(res), 'error');
+                }
+              }}>
+                Upload
+              </Button>
+            </div>
+            </CardContent>
+          </Card>
         </div>
+        <ToastStack toasts={toasts} onDismiss={dismissToast} />
       </div>
     </AppLayout>
   );

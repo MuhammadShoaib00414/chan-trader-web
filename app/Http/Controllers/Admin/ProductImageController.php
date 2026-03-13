@@ -17,12 +17,26 @@ class ProductImageController extends Controller
     public function store(Request $request, Product $product)
     {
         $validated = $request->validate([
-            'path' => ['required', 'string', 'max:255'],
+            'path' => ['nullable', 'string', 'max:255'],
+            'file' => ['nullable', 'image', 'max:5120'],
             'alt' => ['nullable', 'string', 'max:150'],
             'sort_order' => ['nullable', 'integer'],
             'is_primary' => ['boolean'],
         ]);
-        $image = $product->images()->create($validated);
+        if ($request->hasFile('file')) {
+            $path = $request->file('file')->storePublicly("products/{$product->id}", ['disk' => 'public']);
+            $validated['path'] = "/storage/{$path}";
+        }
+        if (empty($validated['path'])) {
+            abort(422, 'Either path or file is required.');
+        }
+        $image = $product->images()->create([
+            'path' => $validated['path'],
+            'alt' => $validated['alt'] ?? null,
+            'sort_order' => $validated['sort_order'] ?? 0,
+            'is_primary' => (bool) ($validated['is_primary'] ?? false),
+        ]);
+
         return response()->json(['success' => true, 'data' => $image], 201);
     }
 
@@ -32,6 +46,7 @@ class ProductImageController extends Controller
             abort(404);
         }
         $image->delete();
+
         return response()->json(['success' => true]);
     }
 
@@ -44,6 +59,7 @@ class ProductImageController extends Controller
             \App\Models\ProductImage::where('product_id', $product->id)->update(['is_primary' => false]);
             $image->update(['is_primary' => true]);
         });
+
         return response()->json(['success' => true, 'data' => $image->fresh()]);
     }
 }
