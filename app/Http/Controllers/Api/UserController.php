@@ -70,6 +70,9 @@ class UserController extends AppBaseController
             'roles' => 'array',
             'roles.*' => 'exists:roles,name',
             'status' => 'boolean',
+            'phone_number' => 'nullable|string|max:30',
+            'city_district' => 'nullable|string|max:150',
+            'address' => 'nullable|string|max:255',
         ]);
 
         $user = User::create([
@@ -78,6 +81,9 @@ class UserController extends AppBaseController
             'email' => $validated['email'],
             'password' => Hash::make($validated['password']),
             'status' => $validated['status'] ?? User::STATUS_ACTIVE,
+            'phone_number' => $validated['phone_number'] ?? null,
+            'city_district' => $validated['city_district'] ?? null,
+            'address' => $validated['address'] ?? null,
             'email_verified_at' => now(),
         ]);
 
@@ -120,6 +126,9 @@ class UserController extends AppBaseController
             'roles' => 'sometimes|array',
             'roles.*' => 'exists:roles,name',
             'status' => 'sometimes|boolean',
+            'phone_number' => 'sometimes|nullable|string|max:30',
+            'city_district' => 'sometimes|nullable|string|max:150',
+            'address' => 'sometimes|nullable|string|max:255',
         ]);
 
         if (isset($validated['password'])) {

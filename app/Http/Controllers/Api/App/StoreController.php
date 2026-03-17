@@ -8,6 +8,17 @@ use Illuminate\Http\Request;
 
 class StoreController extends AppBaseController
 {
+    /**
+     * List Stores
+     *
+     * @group APP APIs
+     *
+     * @queryParam q string Search by store name (partial match). Example: electronics
+     * @queryParam per_page integer Items per page (default 20). Example: 20
+     * @queryParam page integer Page number for pagination. Example: 1
+     *
+     * @unauthenticated
+     */
     public function index(Request $request)
     {
         $query = Store::query()->where('status', 'active');

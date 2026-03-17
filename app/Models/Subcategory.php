@@ -4,16 +4,18 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-class Category extends Model
+class Subcategory extends Model
 {
+    /** @use HasFactory<\Database\Factories\SubcategoryFactory> */
     use HasFactory;
+
     use SoftDeletes;
 
     protected $fillable = [
-        'parent_id',
+        'category_id',
         'name',
         'slug',
         'image',
@@ -25,13 +27,8 @@ class Category extends Model
         'is_active' => 'boolean',
     ];
 
-    public function parent()
+    public function category(): BelongsTo
     {
-        return $this->belongsTo(Category::class, 'parent_id');
-    }
-
-    public function subcategories(): HasMany
-    {
-        return $this->hasMany(Subcategory::class);
+        return $this->belongsTo(Category::class);
     }
 }

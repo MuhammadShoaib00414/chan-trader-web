@@ -9,7 +9,7 @@ use Illuminate\Http\Request;
 class ProductController extends AppBaseController
 {
     /**
-     * List products (APP, paginated)
+     * List Products
      *
      * @group APP APIs
      *

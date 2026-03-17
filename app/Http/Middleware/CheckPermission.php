@@ -15,7 +15,15 @@ class CheckPermission
      */
     public function handle(Request $request, Closure $next, string $permission): Response
     {
-        if (! $request->user() || ! $request->user()->hasPermissionTo($permission)) {
+        $permissions = array_filter(array_map('trim', explode('|', $permission)));
+        if ($permissions === []) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        $user = $request->user();
+        $authorized = $user !== null && collect($permissions)->some(fn (string $p) => $user->hasPermissionTo($p));
+
+        if (! $authorized) {
             abort(403, 'Unauthorized action.');
         }
 

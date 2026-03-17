@@ -9,7 +9,7 @@ use Illuminate\Http\Request;
 class CategoryController extends AppBaseController
 {
     /**
-     * List categories (APP)
+     * List Categories
      *
      * @group APP APIs
      *

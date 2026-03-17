@@ -72,6 +72,10 @@ class LoginController extends AppBaseController
             return $this->errorResponse('The provided credentials are incorrect.', 401);
         }
 
+        if ($user->hasRole('vendor') && (int) $user->status !== User::STATUS_ACTIVE) {
+            return $this->errorResponse('You are not allowed to log in. Please contact the admin.', 403);
+        }
+
         if (! $user->email_verified_at) {
             // Generate and send new OTP
             $otp = $this->generateAndSaveOTP($user, 'verification');

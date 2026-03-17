@@ -9,7 +9,7 @@ use Illuminate\Http\Request;
 class PromotionController extends AppBaseController
 {
     /**
-     * List active promotions (APP)
+     * List Active Promotions
      *
      * @group APP APIs
      *

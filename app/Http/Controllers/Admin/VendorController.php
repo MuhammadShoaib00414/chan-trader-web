@@ -23,6 +23,11 @@ class VendorController extends Controller
             'email' => ['required', 'email', 'unique:users,email'],
             'password' => ['required', 'string', 'min:8', 'confirmed'],
             'store_name' => ['required', 'string', 'max:150'],
+            'shop_name' => ['nullable', 'string', 'max:150'],
+            'phone_number' => ['nullable', 'string', 'max:30'],
+            'city_district' => ['nullable', 'string', 'max:150'],
+            'address' => ['nullable', 'string', 'max:255'],
+            'status' => ['nullable', 'integer', 'in:0,1'],
             'store_slug' => ['nullable', 'string', 'max:160', 'unique:stores,slug'],
         ]);
 
@@ -31,7 +36,11 @@ class VendorController extends Controller
             'last_name' => $validated['last_name'],
             'email' => $validated['email'],
             'password' => Hash::make($validated['password']),
-            'status' => User::STATUS_ACTIVE,
+            'status' => $validated['status'] ?? User::STATUS_ACTIVE,
+            'phone_number' => $validated['phone_number'] ?? null,
+            'shop_name' => $validated['shop_name'] ?? $validated['store_name'],
+            'city_district' => $validated['city_district'] ?? null,
+            'address' => $validated['address'] ?? null,
             'email_verified_at' => now(),
         ]);
         $vendor->assignRole('vendor');
@@ -50,7 +59,7 @@ class VendorController extends Controller
             'data' => [
                 'vendor' => [
                     'id' => $vendor->id,
-                    'name' => trim($vendor->first_name . ' ' . $vendor->last_name),
+                    'name' => trim($vendor->first_name.' '.$vendor->last_name),
                     'email' => $vendor->email,
                 ],
                 'store' => [

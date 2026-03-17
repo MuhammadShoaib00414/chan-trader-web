@@ -25,6 +25,7 @@ interface User {
     id: number;
     name: string;
     email: string;
+    phone_number?: string | null;
     roles: Array<{ name: string }>;
     status: number;
     created_at: string;
@@ -43,6 +44,8 @@ interface UsersTableProps {
 export function UsersTable({ users, roles }: UsersTableProps) {
     const [editingUser, setEditingUser] = useState<User | null>(null);
     const [editDialogOpen, setEditDialogOpen] = useState(false);
+    const [sortBy, setSortBy] = useState<'name' | 'email' | 'created_at' | 'status'>('name');
+    const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
 
     const handleEdit = (user: User) => {
         setEditingUser(user);
@@ -56,6 +59,41 @@ export function UsersTable({ users, roles }: UsersTableProps) {
             });
         }
     };
+
+    const toggleSort = (key: 'name' | 'email' | 'created_at' | 'status') => {
+        if (sortBy === key) {
+            setSortDir((prev) => (prev === 'asc' ? 'desc' : 'asc'));
+        } else {
+            setSortBy(key);
+            setSortDir('asc');
+        }
+    };
+
+    const sortedUsers = [...users].sort((a, b) => {
+        let av: string | number = '';
+        let bv: string | number = '';
+        switch (sortBy) {
+            case 'name':
+                av = a.name.toLowerCase();
+                bv = b.name.toLowerCase();
+                break;
+            case 'email':
+                av = a.email.toLowerCase();
+                bv = b.email.toLowerCase();
+                break;
+            case 'created_at':
+                av = new Date(a.created_at).getTime();
+                bv = new Date(b.created_at).getTime();
+                break;
+            case 'status':
+                av = a.status;
+                bv = b.status;
+                break;
+        }
+        if (av < bv) return sortDir === 'asc' ? -1 : 1;
+        if (av > bv) return sortDir === 'asc' ? 1 : -1;
+        return 0;
+    });
 
     if (users.length === 0) {
         return (
@@ -79,21 +117,55 @@ export function UsersTable({ users, roles }: UsersTableProps) {
                 <Table>
                 <TableHeader>
                     <TableRow>
-                        <TableHead>Name</TableHead>
-                        <TableHead>Email</TableHead>
+                        <TableHead>
+                            <button
+                                type="button"
+                                className="flex items-center gap-1 text-xs font-medium uppercase tracking-wide cursor-pointer"
+                                onClick={() => toggleSort('name')}
+                            >
+                                Name
+                            </button>
+                        </TableHead>
+                        <TableHead>
+                            <button
+                                type="button"
+                                className="flex items-center gap-1 text-xs font-medium uppercase tracking-wide cursor-pointer"
+                                onClick={() => toggleSort('email')}
+                            >
+                                Email
+                            </button>
+                        </TableHead>
+                        <TableHead>Phone</TableHead>
                         <TableHead>Roles</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Created</TableHead>
+                        <TableHead>
+                            <button
+                                type="button"
+                                className="flex items-center gap-1 text-xs font-medium uppercase tracking-wide cursor-pointer"
+                                onClick={() => toggleSort('status')}
+                            >
+                                Status
+                            </button>
+                        </TableHead>
+                        <TableHead>
+                            <button
+                                type="button"
+                                className="flex items-center gap-1 text-xs font-medium uppercase tracking-wide cursor-pointer"
+                                onClick={() => toggleSort('created_at')}
+                            >
+                                Created
+                            </button>
+                        </TableHead>
                         <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                 </TableHeader>
                 <TableBody>
-                    {users.map((user) => (
+                    {sortedUsers.map((user) => (
                         <TableRow key={user.id}>
                             <TableCell className="font-medium">
                                 {user.name}
                             </TableCell>
                             <TableCell>{user.email}</TableCell>
+                            <TableCell>{user.phone_number ?? '-'}</TableCell>
                             <TableCell>
                                 <div className="flex flex-wrap gap-1">
                                     {user.roles.map((role) => (
@@ -109,12 +181,12 @@ export function UsersTable({ users, roles }: UsersTableProps) {
                             <TableCell>
                                 <Badge
                                     variant={
-                                        user.status === 1
+                                        user.status == 1
                                             ? 'default'
                                             : 'destructive'
                                     }
                                 >
-                                    {user.status === 1 ? 'Active' : 'Inactive'}
+                                    {user.status == 1 ? 'Active' : 'Inactive'}
                                 </Badge>
                             </TableCell>
                             <TableCell className="text-muted-foreground">

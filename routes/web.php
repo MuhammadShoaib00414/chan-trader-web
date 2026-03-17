@@ -8,15 +8,17 @@ use App\Models\Payment;
 use App\Models\Product;
 use App\Models\Shipment;
 use App\Models\Store;
+use App\Models\Subcategory;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
-use Illuminate\Support\Facades\Mail;
 
 Route::get('/', function () {
     if (auth()->check()) {
         return redirect()->route('dashboard');
     }
+
     return redirect()->route('login');
 })->name('home');
 
@@ -76,16 +78,22 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // User Management
     Route::get('users', function () {
-        $users = \App\Models\User::with('roles')->get()->map(function ($user) {
-            return [
-                'id' => $user->id,
-                'name' => $user->name,
-                'email' => $user->email,
-                'roles' => $user->roles->map(fn ($role) => ['name' => $role->name]),
-                'status' => $user->status,
-                'created_at' => $user->created_at->toISOString(),
-            ];
-        });
+        $users = \App\Models\User::with('roles')
+            ->whereDoesntHave('roles', function ($q) {
+                $q->where('name', 'vendor');
+            })
+            ->get()
+            ->map(function ($user) {
+                return [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'email' => $user->email,
+                    'phone_number' => $user->phone_number,
+                    'roles' => $user->roles->map(fn ($role) => ['name' => $role->name]),
+                    'status' => $user->status,
+                    'created_at' => $user->created_at->toISOString(),
+                ];
+            });
 
         $roles = \Spatie\Permission\Models\Role::all()->map(function ($role) {
             return [
@@ -154,13 +162,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
                 abort_unless(auth()->user()?->hasRole('super-admin'), 403);
                 $vendors = \App\Models\User::role('vendor')
                     ->orderBy('first_name')
-                    ->get(['id', 'first_name', 'last_name', 'email']);
+                    ->get(['id', 'first_name', 'last_name', 'email', 'phone_number', 'status']);
                 $items = $vendors->map(function ($v) {
                     $store = Store::where('owner_id', $v->id)->first(['id', 'name', 'slug', 'status']);
+
                     return [
                         'id' => $v->id,
-                        'name' => trim($v->first_name . ' ' . $v->last_name),
+                        'name' => trim($v->first_name.' '.$v->last_name),
                         'email' => $v->email,
+                        'phone_number' => $v->phone_number,
+                        'status' => $v->status,
                         'store' => $store ? [
                             'id' => $store->id,
                             'name' => $store->name,
@@ -169,6 +180,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
                         ] : null,
                     ];
                 });
+
                 return Inertia::render('admin/vendors/index', [
                     'vendors' => $items,
                 ]);
@@ -183,6 +195,17 @@ Route::middleware(['auth', 'verified'])->group(function () {
                 ->middleware('permission:categories.manage');
             Route::delete('categories/{category}', [\App\Http\Controllers\Admin\CategoryController::class, 'destroy'])
                 ->middleware('permission:categories.manage');
+
+            Route::get('subcategories', [\App\Http\Controllers\Admin\SubcategoryController::class, 'index'])
+                ->middleware('permission:subcategories.manage');
+            Route::post('subcategories', [\App\Http\Controllers\Admin\SubcategoryController::class, 'store'])
+                ->middleware('permission:subcategories.manage');
+            Route::get('subcategories/{subcategory}', [\App\Http\Controllers\Admin\SubcategoryController::class, 'show'])
+                ->middleware('permission:subcategories.manage');
+            Route::patch('subcategories/{subcategory}', [\App\Http\Controllers\Admin\SubcategoryController::class, 'update'])
+                ->middleware('permission:subcategories.manage');
+            Route::delete('subcategories/{subcategory}', [\App\Http\Controllers\Admin\SubcategoryController::class, 'destroy'])
+                ->middleware('permission:subcategories.manage');
 
             Route::get('brands', [\App\Http\Controllers\Admin\BrandController::class, 'index'])
                 ->middleware('permission:brands.manage');
@@ -270,7 +293,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
                 ->middleware('permission:shipments.update');
 
             Route::get('promotions', [\App\Http\Controllers\Admin\PromotionController::class, 'index'])
-                ->middleware('permission:promotions.manage');
+                ->middleware('permission:promotions.manage|promotions.view');
             Route::post('promotions', [\App\Http\Controllers\Admin\PromotionController::class, 'store'])
                 ->middleware('permission:promotions.manage');
             Route::get('promotions/{promotion}', [\App\Http\Controllers\Admin\PromotionController::class, 'show'])
@@ -287,13 +310,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
             abort_unless(auth()->user()?->hasRole('super-admin'), 403);
             $vendors = \App\Models\User::role('vendor')
                 ->orderBy('first_name')
-                ->get(['id', 'first_name', 'last_name', 'email']);
+                ->get(['id', 'first_name', 'last_name', 'email', 'phone_number', 'status']);
             $items = $vendors->map(function ($v) {
                 $store = Store::where('owner_id', $v->id)->first(['id', 'name', 'slug', 'status']);
+
                 return [
                     'id' => $v->id,
-                    'name' => trim($v->first_name . ' ' . $v->last_name),
+                    'name' => trim($v->first_name.' '.$v->last_name),
                     'email' => $v->email,
+                    'phone_number' => $v->phone_number,
+                    'status' => $v->status,
                     'store' => $store ? [
                         'id' => $store->id,
                         'name' => $store->name,
@@ -302,6 +328,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
                     ] : null,
                 ];
             });
+
             return Inertia::render('admin/vendors/index', [
                 'vendors' => $items,
             ]);
@@ -341,6 +368,41 @@ Route::middleware(['auth', 'verified'])->group(function () {
                 ],
             ]);
         })->middleware('permission:categories.manage');
+
+        Route::get('subcategories', function (Request $request) {
+            $query = Subcategory::query()->with('category:id,name');
+            if ($request->filled('q')) {
+                $q = $request->string('q')->toString();
+                $query->where('name', 'like', "%{$q}%");
+            }
+            if ($request->filled('category_id')) {
+                $query->where('category_id', (int) $request->get('category_id'));
+            }
+            $sortBy = in_array($request->get('sort_by'), ['id', 'name', 'slug', 'sort_order', 'is_active', 'created_at']) ? $request->get('sort_by') : 'sort_order';
+            $sortDir = in_array($request->get('sort_dir'), ['asc', 'desc']) ? $request->get('sort_dir') : 'asc';
+            $query->orderBy($sortBy, $sortDir);
+            if ($sortBy !== 'id') {
+                $query->orderBy('id', 'asc');
+            }
+            $items = $query->paginate(20)->withQueryString();
+
+            return Inertia::render('admin/subcategories/index', [
+                'items' => $items->items(),
+                'pagination' => [
+                    'total' => $items->total(),
+                    'per_page' => $items->perPage(),
+                    'current_page' => $items->currentPage(),
+                    'last_page' => $items->lastPage(),
+                ],
+                'filters' => [
+                    'q' => $request->get('q'),
+                    'category_id' => $request->get('category_id'),
+                    'sort_by' => $sortBy,
+                    'sort_dir' => $sortDir,
+                ],
+                'categories' => Category::orderBy('name')->get(['id', 'name']),
+            ]);
+        })->middleware('permission:subcategories.manage');
 
         Route::get('brands', function (Request $request) {
             $query = Brand::query();
@@ -400,12 +462,19 @@ Route::middleware(['auth', 'verified'])->group(function () {
             $products = $query->orderBy($sortBy, $sortDir)->paginate(20)->withQueryString();
 
             $items = $products->through(function ($p) {
+                $discountPercent = null;
+                if ($p->compare_at && $p->compare_at > 0 && $p->compare_at > $p->price) {
+                    $discountPercent = (int) round((($p->compare_at - $p->price) / $p->compare_at) * 100);
+                }
+
                 return [
                     'id' => $p->id,
                     'name' => $p->name,
                     'slug' => $p->slug,
                     'sku' => $p->sku,
                     'price' => $p->price,
+                    'compare_at' => $p->compare_at,
+                    'discount_percent' => $discountPercent,
                     'thumb' => $p->feature_image ?: optional($p->images->first())->path,
                     'has_primary_image' => $p->images->isNotEmpty(),
                     'store' => $p->store ? ['id' => $p->store->id, 'name' => $p->store->name] : null,
@@ -447,6 +516,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
             return Inertia::render('admin/products/show', [
                 'product' => $product,
+                'stores' => \App\Models\Store::orderBy('name')->get(['id', 'name']),
+                'categories' => \App\Models\Category::orderBy('name')->get(['id', 'name']),
+                'brands' => \App\Models\Brand::orderBy('name')->get(['id', 'name']),
             ]);
         })->middleware('permission:products.view');
 
@@ -577,7 +649,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
                 ],
                 'products' => $products,
             ]);
-        })->middleware('permission:promotions.manage');
+        })->middleware('permission:promotions.manage|promotions.view');
     });
 });
 
@@ -585,11 +657,11 @@ Route::get('/test-mail', function () {
 
     Mail::raw('SMTP Test Email - Chan Trader', function ($message) {
         $message->to('itianzinfo@gmail.com')
-                ->from(env('MAIL_FROM_ADDRESS'), env('MAIL_FROM_NAME'))
-                ->subject('SMTP Test');
+            ->from(env('MAIL_FROM_ADDRESS'), env('MAIL_FROM_NAME'))
+            ->subject('SMTP Test');
     });
 
-    return "Email Sent";
+    return 'Email Sent';
 });
 require __DIR__.'/settings.php';
 require __DIR__.'/auth.php';

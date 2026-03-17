@@ -4,8 +4,9 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { postJson } from '@/lib/http';
+import { postForm } from '@/lib/http';
 import { ToastStack } from '@/components/ui/toast-stack';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 
 export default function ProductsIndex() {
   type ProductItem = {
@@ -14,6 +15,8 @@ export default function ProductsIndex() {
     slug: string;
     sku: string;
     price: number;
+    compare_at?: number | null;
+    discount_percent?: number | null;
     has_primary_image?: boolean;
     thumb?: string;
     store?: { id: number; name: string } | null;
@@ -43,7 +46,10 @@ export default function ProductsIndex() {
   const [slug, setSlug] = useState('');
   const [sku, setSku] = useState('');
   const [price, setPrice] = useState('');
+  const [compareAt, setCompareAt] = useState('');
+  const [featureImage, setFeatureImage] = useState<File | null>(null);
   const [toasts, setToasts] = useState<Array<{ id: number; title: string; variant: 'success' | 'error' }>>([]);
+  const [addOpen, setAddOpen] = useState(false);
 
   const dismissToast = (id: number) => setToasts((ts) => ts.filter((t) => t.id !== id));
   const showToast = (title: string, variant: 'success' | 'error' = 'success') => {
@@ -99,19 +105,27 @@ export default function ProductsIndex() {
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const res = await postJson('/api/admin/products', {
-      store_id: Number(storeId),
-      category_id: Number(categoryId),
-      brand_id: brandId ? Number(brandId) : null,
-      name, slug, sku,
-      price: Number(price),
-    });
+    const fd = new FormData();
+    fd.append('store_id', String(storeId));
+    fd.append('category_id', String(categoryId));
+    if (brandId) fd.append('brand_id', String(brandId));
+    fd.append('name', name);
+    fd.append('slug', slug);
+    fd.append('sku', sku);
+    fd.append('price', String(price));
+    if (compareAt) fd.append('compare_at', String(compareAt));
+    if (featureImage) fd.append('feature_image', featureImage);
+
+    const res = await postForm('/api/admin/products', fd);
     if (res.ok) {
       setName('');
       setSlug('');
       setSku('');
       setPrice('');
+      setCompareAt('');
+      setFeatureImage(null);
       showToast('Product created.', 'success');
+      setAddOpen(false);
       router.reload({ only: ['items'] });
       return;
     }
@@ -122,7 +136,8 @@ export default function ProductsIndex() {
     <AppLayout breadcrumbs={[{ title: 'Products', href: '/admin/products' }]}>
       <Head title="Products" />
       <div className="grid gap-6 p-4">
-        <form onSubmit={submitFilters} className="grid grid-cols-2 gap-3 md:grid-cols-6">
+        <div className="flex items-center justify-between gap-3">
+          <form onSubmit={submitFilters} className="grid grid-cols-2 gap-3 md:grid-cols-6 flex-1">
           <div className="md:col-span-2">
             <label className="mb-1 block text-sm">Search (name or SKU)</label>
             <Input name="q" defaultValue={filters.q ?? ''} placeholder="MOSFET or SKU-0001" />
@@ -159,55 +174,113 @@ export default function ProductsIndex() {
               <option value="asc">Asc</option>
             </select>
           </div>
-        </form>
-        <form onSubmit={submit} className="grid grid-cols-2 gap-3 md:grid-cols-6">
-          <div className="md:col-span-2">
-            <label className="mb-1 block text-sm">Store</label>
-            <select className="w-full rounded-md border px-2 py-2" value={String(storeId)} onChange={(e) => setStoreId(Number(e.target.value))}>
-              {stores?.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-            </select>
-          </div>
-          <div className="md:col-span-2">
-            <label className="mb-1 block text-sm">Category</label>
-            <select className="w-full rounded-md border px-2 py-2" value={String(categoryId)} onChange={(e) => setCategoryId(Number(e.target.value))}>
-              {categories?.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
-          </div>
-          <div className="md:col-span-2">
-            <label className="mb-1 block text-sm">Brand (optional)</label>
-            <select className="w-full rounded-md border px-2 py-2" value={String(brandId)} onChange={(e) => setBrandId(Number(e.target.value))}>
-              <option value={0}>None</option>
-              {brands?.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
-            </select>
-          </div>
-          <div className="md:col-span-2">
-            <label className="mb-1 block text-sm">Name</label>
-            <Input
-              value={name}
-              onChange={(e) => {
-                const v = e.target.value;
-                setName(v);
-                if (!slug || slug === slugify(name)) setSlug(slugify(v));
-              }}
-              placeholder="MOSFET XYZ"
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-sm">Slug</label>
-            <Input value={slug} onChange={(e) => setSlug(e.target.value)} placeholder="mosfet-xyz" />
-          </div>
-          <div>
-            <label className="mb-1 block text-sm">SKU</label>
-            <Input value={sku} onChange={(e) => setSku(e.target.value)} placeholder="SKU-0001" />
-          </div>
-          <div>
-            <label className="mb-1 block text-sm">Price</label>
-            <Input value={price} onChange={(e) => setPrice(e.target.value)} placeholder="10.00" />
-          </div>
-          <div className="md:col-span-6">
-            <Button type="submit">Add</Button>
-          </div>
-        </form>
+          </form>
+
+          <Dialog open={addOpen} onOpenChange={setAddOpen}>
+            <DialogTrigger asChild>
+              <Button size="lg" onClick={() => setAddOpen(true)}>
+                Add Product
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Add Product</DialogTitle>
+              </DialogHeader>
+              <form
+                onSubmit={(e) => {
+                  void submit(e);
+                }}
+                className="grid grid-cols-1 gap-4 md:grid-cols-2"
+              >
+                <div className="md:col-span-2">
+                  <h3 className="text-sm font-semibold mb-2 text-muted-foreground">Basic Information</h3>
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium">Name *</label>
+                  <Input
+                    value={name}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      setName(v);
+                      if (!slug || slug === slugify(name)) setSlug(slugify(v));
+                    }}
+                    placeholder="MOSFET XYZ"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium">SKU *</label>
+                  <Input value={sku} onChange={(e) => setSku(e.target.value)} placeholder="SKU-0001" required />
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium">Slug *</label>
+                  <Input value={slug} onChange={(e) => setSlug(e.target.value)} placeholder="mosfet-xyz" required />
+                  <p className="text-xs text-muted-foreground mt-1">Auto-generated from name</p>
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium">Price *</label>
+                  <Input value={price} onChange={(e) => setPrice(e.target.value)} placeholder="10.00" type="number" step="0.01" required />
+                </div>
+                <div className="md:col-span-2">
+                  <label className="mb-1.5 block text-sm font-medium">Compare at price (optional)</label>
+                  <Input value={compareAt} onChange={(e) => setCompareAt(e.target.value)} placeholder="12.00" type="number" step="0.01" />
+                  <p className="text-xs text-muted-foreground mt-1">Show original price for discounts</p>
+                </div>
+                
+                <div className="md:col-span-2 border-t pt-4">
+                  <h3 className="text-sm font-semibold mb-2 text-muted-foreground">Organization</h3>
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium">Store *</label>
+                  <select className="w-full rounded-md border px-3 py-2" value={String(storeId)} onChange={(e) => setStoreId(Number(e.target.value))}>
+                    {stores?.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium">Category *</label>
+                  <select className="w-full rounded-md border px-3 py-2" value={String(categoryId)} onChange={(e) => setCategoryId(Number(e.target.value))}>
+                    {categories?.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="md:col-span-2">
+                  <label className="mb-1.5 block text-sm font-medium">Brand (optional)</label>
+                  <select className="w-full rounded-md border px-3 py-2" value={String(brandId)} onChange={(e) => setBrandId(Number(e.target.value))}>
+                    <option value={0}>None</option>
+                    {brands?.map((b) => (
+                      <option key={b.id} value={b.id}>
+                        {b.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                
+                <div className="md:col-span-2 border-t pt-4">
+                  <h3 className="text-sm font-semibold mb-2 text-muted-foreground">Media</h3>
+                </div>
+                <div className="md:col-span-2">
+                  <label className="mb-1.5 block text-sm font-medium">Feature image (optional)</label>
+                  <Input
+                    type="file"
+                    accept=".png,.jpg,.jpeg,.webp"
+                    onChange={(e) => setFeatureImage(e.target.files?.[0] ?? null)}
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">Main product image displayed in listings</p>
+                </div>
+                <DialogFooter className="md:col-span-2">
+                  <Button type="submit">Save</Button>
+                </DialogFooter>
+              </form>
+            </DialogContent>
+          </Dialog>
+        </div>
 
         <div className="rounded-lg border">
           <Table>
@@ -218,6 +291,7 @@ export default function ProductsIndex() {
                 <TableHead>Slug</TableHead>
                 <TableHead>SKU</TableHead>
                 <TableHead>Price</TableHead>
+                <TableHead>Discount</TableHead>
                 <TableHead>Thumb</TableHead>
                 <TableHead>Meta</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
@@ -230,7 +304,23 @@ export default function ProductsIndex() {
                   <TableCell>{p.name}</TableCell>
                   <TableCell>{p.slug}</TableCell>
                   <TableCell>{p.sku}</TableCell>
-                  <TableCell>${p.price}</TableCell>
+                  <TableCell>
+                    <div className="flex flex-col text-sm">
+                      <span>${p.price}</span>
+                      {p.compare_at && p.compare_at > p.price && (
+                        <span className="text-xs text-muted-foreground line-through">${p.compare_at}</span>
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    {p.discount_percent && p.discount_percent > 0 ? (
+                      <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-xs text-emerald-700">
+                        -{p.discount_percent}%
+                      </span>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">—</span>
+                    )}
+                  </TableCell>
                   <TableCell>
                     {p.thumb ? <img src={p.thumb} alt="" className="h-8 w-8 rounded object-cover" /> : '-'}
                   </TableCell>

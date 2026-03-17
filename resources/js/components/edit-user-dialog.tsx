@@ -1,5 +1,4 @@
 import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
 import {
     Dialog,
     DialogContent,
@@ -25,6 +24,9 @@ interface User {
     email: string;
     roles: Array<{ name: string }>;
     status: number;
+    phone_number?: string | null;
+    city_district?: string | null;
+    address?: string | null;
 }
 
 interface EditUserDialogProps {
@@ -49,6 +51,9 @@ export function EditUserDialog({
         password_confirmation: '',
         roles: [] as string[],
         status: 1,
+        phone_number: '',
+        city_district: '',
+        address: '',
     });
 
     useEffect(() => {
@@ -62,6 +67,9 @@ export function EditUserDialog({
                 password_confirmation: '',
                 roles: user.roles.map((r) => r.name),
                 status: user.status,
+                phone_number: user.phone_number ?? '',
+                city_district: user.city_district ?? '',
+                address: user.address ?? '',
             });
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -81,6 +89,9 @@ export function EditUserDialog({
             email: data.email,
             roles: data.roles,
             status: data.status,
+            phone_number: (data as any).phone_number ?? null,
+            city_district: (data as any).city_district ?? null,
+            address: (data as any).address ?? null,
             ...(data.password && data.password.trim() !== '' && {
                 password: data.password,
                 password_confirmation: data.password_confirmation,
@@ -100,16 +111,9 @@ export function EditUserDialog({
         });
     };
 
-    const toggleRole = (roleName: string) => {
-        const currentRoles = data.roles;
-        if (currentRoles.includes(roleName)) {
-            setData(
-                'roles',
-                currentRoles.filter((r) => r !== roleName),
-            );
-        } else {
-            setData('roles', [...currentRoles, roleName]);
-        }
+    const handleRoleChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+        const value = event.target.value;
+        setData('roles', value ? [value] : []);
     };
 
     if (!user) return null;
@@ -182,6 +186,30 @@ export function EditUserDialog({
                         </div>
 
                         <div className="grid gap-2">
+                            <Label htmlFor="edit_phone_number">Mobile Number</Label>
+                            <Input
+                                id="edit_phone_number"
+                                value={(data as any).phone_number ?? ''}
+                                onChange={(e) =>
+                                    setData('phone_number' as any, e.target.value)
+                                }
+                                placeholder="+1 555 123 4567"
+                            />
+                        </div>
+
+                        <div className="grid gap-2">
+                            <Label htmlFor="edit_city_district">Location / City</Label>
+                            <Input
+                                id="edit_city_district"
+                                value={(data as any).city_district ?? ''}
+                                onChange={(e) =>
+                                    setData('city_district' as any, e.target.value)
+                                }
+                                placeholder="City or District"
+                            />
+                        </div>
+
+                        <div className="grid gap-2">
                             <Label htmlFor="edit_password">
                                 Password (leave blank to keep current)
                             </Label>
@@ -199,6 +227,33 @@ export function EditUserDialog({
                                     {errors.password}
                                 </p>
                             )}
+                        </div>
+
+                        <div className="grid gap-2">
+                            <Label htmlFor="edit_address">Address</Label>
+                            <Input
+                                id="edit_address"
+                                value={(data as any).address ?? ''}
+                                onChange={(e) =>
+                                    setData('address' as any, e.target.value)
+                                }
+                                placeholder="Street, building, etc."
+                            />
+                        </div>
+
+                        <div className="grid gap-2">
+                            <Label htmlFor="edit_status">Status</Label>
+                            <select
+                                id="edit_status"
+                                className="w-full rounded-md border px-2 py-2"
+                                value={String(data.status)}
+                                onChange={(e) =>
+                                    setData('status', Number(e.target.value))
+                                }
+                            >
+                                <option value={1}>Active</option>
+                                <option value={0}>Inactive</option>
+                            </select>
                         </div>
 
                         <div className="grid gap-2">
@@ -225,31 +280,20 @@ export function EditUserDialog({
                         </div>
 
                         <div className="grid gap-2">
-                            <Label>Assign Roles</Label>
-                            <div className="space-y-2 rounded-lg border p-3">
+                            <Label htmlFor="edit_role">Assign Role</Label>
+                            <select
+                                id="edit_role"
+                                className="w-full rounded-md border px-2 py-2"
+                                value={data.roles[0] ?? ''}
+                                onChange={handleRoleChange}
+                            >
+                                <option value="">Select role</option>
                                 {roles.map((role) => (
-                                    <div
-                                        key={role.id}
-                                        className="flex items-center space-x-2"
-                                    >
-                                        <Checkbox
-                                            id={`edit-role-${role.id}`}
-                                            checked={data.roles.includes(
-                                                role.name,
-                                            )}
-                                            onCheckedChange={() =>
-                                                toggleRole(role.name)
-                                            }
-                                        />
-                                        <Label
-                                            htmlFor={`edit-role-${role.id}`}
-                                            className="cursor-pointer font-normal"
-                                        >
-                                            {role.name}
-                                        </Label>
-                                    </div>
+                                    <option key={role.id} value={role.name}>
+                                        {role.name}
+                                    </option>
                                 ))}
-                            </div>
+                            </select>
                             {errors.roles && (
                                 <p className="text-sm text-red-500">
                                     {errors.roles}

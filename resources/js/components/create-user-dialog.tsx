@@ -1,5 +1,4 @@
 import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
 import {
     Dialog,
     DialogContent,
@@ -32,7 +31,7 @@ export function CreateUserDialog({ roles }: CreateUserDialogProps) {
         email: '',
         password: '',
         password_confirmation: '',
-        roles: ['user'] as string[],
+        roles: ['vendor'] as string[],
         status: 1,
     });
 
@@ -48,16 +47,9 @@ export function CreateUserDialog({ roles }: CreateUserDialogProps) {
         });
     };
 
-    const toggleRole = (roleName: string) => {
-        const currentRoles = data.roles;
-        if (currentRoles.includes(roleName)) {
-            setData(
-                'roles',
-                currentRoles.filter((r) => r !== roleName),
-            );
-        } else {
-            setData('roles', [...currentRoles, roleName]);
-        }
+    const handleRoleChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+        const value = event.target.value;
+        setData('roles', value ? [value] : []);
     };
 
     return (
@@ -135,6 +127,30 @@ export function CreateUserDialog({ roles }: CreateUserDialogProps) {
                         </div>
 
                         <div className="grid gap-2">
+                            <Label htmlFor="phone_number">Mobile Number</Label>
+                            <Input
+                                id="phone_number"
+                                value={(data as any).phone_number ?? ''}
+                                onChange={(e) =>
+                                    setData('phone_number' as any, e.target.value)
+                                }
+                                placeholder="+1 555 123 4567"
+                            />
+                        </div>
+
+                        <div className="grid gap-2">
+                            <Label htmlFor="city_district">Location / City</Label>
+                            <Input
+                                id="city_district"
+                                value={(data as any).city_district ?? ''}
+                                onChange={(e) =>
+                                    setData('city_district' as any, e.target.value)
+                                }
+                                placeholder="City or District"
+                            />
+                        </div>
+
+                        <div className="grid gap-2">
                             <Label htmlFor="password">Password</Label>
                             <Input
                                 id="password"
@@ -178,31 +194,47 @@ export function CreateUserDialog({ roles }: CreateUserDialogProps) {
                         </div>
 
                         <div className="grid gap-2">
-                            <Label>Assign Roles</Label>
-                            <div className="space-y-2 rounded-lg border p-3">
+                            <Label htmlFor="address">Address</Label>
+                            <Input
+                                id="address"
+                                value={(data as any).address ?? ''}
+                                onChange={(e) =>
+                                    setData('address' as any, e.target.value)
+                                }
+                                placeholder="Street, building, etc."
+                            />
+                        </div>
+
+                        <div className="grid gap-2">
+                            <Label htmlFor="status">Status</Label>
+                            <select
+                                id="status"
+                                className="w-full rounded-md border px-2 py-2"
+                                value={(data as any).status ?? 1}
+                                onChange={(e) =>
+                                    setData('status' as any, Number(e.target.value))
+                                }
+                            >
+                                <option value={1}>Active</option>
+                                <option value={0}>Inactive</option>
+                            </select>
+                        </div>
+
+                        <div className="grid gap-2">
+                            <Label htmlFor="create_role">Assign Role</Label>
+                            <select
+                                id="create_role"
+                                className="w-full rounded-md border px-2 py-2"
+                                value={data.roles[0] ?? ''}
+                                onChange={handleRoleChange}
+                            >
+                                <option value="">Select role</option>
                                 {roles.map((role) => (
-                                    <div
-                                        key={role.id}
-                                        className="flex items-center space-x-2"
-                                    >
-                                        <Checkbox
-                                            id={`role-${role.id}`}
-                                            checked={data.roles.includes(
-                                                role.name,
-                                            )}
-                                            onCheckedChange={() =>
-                                                toggleRole(role.name)
-                                            }
-                                        />
-                                        <Label
-                                            htmlFor={`role-${role.id}`}
-                                            className="cursor-pointer font-normal"
-                                        >
-                                            {role.name}
-                                        </Label>
-                                    </div>
+                                    <option key={role.id} value={role.name}>
+                                        {role.name}
+                                    </option>
                                 ))}
-                            </div>
+                            </select>
                             {errors.roles && (
                                 <p className="text-sm text-red-500">
                                     {errors.roles}

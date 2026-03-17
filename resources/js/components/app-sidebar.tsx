@@ -14,7 +14,7 @@ import { dashboard } from '@/routes';
 import { type NavItem } from '@/types';
 import { Link, usePage } from '@inertiajs/react';
 import { SharedData } from '@/types';
-import { Folder, LayoutGrid, Shield, Users, Package, ShoppingCart, Truck, CreditCard, Boxes, Store } from 'lucide-react';
+import { Folder, LayoutGrid, Shield, Users, Package, ShoppingCart, Truck, CreditCard, Boxes, Store, Tag, Layers } from 'lucide-react';
 import AppLogo from './app-logo';
 
 const mainNavItems: NavItem[] = [
@@ -49,6 +49,11 @@ const mainNavItems: NavItem[] = [
         icon: Boxes,
     },
     {
+        title: 'Subcategories',
+        href: '/admin/subcategories',
+        icon: Layers,
+    },
+    {
         title: 'Brands',
         href: '/admin/brands',
         icon: Folder,
@@ -57,6 +62,11 @@ const mainNavItems: NavItem[] = [
         title: 'Products',
         href: '/admin/products',
         icon: Package,
+    },
+    {
+        title: 'Promotions',
+        href: '/admin/promotions',
+        icon: Tag,
     },
     {
         title: 'Orders',
@@ -100,8 +110,10 @@ export function AppSidebar() {
         '/admin/vendors': ['view vendors'],
         '/admin/stores': ['stores.view', 'view stores'],
         '/admin/categories': ['categories.manage', 'view categories'],
+        '/admin/subcategories': ['subcategories.manage', 'view subcategories'],
         '/admin/brands': ['brands.manage', 'view brands'],
         '/admin/products': ['products.view', 'view products'],
+        '/admin/promotions': ['promotions.manage', 'promotions.view', 'view promotions', 'create promotions', 'edit promotions', 'delete promotions'],
         '/admin/orders': ['orders.view', 'view orders'],
         '/admin/shipments': ['shipments.view', 'view shipments'],
         '/admin/payments': ['payments.view', 'view payments'],
@@ -118,7 +130,7 @@ export function AppSidebar() {
                 <SidebarMenu>
                     <SidebarMenuItem>
                         <SidebarMenuButton size="lg" asChild>
-                            <Link href={dashboard()} prefetch>
+                            <Link href={dashboard()} prefetch style={{ pointerEvents: 'none' }}>
                                 <AppLogo />
                             </Link>
                         </SidebarMenuButton>

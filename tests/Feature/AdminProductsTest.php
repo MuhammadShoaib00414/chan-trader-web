@@ -6,7 +6,11 @@ use App\Models\Product;
 use App\Models\Store;
 use App\Models\User;
 use Database\Seeders\RolesAndPermissionsSeeder;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Spatie\Permission\Models\Role;
+
+uses(RefreshDatabase::class);
 
 it('allows admin to create a product', function () {
     $this->seed(RolesAndPermissionsSeeder::class);
@@ -43,6 +47,7 @@ it('allows admin to create a product', function () {
         'slug' => 'test-product',
         'sku' => 'SKU-TEST-0001',
         'price' => 10.50,
+        'feature_image' => UploadedFile::fake()->image('feature.jpg'),
     ];
 
     $res = $this->post('/api/admin/products', $payload);
@@ -52,5 +57,5 @@ it('allows admin to create a product', function () {
     $id = (int) $res->json('data.id');
     expect(Product::find($id))->not->toBeNull();
     expect(Product::find($id)?->store_id)->toBe($store->id);
+    expect(Product::find($id)?->feature_image)->toContain('/storage/products/feature/');
 });
-

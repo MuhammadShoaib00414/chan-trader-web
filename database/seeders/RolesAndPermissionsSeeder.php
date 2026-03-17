@@ -44,6 +44,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'stores.suspend',
             'stores.manage_staff',
             'categories.manage',
+            'subcategories.manage',
             'brands.manage',
             'products.view',
             'products.create',
@@ -51,6 +52,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'products.delete',
             'products.publish',
             'promotions.manage',
+            'promotions.view',
 
             // Orders & operations
             'orders.view',
@@ -88,6 +90,8 @@ class RolesAndPermissionsSeeder extends Seeder
             'view stores', 'create stores', 'edit stores', 'delete stores', 'approve stores', 'suspend stores',
             // Categories
             'view categories', 'create categories', 'edit categories', 'delete categories',
+            // Subcategories
+            'view subcategories', 'create subcategories', 'edit subcategories', 'delete subcategories',
             // Brands
             'view brands', 'create brands', 'edit brands', 'delete brands',
             // Products
@@ -128,6 +132,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'stores.approve',
             'stores.suspend',
             'categories.manage',
+            'subcategories.manage',
             'brands.manage',
             'products.view',
             'products.create',
@@ -146,6 +151,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'banners.manage',
             'pages.manage',
             'promotions.manage',
+            'promotions.view',
             'view settings',
         ]);
 
@@ -153,18 +159,21 @@ class RolesAndPermissionsSeeder extends Seeder
         $editor = Role::firstOrCreate(['name' => 'editor']);
         $editor->syncPermissions([
             'categories.manage',
+            'subcategories.manage',
             'brands.manage',
             'products.view',
             'products.create',
             'products.update',
             'products.publish',
             'promotions.manage',
+            'promotions.view',
         ]);
 
         // Vendor - restricted to managing their own catalog (Categories, Brands, Products)
         $vendor = Role::firstOrCreate(['name' => 'vendor']);
         $vendor->syncPermissions([
             'categories.manage',
+            'subcategories.manage',
             'brands.manage',
             'products.view',
             'products.create',

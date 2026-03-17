@@ -2,9 +2,10 @@
 
 use App\Http\Controllers\Api\App\BrandController as AppBrandController;
 use App\Http\Controllers\Api\App\CategoryController as AppCategoryController;
-use App\Http\Controllers\Api\App\StoreController as AppStoreController;
 use App\Http\Controllers\Api\App\ProductController as AppProductController;
 use App\Http\Controllers\Api\App\PromotionController as AppPromotionController;
+use App\Http\Controllers\Api\App\StoreController as AppStoreController;
+use App\Http\Controllers\Api\App\SubcategoryController as AppSubcategoryController;
 use App\Http\Controllers\Api\Auth\LoginController;
 use App\Http\Controllers\Api\Auth\OtpController;
 use App\Http\Controllers\Api\Auth\PasswordController;
@@ -54,6 +55,7 @@ Route::name('api.')->group(function () {
     // Public APP APIs (mobile/web app)
     Route::prefix('app')->group(function () {
         Route::get('/categories', [AppCategoryController::class, 'index']);
+        Route::get('/subcategories', [AppSubcategoryController::class, 'index']);
         Route::get('/brands', [AppBrandController::class, 'index']);
         Route::get('/stores', [AppStoreController::class, 'index']);
         Route::get('/stores/{store}', [AppStoreController::class, 'show']);

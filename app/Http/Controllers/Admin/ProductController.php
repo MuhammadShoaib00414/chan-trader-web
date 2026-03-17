@@ -3,8 +3,8 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\Store;
 use App\Models\Product;
+use App\Models\Store;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
@@ -95,6 +95,7 @@ class ProductController extends Controller
             'sku' => ['required', 'string', 'max:64', 'unique:products,sku'],
             'short_description' => ['nullable', 'string', 'max:300'],
             'description' => ['nullable', 'string'],
+            'feature_image' => ['nullable', 'image', 'max:5120'],
             'price' => ['required', 'numeric'],
             'compare_at' => ['nullable', 'numeric'],
             'unit' => ['nullable', 'string', 'max:32'],
@@ -108,6 +109,11 @@ class ProductController extends Controller
                 abort(403, 'No store associated with vendor user.');
             }
             $validated['store_id'] = $storeId;
+        }
+
+        if ($request->hasFile('feature_image')) {
+            $path = $request->file('feature_image')->storePublicly('products/feature', ['disk' => 'public']);
+            $validated['feature_image'] = "/storage/{$path}";
         }
 
         $product = Product::create($validated);
@@ -150,6 +156,7 @@ class ProductController extends Controller
         ]);
         $path = $request->file('file')->storePublicly("products/{$product->id}", ['disk' => 'public']);
         $product->update(['feature_image' => "/storage/{$path}"]);
+
         return response()->json(['success' => true, 'data' => ['feature_image' => $product->feature_image]]);
     }
 
@@ -160,6 +167,7 @@ class ProductController extends Controller
         ]);
         $path = $request->file('file')->storePublicly("products/{$product->id}", ['disk' => 'public']);
         $product->update(['top_image' => "/storage/{$path}"]);
+
         return response()->json(['success' => true, 'data' => ['top_image' => $product->top_image]]);
     }
 

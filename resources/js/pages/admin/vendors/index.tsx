@@ -5,15 +5,23 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { ToastStack } from '@/components/ui/toast-stack';
 import { requestJson } from '@/lib/http';
 import { Separator } from '@/components/ui/separator';
+import { Badge } from '@/components/ui/badge';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Edit2, MoreHorizontal, Trash2 } from 'lucide-react';
 
 type VendorItem = {
   id: number;
   name: string;
   email: string;
+  phone_number?: string | null;
+  status: number;
+  shop_name?: string | null;
+  city_district?: string | null;
+  address?: string | null;
   store: { id: number; name: string; slug: string; status: string } | null;
 };
 
@@ -30,6 +38,11 @@ export default function VendorsIndex({ vendors }: VendorsPageProps) {
   const [password, setPassword] = useState('');
   const [passwordConfirmation, setPasswordConfirmation] = useState('');
   const [storeName, setStoreName] = useState('');
+  const [shopName, setShopName] = useState('');
+  const [mobileNumber, setMobileNumber] = useState('');
+  const [locationCity, setLocationCity] = useState('');
+  const [address, setAddress] = useState('');
+  const [statusValue, setStatusValue] = useState<'1' | '0'>('1');
 
   const [openReset, setOpenReset] = useState(false);
   const [resetVendorId, setResetVendorId] = useState<number | null>(null);
@@ -40,6 +53,17 @@ export default function VendorsIndex({ vendors }: VendorsPageProps) {
   const [addStoreVendorId, setAddStoreVendorId] = useState<number | null>(null);
   const [extraStoreName, setExtraStoreName] = useState('');
 
+  const [editOpen, setEditOpen] = useState(false);
+  const [editVendor, setEditVendor] = useState<VendorItem | null>(null);
+  const [editFirst, setEditFirst] = useState('');
+  const [editLast, setEditLast] = useState('');
+  const [editEmail, setEditEmail] = useState('');
+  const [editPhone, setEditPhone] = useState('');
+  const [editStatus, setEditStatus] = useState<number>(1);
+  const [editShopName, setEditShopName] = useState('');
+  const [editCity, setEditCity] = useState('');
+  const [editAddress, setEditAddress] = useState('');
+
   const [toasts, setToasts] = useState<Array<{ id: number; title: string; variant: 'success' | 'error' }>>([]);
   const dismissToast = (id: number) => setToasts((ts) => ts.filter((t) => t.id !== id));
   const showToast = (title: string, variant: 'success' | 'error' = 'success') => {
@@ -47,6 +71,71 @@ export default function VendorsIndex({ vendors }: VendorsPageProps) {
     setToasts((ts) => [...ts, { id, title, variant }]);
     setTimeout(() => dismissToast(id), 2500);
   };
+
+  const [query, setQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
+  const [roleFilter, setRoleFilter] = useState<'all' | 'vendor'>('all');
+  const [sortBy, setSortBy] = useState<'name' | 'email' | 'status'>('name');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
+
+  const toggleSort = (key: 'name' | 'email' | 'status') => {
+    if (sortBy === key) {
+      setSortDir((prev) => (prev === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortBy(key);
+      setSortDir('asc');
+    }
+  };
+
+  const filtered = useMemo(
+    () =>
+      vendors.filter((v) => {
+        const q = query.toLowerCase();
+        const statusText = v.status == 1 ? 'active' : 'inactive';
+        if (statusFilter === 'active' && v.status != 1) {
+          return false;
+        }
+        if (statusFilter === 'inactive' && v.status == 1) {
+          return false;
+        }
+        if (roleFilter === 'vendor') {
+          // all records here are vendors already; keep for symmetry
+        }
+
+        if (!q) return true;
+
+        return (
+          v.name.toLowerCase().includes(q) ||
+          v.email.toLowerCase().includes(q) ||
+          (v.store?.name?.toLowerCase().includes(q) ?? false) ||
+          statusText.includes(q) ||
+          'vendor'.includes(q)
+        );
+      }),
+    [vendors, query, statusFilter, roleFilter],
+  );
+
+  const sortedVendors = [...filtered].sort((a, b) => {
+    let av: string | number = '';
+    let bv: string | number = '';
+    switch (sortBy) {
+      case 'name':
+        av = a.name.toLowerCase();
+        bv = b.name.toLowerCase();
+        break;
+      case 'email':
+        av = a.email.toLowerCase();
+        bv = b.email.toLowerCase();
+        break;
+      case 'status':
+        av = a.status;
+        bv = b.status;
+        break;
+    }
+    if (av < bv) return sortDir === 'asc' ? -1 : 1;
+    if (av > bv) return sortDir === 'asc' ? 1 : -1;
+    return 0;
+  });
 
   const slugify = (s: string) =>
     s
@@ -66,11 +155,17 @@ export default function VendorsIndex({ vendors }: VendorsPageProps) {
       password,
       password_confirmation: passwordConfirmation,
       store_name: storeName,
+      shop_name: shopName || storeName,
+      phone_number: mobileNumber || null,
+      city_district: locationCity || null,
+      address: address || null,
+      status: Number(statusValue),
     });
     setProcessing(false);
     if (res.ok) {
       setOpen(false);
-      setFirstName(''); setLastName(''); setEmail(''); setPassword(''); setPasswordConfirmation(''); setStoreName('');
+      setFirstName(''); setLastName(''); setEmail(''); setPassword(''); setPasswordConfirmation('');
+      setStoreName(''); setShopName(''); setMobileNumber(''); setLocationCity(''); setAddress(''); setStatusValue('1');
       showToast('Vendor created.', 'success');
       router.reload({ only: ['vendors'] });
     } else {
@@ -145,6 +240,53 @@ export default function VendorsIndex({ vendors }: VendorsPageProps) {
     }
   };
 
+  const openEditVendor = (v: VendorItem) => {
+    setEditVendor(v);
+    const parts = v.name.split(' ');
+    setEditFirst(parts[0] ?? '');
+    setEditLast(parts.slice(1).join(' ') ?? '');
+    setEditEmail(v.email);
+    setEditPhone(v.phone_number ?? '');
+    setEditStatus(v.status ?? 1);
+    setEditShopName(v.shop_name ?? '');
+    setEditCity(v.city_district ?? '');
+    setEditAddress(v.address ?? '');
+    setEditOpen(true);
+  };
+
+  const submitEditVendor = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editVendor) return;
+    const res = await requestJson('PUT', `/api/users/${editVendor.id}`, {
+      first_name: editFirst,
+      last_name: editLast,
+      email: editEmail,
+      phone_number: editPhone || null,
+      status: editStatus,
+      shop_name: editShopName || null,
+      city_district: editCity || null,
+      address: editAddress || null,
+    });
+    if (res.ok) {
+      setEditOpen(false);
+      showToast('Vendor updated.', 'success');
+      router.reload({ only: ['vendors'] });
+    } else {
+      showToast('Failed to update vendor.', 'error');
+    }
+  };
+
+  const deleteVendor = async (id: number) => {
+    if (!confirm('Are you sure you want to delete this vendor?')) return;
+    const res = await requestJson('DELETE', `/api/users/${id}`, {});
+    if (res.ok) {
+      showToast('Vendor deleted.', 'success');
+      router.reload({ only: ['vendors'] });
+    } else {
+      showToast('Failed to delete vendor.', 'error');
+    }
+  };
+
   return (
     <AppLayout>
       <Head title="Vendors" />
@@ -175,7 +317,24 @@ export default function VendorsIndex({ vendors }: VendorsPageProps) {
                       <Input placeholder="Password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
                       <Input placeholder="Confirm password" type="password" value={passwordConfirmation} onChange={(e) => setPasswordConfirmation(e.target.value)} />
                     </div>
-                    <Input placeholder="Store name" value={storeName} onChange={(e) => setStoreName(e.target.value)} />
+                    <Input placeholder="Shop name" value={shopName} onChange={(e) => setShopName(e.target.value)} />
+                    <Input placeholder="Mobile number" value={mobileNumber} onChange={(e) => setMobileNumber(e.target.value)} />
+                    <div className="grid grid-cols-2 gap-2">
+                      <Input placeholder="Location / City" value={locationCity} onChange={(e) => setLocationCity(e.target.value)} />
+                      <Input placeholder="Store name" value={storeName} onChange={(e) => setStoreName(e.target.value)} />
+                    </div>
+                    <Input placeholder="Address" value={address} onChange={(e) => setAddress(e.target.value)} />
+                    <div>
+                      <label className="mb-1 block text-sm">Status</label>
+                      <select
+                        className="w-full rounded-md border px-2 py-2"
+                        value={statusValue}
+                        onChange={(e) => setStatusValue(e.target.value as '1' | '0')}
+                      >
+                        <option value="1">Active</option>
+                        <option value="0">Inactive</option>
+                      </select>
+                    </div>
                   </div>
                   <div className="flex items-center justify-end gap-2">
                     <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={processing}>Cancel</Button>
@@ -189,51 +348,140 @@ export default function VendorsIndex({ vendors }: VendorsPageProps) {
 
         <Card>
           <CardHeader>
-            <CardTitle>Vendors</CardTitle>
+            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+              <CardTitle>Vendors</CardTitle>
+              <div className="flex flex-col gap-2 md:flex-row md:items-center">
+                <select
+                  className="w-full rounded-md border px-2 py-1 text-sm md:w-32"
+                  value={statusFilter}
+                  onChange={(e) =>
+                    setStatusFilter(
+                      e.target.value as 'all' | 'active' | 'inactive',
+                    )
+                  }
+                >
+                  <option value="all">All status</option>
+                  <option value="active">Active</option>
+                  <option value="inactive">Inactive</option>
+                </select>
+                <select
+                  className="w-full rounded-md border px-2 py-1 text-sm md:w-32"
+                  value={roleFilter}
+                  onChange={(e) =>
+                    setRoleFilter(e.target.value as 'all' | 'vendor')
+                  }
+                >
+                  <option value="all">All roles</option>
+                  <option value="vendor">Vendor</option>
+                </select>
+                <Input
+                  placeholder="Search by name, email, status, or store..."
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  className="md:w-72"
+                />
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Email</TableHead>
+                  <TableHead>
+                    <button
+                      type="button"
+                      className="flex items-center gap-1 text-xs font-medium uppercase tracking-wide"
+                      onClick={() => toggleSort('name')}
+                    >
+                      Name
+                    </button>
+                  </TableHead>
+                  <TableHead>
+                    <button
+                      type="button"
+                      className="flex items-center gap-1 text-xs font-medium uppercase tracking-wide"
+                      onClick={() => toggleSort('email')}
+                    >
+                      Email
+                    </button>
+                  </TableHead>
+                  <TableHead>Phone</TableHead>
                   <TableHead>Store</TableHead>
-                  <TableHead>Status</TableHead>
+                  <TableHead>Store Status</TableHead>
+                  <TableHead>
+                    <button
+                      type="button"
+                      className="flex items-center gap-1 text-xs font-medium uppercase tracking-wide cursor-pointer"
+                      onClick={() => toggleSort('status')}
+                    >
+                      Status
+                    </button>
+                  </TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {vendors.map((v) => (
+                {sortedVendors.map((v) => (
                   <TableRow key={v.id}>
                     <TableCell>{v.name}</TableCell>
                     <TableCell>{v.email}</TableCell>
+                    <TableCell>{v.phone_number ?? '—'}</TableCell>
                     <TableCell>{v.store ? v.store.name : '—'}</TableCell>
-                    <TableCell>{v.store ? v.store.status : '—'}</TableCell>
+                    <TableCell>
+                      {v.store ? (
+                        <Badge variant={v.store.status === 'active' ? 'default' : 'outline'}>
+                          {v.store.status === 'active' ? 'Approved' : v.store.status === 'suspended' ? 'Suspended' : 'Pending'}
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline">Pending</Badge>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={v.status == 1 ? 'default' : 'outline'}>
+                        {v.status == 1 ? 'Active' : 'Inactive'}
+                      </Badge>
+                    </TableCell>
                     <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
-                        {v.store ? (
-                          <>
-                            {v.store.status !== 'active' && (
-                              <Button size="sm" variant="outline" onClick={() => approveStore(v.store!.id)}>
-                                Approve
-                              </Button>
-                            )}
-                            {v.store.status === 'active' && (
-                              <Button size="sm" variant="destructive" onClick={() => suspendStore(v.store!.id)}>
-                                Suspend
-                              </Button>
-                            )}
-                          </>
-                        ) : (
-                          <Button size="sm" variant="outline" onClick={() => openAddStoreDialog(v.id)}>
-                            Add Store
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" className="h-8 w-8 p-0">
+                            <span className="sr-only">Open menu</span>
+                            <MoreHorizontal className="h-4 w-4" />
                           </Button>
-                        )}
-                        <Separator orientation="vertical" className="h-6" />
-                        <Button size="sm" variant="ghost" onClick={() => openResetPassword(v.id)}>
-                          Reset Password
-                        </Button>
-                      </div>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem onClick={() => openEditVendor(v)}>
+                            <Edit2 className="mr-2 h-4 w-4" />
+                            Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuItem className="text-red-600" onClick={() => deleteVendor(v.id)}>
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Delete
+                          </DropdownMenuItem>
+                          {v.store && (
+                            <DropdownMenuItem
+                              onClick={() =>
+                                v.store!.status === 'active'
+                                  ? suspendStore(v.store!.id)
+                                  : approveStore(v.store!.id)
+                              }
+                            >
+                              {v.store.status === 'active' ? 'Unapprove Store' : 'Approve Store'}
+                            </DropdownMenuItem>
+                          )}
+                          {!v.store && (
+                            <DropdownMenuItem onClick={() => openAddStoreDialog(v.id)}>
+                              Approve Store (Create)
+                            </DropdownMenuItem>
+                          )}
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem onClick={() => openResetPassword(v.id)}>
+                            Reset Password
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -246,6 +494,45 @@ export default function VendorsIndex({ vendors }: VendorsPageProps) {
             </Table>
           </CardContent>
         </Card>
+
+        <Dialog open={editOpen} onOpenChange={setEditOpen}>
+          <DialogContent className="sm:max-w-[520px]">
+            <form onSubmit={submitEditVendor}>
+              <DialogHeader>
+                <DialogTitle>Edit Vendor</DialogTitle>
+                <DialogDescription>Update vendor account details.</DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-3 py-3">
+                <div className="grid grid-cols-2 gap-2">
+                  <Input placeholder="First name" value={editFirst} onChange={(e) => setEditFirst(e.target.value)} />
+                  <Input placeholder="Last name" value={editLast} onChange={(e) => setEditLast(e.target.value)} />
+                </div>
+                <Input placeholder="Email" type="email" value={editEmail} onChange={(e) => setEditEmail(e.target.value)} />
+                <Input placeholder="Phone number" value={editPhone} onChange={(e) => setEditPhone(e.target.value)} />
+                <Input placeholder="Shop name" value={editShopName} onChange={(e) => setEditShopName(e.target.value)} />
+                <div className="grid grid-cols-2 gap-2">
+                  <Input placeholder="Location / City" value={editCity} onChange={(e) => setEditCity(e.target.value)} />
+                  <div>
+                    {/* <label className="mb-1 block text-sm">Status</label> */}
+                    <select
+                      className="w-full rounded-md border px-2 py-2"
+                      value={String(editStatus)}
+                      onChange={(e) => setEditStatus(Number(e.target.value))}
+                    >
+                      <option value={1}>Active</option>
+                      <option value={0}>Inactive</option>
+                    </select>
+                  </div>
+                </div>
+                <Input placeholder="Address" value={editAddress} onChange={(e) => setEditAddress(e.target.value)} />
+              </div>
+              <div className="flex items-center justify-end gap-2">
+                <Button type="button" variant="outline" onClick={() => setEditOpen(false)}>Cancel</Button>
+                <Button type="submit">Save</Button>
+              </div>
+            </form>
+          </DialogContent>
+        </Dialog>
 
         <Dialog open={openReset} onOpenChange={setOpenReset}>
           <DialogContent className="sm:max-w-[520px]">

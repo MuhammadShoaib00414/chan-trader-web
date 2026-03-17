@@ -9,7 +9,7 @@ use Illuminate\Http\Request;
 class BrandController extends AppBaseController
 {
     /**
-     * List brands (APP)
+     * List Brands
      *
      * @group APP APIs
      *
