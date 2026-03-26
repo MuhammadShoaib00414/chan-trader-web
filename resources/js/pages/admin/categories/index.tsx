@@ -179,13 +179,13 @@ export default function CategoriesIndex() {
     <AppLayout breadcrumbs={[{ title: 'Categories', href: '/admin/categories' }]}>
       <Head title="Categories" />
       <div className="grid gap-6 p-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+          <div className="flex flex-1 items-center gap-2">
             <Input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search categories..."
-              className="w-[240px]"
+              className="flex-1 md:max-w-sm"
             />
             <Button variant="outline" size="sm" onClick={() => applyFilters({ page: 1 })}>
               Search
@@ -205,11 +205,11 @@ export default function CategoriesIndex() {
           </div>
           <Dialog open={addOpen} onOpenChange={setAddOpen}>
             <DialogTrigger asChild>
-              <Button size="sm" onClick={() => setAddOpen(true)}>
+              <Button size="lg" onClick={() => setAddOpen(true)}>
                 <Plus className="mr-2 size-4" /> Add Category
               </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Add Category</DialogTitle>
               </DialogHeader>
@@ -248,7 +248,8 @@ export default function CategoriesIndex() {
         </div>
 
         <div className="rounded-xl border bg-card shadow-md">
-          <Table>
+          <div className="hidden md:block w-full overflow-x-auto">
+          <Table className="min-w-[800px]">
             <TableHeader>
               <TableRow className="bg-muted/30">
                 <TableHead className="w-16 text-xs uppercase tracking-wide">
@@ -261,7 +262,7 @@ export default function CategoriesIndex() {
                     Name {sortBy === 'name' ? (sortDir === 'asc' ? <ChevronUp className="size-3" /> : <ChevronDown className="size-3" />) : <ArrowUpDown className="size-3" />}
                   </button>
                 </TableHead>
-                <TableHead className="text-xs uppercase tracking-wide">
+                <TableHead className="text-xs uppercase tracking-wide hidden md:table-cell">
                   <button type="button" className="flex items-center gap-1 cursor-pointer" onClick={() => toggleSort('slug')}>
                     Slug {sortBy === 'slug' ? (sortDir === 'asc' ? <ChevronUp className="size-3" /> : <ChevronDown className="size-3" />) : <ArrowUpDown className="size-3" />}
                   </button>
@@ -271,12 +272,12 @@ export default function CategoriesIndex() {
                     Active {sortBy === 'is_active' ? (sortDir === 'asc' ? <ChevronUp className="size-3" /> : <ChevronDown className="size-3" />) : <ArrowUpDown className="size-3" />}
                   </button>
                 </TableHead>
-                <TableHead className="text-xs uppercase tracking-wide">
+                <TableHead className="text-xs uppercase tracking-wide hidden sm:table-cell">
                   <button type="button" className="flex items-center gap-1 cursor-pointer" onClick={() => toggleSort('sort_order')}>
                     Order {sortBy === 'sort_order' ? (sortDir === 'asc' ? <ChevronUp className="size-3" /> : <ChevronDown className="size-3" />) : <ArrowUpDown className="size-3" />}
                   </button>
                 </TableHead>
-                <TableHead className="text-xs uppercase tracking-wide">Image</TableHead>
+                <TableHead className="text-xs uppercase tracking-wide hidden lg:table-cell">Image</TableHead>
                 <TableHead className="w-28 text-right text-xs uppercase tracking-wide">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -291,17 +292,17 @@ export default function CategoriesIndex() {
                   onClick={() => startEdit(c, shownOrder)}
                 >
                   <TableCell>{c.id}</TableCell>
-                  <TableCell>{c.name}</TableCell>
-                  <TableCell>{c.slug}</TableCell>
+                  <TableCell className="whitespace-nowrap">{c.name}</TableCell>
+                  <TableCell className="hidden md:table-cell">{c.slug}</TableCell>
                   <TableCell>
                     <Badge variant={c.is_active ? 'secondary' : 'outline'}>
                       {c.is_active ? 'Enabled' : 'Disabled'}
                     </Badge>
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="hidden sm:table-cell">
                     {shownOrder}
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="hidden lg:table-cell">
                     {c.image ? (
                       <img src={`/storage/${c.image}`} alt={c.name} className="size-8 rounded-md border object-cover" />
                     ) : (
@@ -340,6 +341,22 @@ export default function CategoriesIndex() {
               ))}
             </TableBody>
           </Table>
+          </div>
+          <div className="md:hidden grid gap-2 p-3">
+            {items?.map((c, i) => {
+              const shownOrder = displaySortOrder(c, i)
+              return (
+                <div key={c.id} className="rounded-lg border p-3" onClick={() => startEdit(c, shownOrder)}>
+                  <div className="font-medium">{c.name}</div>
+                  <div className="text-sm text-muted-foreground">{c.slug}</div>
+                  <div className="mt-1 flex items-center justify-between">
+                    <Badge variant={c.is_active ? 'secondary' : 'outline'}>{c.is_active ? 'Enabled' : 'Disabled'}</Badge>
+                    <div className="text-xs text-muted-foreground">Order {shownOrder}</div>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
           {(!items || items.length === 0) && (
             <div className="p-8 text-center text-sm text-muted-foreground">
               No categories found.
@@ -383,7 +400,7 @@ export default function CategoriesIndex() {
         </div>
 
         <Dialog open={editOpen} onOpenChange={(o) => setEditOpen(o)}>
-          <DialogContent>
+          <DialogContent className="max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Edit Category</DialogTitle>
             </DialogHeader>

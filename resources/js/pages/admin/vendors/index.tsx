@@ -384,7 +384,8 @@ export default function VendorsIndex({ vendors }: VendorsPageProps) {
             </div>
           </CardHeader>
           <CardContent>
-            <Table>
+            <div className="hidden md:block w-full overflow-x-auto">
+            <Table className="min-w-[900px]">
               <TableHeader>
                 <TableRow>
                   <TableHead>
@@ -405,9 +406,9 @@ export default function VendorsIndex({ vendors }: VendorsPageProps) {
                       Email
                     </button>
                   </TableHead>
-                  <TableHead>Phone</TableHead>
-                  <TableHead>Store</TableHead>
-                  <TableHead>Store Status</TableHead>
+                  <TableHead className="hidden md:table-cell">Phone</TableHead>
+                  <TableHead className="hidden md:table-cell">Store</TableHead>
+                  <TableHead className="hidden sm:table-cell">Store Status</TableHead>
                   <TableHead>
                     <button
                       type="button"
@@ -423,11 +424,11 @@ export default function VendorsIndex({ vendors }: VendorsPageProps) {
               <TableBody>
                 {sortedVendors.map((v) => (
                   <TableRow key={v.id}>
-                    <TableCell>{v.name}</TableCell>
-                    <TableCell>{v.email}</TableCell>
-                    <TableCell>{v.phone_number ?? '—'}</TableCell>
-                    <TableCell>{v.store ? v.store.name : '—'}</TableCell>
-                    <TableCell>
+                    <TableCell className="whitespace-nowrap">{v.name}</TableCell>
+                    <TableCell className="whitespace-nowrap">{v.email}</TableCell>
+                    <TableCell className="hidden md:table-cell">{v.phone_number ?? '—'}</TableCell>
+                    <TableCell className="hidden md:table-cell">{v.store ? v.store.name : '—'}</TableCell>
+                    <TableCell className="hidden sm:table-cell">
                       {v.store ? (
                         <Badge variant={v.store.status === 'active' ? 'default' : 'outline'}>
                           {v.store.status === 'active' ? 'Approved' : v.store.status === 'suspended' ? 'Suspended' : 'Pending'}
@@ -492,6 +493,59 @@ export default function VendorsIndex({ vendors }: VendorsPageProps) {
                 )}
               </TableBody>
             </Table>
+            </div>
+            <div className="md:hidden grid gap-2 p-3">
+              {sortedVendors.map((v) => (
+                <div key={v.id} className="rounded-lg border p-3">
+                  <div className="font-medium">{v.name}</div>
+                  <div className="text-sm text-muted-foreground">{v.email}</div>
+                  <div className="mt-1 text-xs text-muted-foreground">{v.phone_number ?? '—'}</div>
+                  <div className="mt-1 text-xs text-muted-foreground">{v.store ? v.store.name : '—'}</div>
+                  <div className="mt-2 flex items-center justify-between">
+                    <Badge variant={v.store && v.store.status === 'active' ? 'default' : 'outline'}>
+                      {v.store ? (v.store.status === 'active' ? 'Approved' : v.store.status === 'suspended' ? 'Suspended' : 'Pending') : 'Pending'}
+                    </Badge>
+                    <Badge variant={v.status == 1 ? 'default' : 'outline'}>{v.status == 1 ? 'Active' : 'Inactive'}</Badge>
+                  </div>
+                  <div className="mt-2 flex justify-end">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="outline" size="sm">Actions</Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => openEditVendor(v)}>
+                          <Edit2 className="mr-2 h-4 w-4" />
+                          Edit
+                        </DropdownMenuItem>
+                        <DropdownMenuItem className="text-red-600" onClick={() => deleteVendor(v.id)}>
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          Delete
+                        </DropdownMenuItem>
+                        {v.store && (
+                          <DropdownMenuItem
+                            onClick={() =>
+                              v.store!.status === 'active'
+                                ? suspendStore(v.store!.id)
+                                : approveStore(v.store!.id)
+                            }
+                          >
+                            {v.store.status === 'active' ? 'Unapprove Store' : 'Approve Store'}
+                          </DropdownMenuItem>
+                        )}
+                        {!v.store && (
+                          <DropdownMenuItem onClick={() => openAddStoreDialog(v.id)}>
+                            Approve Store (Create)
+                          </DropdownMenuItem>
+                        )}
+                        <DropdownMenuItem onClick={() => openResetPassword(v.id)}>
+                          Reset Password
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                </div>
+              ))}
+            </div>
           </CardContent>
         </Card>
 

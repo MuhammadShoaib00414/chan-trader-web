@@ -82,13 +82,14 @@ export default function OrderShow() {
             </form>
             <div className="mt-4">
               <div className="mb-2 font-medium">Timeline</div>
-              <Table>
+              <div className="hidden md:block w-full overflow-x-auto">
+              <Table className="min-w-[700px]">
                 <TableHeader>
                   <TableRow>
                     <TableHead>From</TableHead>
                     <TableHead>To</TableHead>
-                    <TableHead>Comment</TableHead>
-                    <TableHead>Time</TableHead>
+                    <TableHead className="hidden md:table-cell">Comment</TableHead>
+                    <TableHead className="hidden sm:table-cell">Time</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -96,12 +97,23 @@ export default function OrderShow() {
                     <TableRow key={i}>
                       <TableCell>{t.from_status ?? '-'}</TableCell>
                       <TableCell>{t.to_status}</TableCell>
-                      <TableCell>{t.comment ?? '-'}</TableCell>
-                      <TableCell>{new Date(t.created_at).toLocaleString()}</TableCell>
+                      <TableCell className="hidden md:table-cell">{t.comment ?? '-'}</TableCell>
+                      <TableCell className="hidden sm:table-cell">{new Date(t.created_at).toLocaleString()}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
               </Table>
+              </div>
+              <div className="md:hidden grid gap-2">
+                {timeline?.map((t, i) => (
+                  <div key={i} className="rounded-lg border p-3">
+                    <div className="font-medium capitalize">{t.to_status}</div>
+                    <div className="text-xs text-muted-foreground">{t.from_status ?? '-'}</div>
+                    <div className="mt-1 text-xs text-muted-foreground">{t.comment ?? '-'}</div>
+                    <div className="mt-1 text-xs text-muted-foreground">{new Date(t.created_at).toLocaleString()}</div>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
 
@@ -124,14 +136,15 @@ export default function OrderShow() {
               <div />
               <Button type="submit" variant="destructive">Refund</Button>
             </form>
-            <Table>
+            <div className="hidden md:block w-full overflow-x-auto">
+            <Table className="min-w-[700px]">
               <TableHeader>
                 <TableRow>
                   <TableHead>ID</TableHead>
                   <TableHead>Method</TableHead>
                   <TableHead>Amount</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>When</TableHead>
+                  <TableHead className="hidden md:table-cell">When</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -141,11 +154,22 @@ export default function OrderShow() {
                     <TableCell>{p.method}</TableCell>
                     <TableCell>${p.amount}</TableCell>
                     <TableCell className="capitalize">{p.status}</TableCell>
-                    <TableCell>{p.paid_at ? new Date(p.paid_at).toLocaleString() : '-'}</TableCell>
+                    <TableCell className="hidden md:table-cell">{p.paid_at ? new Date(p.paid_at).toLocaleString() : '-'}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
+            </div>
+            <div className="md:hidden grid gap-2">
+              {payments?.map((p) => (
+                <div key={p.id} className="rounded-lg border p-3">
+                  <div className="font-medium">{p.method}</div>
+                  <div className="text-sm">${p.amount}</div>
+                  <div className="text-xs text-muted-foreground capitalize">{p.status}</div>
+                  <div className="text-xs text-muted-foreground">{p.paid_at ? new Date(p.paid_at).toLocaleString() : '-'}</div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
 
@@ -161,11 +185,12 @@ export default function OrderShow() {
             <div />
             <Button type="submit">Create Shipment</Button>
           </form>
-            <Table>
+            <div className="hidden md:block w-full overflow-x-auto">
+            <Table className="min-w-[800px]">
             <TableHeader>
               <TableRow>
                 <TableHead>ID</TableHead>
-                <TableHead>Store</TableHead>
+                <TableHead className="hidden md:table-cell">Store</TableHead>
                 <TableHead>Carrier</TableHead>
                 <TableHead>Tracking</TableHead>
                   <TableHead>Status</TableHead>
@@ -176,7 +201,7 @@ export default function OrderShow() {
               {shipments?.map((s) => (
                 <TableRow key={s.id}>
                   <TableCell>{s.id}</TableCell>
-                  <TableCell>{s.store_id}</TableCell>
+                  <TableCell className="hidden md:table-cell">{s.store_id}</TableCell>
                   <TableCell>{s.carrier ?? '-'}</TableCell>
                   <TableCell>{s.tracking_no ?? '-'}</TableCell>
                     <TableCell>
@@ -196,6 +221,28 @@ export default function OrderShow() {
               ))}
             </TableBody>
           </Table>
+          </div>
+          <div className="md:hidden grid gap-2">
+            {shipments?.map((s) => (
+              <div key={s.id} className="rounded-lg border p-3">
+                <div className="font-medium">{s.carrier ?? '-'}</div>
+                <div className="text-xs text-muted-foreground">{s.tracking_no ?? '-'}</div>
+                <div className="mt-1">
+                  <select className="w-full rounded-md border px-2 py-2 capitalize" value={shipStatusEdits[s.id] ?? s.status} onChange={(e) => setShipStatus(s.id, e.target.value)}>
+                    <option value="pending">pending</option>
+                    <option value="shipped">shipped</option>
+                    <option value="in_transit">in_transit</option>
+                    <option value="delivered">delivered</option>
+                    <option value="failed">failed</option>
+                    <option value="returned">returned</option>
+                  </select>
+                </div>
+                <div className="mt-2 flex justify-end">
+                  <Button size="sm" variant="outline" onClick={() => saveShipStatus(s.id, s.status)}>Save</Button>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </AppLayout>

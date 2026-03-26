@@ -283,17 +283,18 @@ export default function ProductsIndex() {
         </div>
 
         <div className="rounded-lg border">
-          <Table>
+          <div className="hidden md:block w-full overflow-x-auto">
+          <Table className="min-w-[900px]">
             <TableHeader>
               <TableRow>
                 <TableHead className="w-12">ID</TableHead>
-                <TableHead>Name</TableHead>
-                <TableHead>Slug</TableHead>
-                <TableHead>SKU</TableHead>
+                <TableHead className="whitespace-nowrap">Name</TableHead>
+                <TableHead className="hidden md:table-cell">Slug</TableHead>
+                <TableHead className="whitespace-nowrap">SKU</TableHead>
                 <TableHead>Price</TableHead>
-                <TableHead>Discount</TableHead>
-                <TableHead>Thumb</TableHead>
-                <TableHead>Meta</TableHead>
+                <TableHead className="hidden sm:table-cell">Discount</TableHead>
+                <TableHead className="hidden lg:table-cell">Thumb</TableHead>
+                <TableHead className="hidden md:table-cell">Meta</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -301,9 +302,9 @@ export default function ProductsIndex() {
               {items?.map((p) => (
                 <TableRow key={p.id}>
                   <TableCell>{p.id}</TableCell>
-                  <TableCell>{p.name}</TableCell>
-                  <TableCell>{p.slug}</TableCell>
-                  <TableCell>{p.sku}</TableCell>
+                  <TableCell className="whitespace-nowrap">{p.name}</TableCell>
+                  <TableCell className="hidden md:table-cell">{p.slug}</TableCell>
+                  <TableCell className="whitespace-nowrap">{p.sku}</TableCell>
                   <TableCell>
                     <div className="flex flex-col text-sm">
                       <span>${p.price}</span>
@@ -312,7 +313,7 @@ export default function ProductsIndex() {
                       )}
                     </div>
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="hidden sm:table-cell">
                     {p.discount_percent && p.discount_percent > 0 ? (
                       <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-xs text-emerald-700">
                         -{p.discount_percent}%
@@ -321,10 +322,10 @@ export default function ProductsIndex() {
                       <span className="text-xs text-muted-foreground">—</span>
                     )}
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="hidden lg:table-cell">
                     {p.thumb ? <img src={p.thumb} alt="" className="h-8 w-8 rounded object-cover" /> : '-'}
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="hidden md:table-cell">
                     <div className="flex flex-wrap gap-1">
                       {p.store?.name && <span className="rounded bg-neutral-100 px-2 py-0.5 text-xs text-neutral-700 dark:bg-neutral-800 dark:text-neutral-200">{p.store.name}</span>}
                       {p.category?.name && <span className="rounded bg-neutral-100 px-2 py-0.5 text-xs text-neutral-700 dark:bg-neutral-800 dark:text-neutral-200">{p.category.name}</span>}
@@ -339,6 +340,32 @@ export default function ProductsIndex() {
               ))}
             </TableBody>
           </Table>
+          </div>
+          <div className="md:hidden grid gap-2 p-3">
+            {items?.map((p) => {
+              const price = `$${p.price}`
+              const compare = p.compare_at && p.compare_at > p.price ? `$${p.compare_at}` : ''
+              return (
+                <div key={p.id} className="rounded-lg border p-3">
+                  <div className="font-medium">{p.name}</div>
+                  <div className="text-xs text-muted-foreground">{p.sku}</div>
+                  <div className="mt-1 text-sm">
+                    <span>{price}</span>
+                    {compare ? <span className="ml-2 text-xs text-muted-foreground line-through">{compare}</span> : null}
+                  </div>
+                  <div className="mt-1 flex flex-wrap gap-1">
+                    {p.store?.name && <span className="rounded bg-neutral-100 px-2 py-0.5 text-xs text-neutral-700 dark:bg-neutral-800 dark:text-neutral-200">{p.store.name}</span>}
+                    {p.category?.name && <span className="rounded bg-neutral-100 px-2 py-0.5 text-xs text-neutral-700 dark:bg-neutral-800 dark:text-neutral-200">{p.category.name}</span>}
+                  </div>
+                  <div className="mt-2 flex justify-end">
+                    <Button size="sm" variant="outline" asChild>
+                      <a href={`/admin/products/${p.id}`}>Manage</a>
+                    </Button>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
         </div>
         {pagination && (
           <div className="flex items-center justify-between">

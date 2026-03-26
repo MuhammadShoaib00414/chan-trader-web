@@ -57,30 +57,42 @@ export default function PaymentsIndex() {
           </div>
         </form>
         <div className="rounded-lg border">
-          <Table>
+          <div className="hidden md:block w-full overflow-x-auto">
+          <Table className="min-w-[800px]">
             <TableHeader>
               <TableRow>
                 <TableHead>ID</TableHead>
-                <TableHead>Order</TableHead>
-                <TableHead>Method</TableHead>
+                <TableHead className="whitespace-nowrap">Order</TableHead>
+                <TableHead className="hidden sm:table-cell">Method</TableHead>
                 <TableHead>Amount</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Paid At</TableHead>
+                <TableHead className="hidden md:table-cell">Paid At</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {items?.map((p) => (
                 <TableRow key={p.id}>
                   <TableCell>{p.id}</TableCell>
-                  <TableCell>{p.order_id}</TableCell>
-                  <TableCell>{p.method}</TableCell>
+                  <TableCell className="whitespace-nowrap">{p.order_id}</TableCell>
+                  <TableCell className="hidden sm:table-cell">{p.method}</TableCell>
                   <TableCell>${p.amount}</TableCell>
                   <TableCell className="capitalize">{p.status}</TableCell>
-                  <TableCell>{p.paid_at ? new Date(p.paid_at).toLocaleString() : '-'}</TableCell>
+                  <TableCell className="hidden md:table-cell">{p.paid_at ? new Date(p.paid_at).toLocaleString() : '-'}</TableCell>
                 </TableRow>
               ))}
             </TableBody>
           </Table>
+          </div>
+          <div className="md:hidden grid gap-2 p-3">
+            {items?.map((p) => (
+              <div key={p.id} className="rounded-lg border p-3">
+                <div className="font-medium">{p.method}</div>
+                <div className="mt-1 text-sm">${p.amount}</div>
+                <div className="mt-1 text-xs text-muted-foreground capitalize">Status: {p.status}</div>
+                <div className="mt-1 text-xs text-muted-foreground">{p.paid_at ? new Date(p.paid_at).toLocaleString() : '-'}</div>
+              </div>
+            ))}
+          </div>
         </div>
         {pagination && (
           <div className="flex items-center justify-between">

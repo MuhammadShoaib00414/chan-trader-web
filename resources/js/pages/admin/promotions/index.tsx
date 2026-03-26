@@ -151,9 +151,14 @@ export default function PromotionsIndex() {
       <Head title="Promotions" />
 
       <div className="grid gap-6 p-4">
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search by product name..." className="w-[260px]" />
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+          <div className="flex flex-1 items-center gap-2">
+            <Input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search by product name..."
+              className="flex-1 md:max-w-sm"
+            />
             <Button variant="outline" size="sm" onClick={() => applyFilters({ page: 1 })}>
               Search
             </Button>
@@ -173,11 +178,11 @@ export default function PromotionsIndex() {
 
           <Dialog open={addOpen} onOpenChange={setAddOpen}>
             <DialogTrigger asChild>
-              <Button size="sm" onClick={() => setAddOpen(true)}>
+              <Button size="lg" onClick={() => setAddOpen(true)}>
                 <Plus className="mr-2 size-4" /> Add Promotion
               </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Add Promotion</DialogTitle>
               </DialogHeader>
@@ -213,13 +218,14 @@ export default function PromotionsIndex() {
         </div>
 
         <div className="rounded-xl border bg-card shadow-md">
-          <Table>
+          <div className="hidden md:block w-full overflow-x-auto">
+          <Table className="min-w-[700px]">
             <TableHeader>
               <TableRow className="bg-muted/30">
                 <TableHead className="w-16 text-xs uppercase tracking-wide">ID</TableHead>
                 <TableHead className="text-xs uppercase tracking-wide">Product</TableHead>
                 <TableHead className="text-xs uppercase tracking-wide">Active</TableHead>
-                <TableHead className="text-xs uppercase tracking-wide">Image</TableHead>
+                <TableHead className="text-xs uppercase tracking-wide hidden md:table-cell">Image</TableHead>
                 <TableHead className="w-28 text-right text-xs uppercase tracking-wide">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -227,9 +233,9 @@ export default function PromotionsIndex() {
               {items.map((p) => (
                 <TableRow key={p.id} className="hover:bg-muted/20">
                   <TableCell>{p.id}</TableCell>
-                  <TableCell>{p.product?.name ?? `#${p.product_id}`}</TableCell>
+                  <TableCell className="whitespace-nowrap">{p.product?.name ?? `#${p.product_id}`}</TableCell>
                   <TableCell>{p.is_active ? 'Yes' : 'No'}</TableCell>
-                  <TableCell>
+                  <TableCell className="hidden md:table-cell">
                     {p.image ? (
                       <img src={`/storage/${p.image}`} alt="" className="size-10 rounded-md border object-cover" />
                     ) : (
@@ -260,6 +266,19 @@ export default function PromotionsIndex() {
               ))}
             </TableBody>
           </Table>
+          </div>
+          <div className="md:hidden grid gap-2 p-3">
+            {items.map((p) => (
+              <div key={p.id} className="rounded-lg border p-3">
+                <div className="font-medium">{p.product?.name ?? `#${p.product_id}`}</div>
+                <div className="mt-1 text-xs text-muted-foreground">{p.is_active ? 'Active' : 'Inactive'}</div>
+                <div className="mt-2 flex justify-end gap-2">
+                  <Button variant="outline" size="sm" onClick={() => startEdit(p)}>Edit</Button>
+                  <Button variant="destructive" size="sm" onClick={() => startDelete(p)}>Delete</Button>
+                </div>
+              </div>
+            ))}
+          </div>
           {(!items || items.length === 0) && <div className="p-8 text-center text-sm text-muted-foreground">No promotions found.</div>}
 
           {pagination && (
@@ -280,7 +299,7 @@ export default function PromotionsIndex() {
         </div>
 
         <Dialog open={editOpen} onOpenChange={setEditOpen}>
-          <DialogContent>
+          <DialogContent className="max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Edit Promotion</DialogTitle>
             </DialogHeader>
@@ -339,4 +358,3 @@ export default function PromotionsIndex() {
     </AppLayout>
   )
 }
-

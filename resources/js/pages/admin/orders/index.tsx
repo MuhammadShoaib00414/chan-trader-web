@@ -49,15 +49,16 @@ export default function OrdersIndex() {
           </div>
         </form>
         <div className="rounded-lg border">
-          <Table>
+          <div className="hidden md:block w-full overflow-x-auto">
+          <Table className="min-w-[900px]">
             <TableHeader>
               <TableRow>
                 <TableHead>ID</TableHead>
-                <TableHead>Code</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Payment</TableHead>
+                <TableHead className="whitespace-nowrap">Code</TableHead>
+                <TableHead className="whitespace-nowrap">Status</TableHead>
+                <TableHead className="hidden sm:table-cell">Payment</TableHead>
                 <TableHead>Total</TableHead>
-                <TableHead>Created</TableHead>
+                <TableHead className="hidden md:table-cell">Created</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -65,11 +66,11 @@ export default function OrdersIndex() {
               {items?.map((o) => (
                 <TableRow key={o.id}>
                   <TableCell>{o.id}</TableCell>
-                  <TableCell>{o.code}</TableCell>
+                  <TableCell className="whitespace-nowrap">{o.code}</TableCell>
                   <TableCell className="capitalize">{o.status}</TableCell>
-                  <TableCell className="capitalize">{o.payment_status}</TableCell>
+                  <TableCell className="capitalize hidden sm:table-cell">{o.payment_status}</TableCell>
                   <TableCell>${o.grand_total}</TableCell>
-                  <TableCell>{new Date(o.created_at).toLocaleString()}</TableCell>
+                  <TableCell className="hidden md:table-cell">{new Date(o.created_at).toLocaleString()}</TableCell>
                   <TableCell className="text-right">
                     <Button size="sm" variant="outline" asChild>
                       <a href={`/admin/orders/${o.id}`}>Manage</a>
@@ -79,6 +80,23 @@ export default function OrdersIndex() {
               ))}
             </TableBody>
           </Table>
+          </div>
+          <div className="md:hidden grid gap-2 p-3">
+            {items?.map((o) => (
+              <div key={o.id} className="rounded-lg border p-3">
+                <div className="font-medium">{o.code}</div>
+                <div className="mt-1 text-xs text-muted-foreground capitalize">Status: {o.status}</div>
+                <div className="mt-1 text-xs text-muted-foreground capitalize">Payment: {o.payment_status}</div>
+                <div className="mt-1 text-sm">${o.grand_total}</div>
+                <div className="mt-1 text-xs text-muted-foreground">{new Date(o.created_at).toLocaleString()}</div>
+                <div className="mt-2 flex justify-end">
+                  <Button size="sm" variant="outline" asChild>
+                    <a href={`/admin/orders/${o.id}`}>Manage</a>
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
         {pagination && (
           <div className="flex items-center justify-between">

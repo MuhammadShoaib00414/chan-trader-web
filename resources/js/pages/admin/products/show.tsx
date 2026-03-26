@@ -385,13 +385,14 @@ export default function ProductShow() {
             
             {product.variants && product.variants.length > 0 ? (
               <div className="rounded-lg border">
-                <Table>
+                <div className="hidden md:block w-full overflow-x-auto">
+                <Table className="min-w-[800px]">
                   <TableHeader>
                     <TableRow className="bg-muted/50">
                       <TableHead className="w-16">ID</TableHead>
-                      <TableHead>SKU</TableHead>
-                      <TableHead>Price</TableHead>
-                      <TableHead>Stock</TableHead>
+                      <TableHead className="whitespace-nowrap">SKU</TableHead>
+                      <TableHead className="whitespace-nowrap">Price</TableHead>
+                      <TableHead className="whitespace-nowrap">Stock</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -436,6 +437,27 @@ export default function ProductShow() {
                     ))}
                   </TableBody>
                 </Table>
+                </div>
+                <div className="md:hidden grid gap-2 p-3">
+                  {product.variants.map((v) => (
+                    <div key={v.id} className="rounded-lg border p-3">
+                      <div className="text-xs text-muted-foreground">#{v.id}</div>
+                      <div className="mt-1">
+                        <Input value={getVariantEdit(v).sku} onChange={(e) => setVariantField(v.id, 'sku', e.target.value)} placeholder="SKU" />
+                      </div>
+                      <div className="mt-1">
+                        <Input value={getVariantEdit(v).price} onChange={(e) => setVariantField(v.id, 'price', e.target.value)} placeholder="Price" type="number" step="0.01" />
+                      </div>
+                      <div className="mt-1">
+                        <Input value={getVariantEdit(v).stock} onChange={(e) => setVariantField(v.id, 'stock', e.target.value)} placeholder="Stock" type="number" />
+                      </div>
+                      <div className="mt-2 flex justify-end gap-2">
+                        <Button size="sm" variant="outline" onClick={() => saveVariant(v)}>Save</Button>
+                        <Button size="sm" variant="destructive" onClick={() => deleteVariant(v)}>Delete</Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             ) : (
               <div className="text-center py-8 text-muted-foreground">
@@ -477,12 +499,13 @@ export default function ProductShow() {
             
             {product.attributes && product.attributes.length > 0 ? (
               <div className="rounded-lg border">
-                <Table>
+                <div className="hidden md:block w-full overflow-x-auto">
+                <Table className="min-w-[700px]">
                   <TableHeader>
                     <TableRow className="bg-muted/50">
-                      <TableHead>Name</TableHead>
-                      <TableHead>Value</TableHead>
-                      <TableHead>Unit</TableHead>
+                      <TableHead className="whitespace-nowrap">Name</TableHead>
+                      <TableHead className="whitespace-nowrap">Value</TableHead>
+                      <TableHead className="hidden sm:table-cell">Unit</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -503,7 +526,7 @@ export default function ProductShow() {
                             className="max-w-[200px]"
                           />
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="hidden sm:table-cell">
                           <Input 
                             value={getAttrEdit(a).unit} 
                             onChange={(e) => setAttrField(a.id, 'unit', e.target.value)} 
@@ -520,6 +543,26 @@ export default function ProductShow() {
                     ))}
                   </TableBody>
                 </Table>
+                </div>
+                <div className="md:hidden grid gap-2 p-3">
+                  {product.attributes.map((a) => (
+                    <div key={a.id} className="rounded-lg border p-3">
+                      <div className="mt-1">
+                        <Input value={getAttrEdit(a).name} onChange={(e) => setAttrField(a.id, 'name', e.target.value)} />
+                      </div>
+                      <div className="mt-1">
+                        <Input value={getAttrEdit(a).value} onChange={(e) => setAttrField(a.id, 'value', e.target.value)} />
+                      </div>
+                      <div className="mt-1">
+                        <Input value={getAttrEdit(a).unit} onChange={(e) => setAttrField(a.id, 'unit', e.target.value)} />
+                      </div>
+                      <div className="mt-2 flex justify-end gap-2">
+                        <Button size="sm" variant="outline" onClick={() => saveAttribute(a)}>Save</Button>
+                        <Button size="sm" variant="destructive" onClick={() => deleteAttribute(a)}>Delete</Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             ) : (
               <div className="text-center py-8 text-muted-foreground">
@@ -567,12 +610,13 @@ export default function ProductShow() {
             
             {product.images && product.images.length > 0 ? (
               <div className="rounded-lg border">
-                <Table>
+                <div className="hidden md:block w-full overflow-x-auto">
+                <Table className="min-w-[800px]">
                   <TableHeader>
                     <TableRow className="bg-muted/50">
                       <TableHead className="w-16">ID</TableHead>
                       <TableHead className="w-32">Preview</TableHead>
-                      <TableHead>Path</TableHead>
+                      <TableHead className="hidden md:table-cell">Path</TableHead>
                       <TableHead className="w-24">Primary</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
@@ -584,7 +628,7 @@ export default function ProductShow() {
                         <TableCell>
                           <img src={img.path} alt="" className="h-16 w-16 rounded-md border-2 object-cover shadow-sm" />
                         </TableCell>
-                        <TableCell className="font-mono text-xs">{img.path}</TableCell>
+                        <TableCell className="font-mono text-xs hidden md:table-cell">{img.path}</TableCell>
                         <TableCell>
                           {img.is_primary ? (
                             <span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-1 text-xs font-medium text-primary">
@@ -609,6 +653,26 @@ export default function ProductShow() {
                     ))}
                   </TableBody>
                 </Table>
+                </div>
+                <div className="md:hidden grid gap-2 p-3">
+                  {product.images.map((img) => (
+                    <div key={img.id} className="rounded-lg border p-3">
+                      <div className="flex items-center gap-3">
+                        <img src={img.path} alt="" className="h-16 w-16 rounded-md border-2 object-cover shadow-sm" />
+                        <div className="text-xs text-muted-foreground">{img.is_primary ? 'Primary' : '—'}</div>
+                      </div>
+                      <div className="mt-2 flex justify-end gap-2">
+                        {!img.is_primary && (
+                          <Button size="sm" variant="outline" onClick={async () => {
+                            const res = await patchJson(`/api/admin/products/${product.id}/images/${img.id}/primary`, {});
+                            if (res.ok) router.reload({ only: ['product'] });
+                          }}>Set Primary</Button>
+                        )}
+                        <Button size="sm" variant="destructive" onClick={() => deleteImage(img.id)}>Delete</Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             ) : (
               <div className="text-center py-8 text-muted-foreground">

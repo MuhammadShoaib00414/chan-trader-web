@@ -302,7 +302,8 @@ export default function SubcategoriesIndex() {
         </div>
 
         <div className="rounded-xl border bg-card shadow-md">
-          <Table>
+          <div className="hidden md:block w-full overflow-x-auto">
+          <Table className="min-w-[800px]">
             <TableHeader>
               <TableRow className="bg-muted/30">
                 <TableHead className="w-16 text-xs uppercase tracking-wide">
@@ -315,18 +316,18 @@ export default function SubcategoriesIndex() {
                     Name {sortBy === 'name' ? (sortDir === 'asc' ? <ChevronUp className="size-3" /> : <ChevronDown className="size-3" />) : <ArrowUpDown className="size-3" />}
                   </button>
                 </TableHead>
-                <TableHead className="text-xs uppercase tracking-wide">Category</TableHead>
+                <TableHead className="text-xs uppercase tracking-wide hidden md:table-cell">Category</TableHead>
                 <TableHead className="text-xs uppercase tracking-wide">
                   <button type="button" className="flex items-center gap-1 cursor-pointer" onClick={() => toggleSort('is_active')}>
                     Active {sortBy === 'is_active' ? (sortDir === 'asc' ? <ChevronUp className="size-3" /> : <ChevronDown className="size-3" />) : <ArrowUpDown className="size-3" />}
                   </button>
                 </TableHead>
-                <TableHead className="text-xs uppercase tracking-wide">
+                <TableHead className="text-xs uppercase tracking-wide hidden sm:table-cell">
                   <button type="button" className="flex items-center gap-1 cursor-pointer" onClick={() => toggleSort('sort_order')}>
                     Order {sortBy === 'sort_order' ? (sortDir === 'asc' ? <ChevronUp className="size-3" /> : <ChevronDown className="size-3" />) : <ArrowUpDown className="size-3" />}
                   </button>
                 </TableHead>
-                <TableHead className="text-xs uppercase tracking-wide">Image</TableHead>
+                <TableHead className="text-xs uppercase tracking-wide hidden lg:table-cell">Image</TableHead>
                 <TableHead className="w-28 text-right text-xs uppercase tracking-wide">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -334,13 +335,13 @@ export default function SubcategoriesIndex() {
               {items.map((s, i) => (
                 <TableRow key={s.id} className={i % 2 === 1 ? 'bg-muted/10 hover:bg-muted/20' : 'hover:bg-muted/20'}>
                   <TableCell>{s.id}</TableCell>
-                  <TableCell>{s.name}</TableCell>
-                  <TableCell>{s.category?.name ?? `#${s.category_id}`}</TableCell>
+                  <TableCell className="whitespace-nowrap">{s.name}</TableCell>
+                  <TableCell className="hidden md:table-cell">{s.category?.name ?? `#${s.category_id}`}</TableCell>
                   <TableCell>
                     <Badge variant={s.is_active ? 'secondary' : 'outline'}>{s.is_active ? 'Enabled' : 'Disabled'}</Badge>
                   </TableCell>
-                  <TableCell>{s.sort_order ?? ''}</TableCell>
-                  <TableCell>
+                  <TableCell className="hidden sm:table-cell">{s.sort_order ?? ''}</TableCell>
+                  <TableCell className="hidden lg:table-cell">
                     {s.image ? <img src={`/storage/${s.image}`} alt={s.name} className="size-8 rounded-md border object-cover" /> : <span className="text-xs text-muted-foreground">None</span>}
                   </TableCell>
                   <TableCell className="text-right">
@@ -355,6 +356,23 @@ export default function SubcategoriesIndex() {
               ))}
             </TableBody>
           </Table>
+          </div>
+          <div className="md:hidden grid gap-2 p-3">
+            {items.map((s) => (
+              <div key={s.id} className="rounded-lg border p-3">
+                <div className="font-medium">{s.name}</div>
+                <div className="text-sm text-muted-foreground">{s.category?.name ?? `#${s.category_id}`}</div>
+                <div className="mt-1 flex items-center justify-between">
+                  <Badge variant={s.is_active ? 'secondary' : 'outline'}>{s.is_active ? 'Enabled' : 'Disabled'}</Badge>
+                  <div className="text-xs text-muted-foreground">Order {s.sort_order ?? ''}</div>
+                </div>
+                <div className="mt-2 flex justify-end gap-2">
+                  <Button variant="outline" size="sm" onClick={() => startEdit(s)}>Edit</Button>
+                  <Button variant="destructive" size="sm" onClick={() => startDelete(s)}>Delete</Button>
+                </div>
+              </div>
+            ))}
+          </div>
           {(!items || items.length === 0) && <div className="p-8 text-center text-sm text-muted-foreground">No subcategories found.</div>}
 
           {pagination && (

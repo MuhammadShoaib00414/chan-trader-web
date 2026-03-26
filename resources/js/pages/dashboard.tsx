@@ -186,19 +186,20 @@ export default function Dashboard({ stats, recentUsers }: DashboardProps) {
                         <CardDescription>Newest signups</CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <Table>
+                        <div className="hidden md:block w-full overflow-x-auto">
+                        <Table className="min-w-[600px]">
                             <TableHeader>
                                 <TableRow>
-                                    <TableHead>Name</TableHead>
-                                    <TableHead>Email</TableHead>
-                                    <TableHead className="text-right">Joined</TableHead>
+                                    <TableHead className="whitespace-nowrap">Name</TableHead>
+                                    <TableHead className="whitespace-nowrap hidden sm:table-cell">Email</TableHead>
+                                    <TableHead className="text-right whitespace-nowrap">Joined</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {recentUsers.map((u) => (
                                     <TableRow key={u.id}>
-                                        <TableCell>{u.name}</TableCell>
-                                        <TableCell>{u.email}</TableCell>
+                                        <TableCell className="whitespace-nowrap">{u.name}</TableCell>
+                                        <TableCell className="whitespace-nowrap hidden sm:table-cell">{u.email}</TableCell>
                                         <TableCell className="text-right">
                                             {new Date(u.created_at).toLocaleDateString()}
                                         </TableCell>
@@ -213,6 +214,19 @@ export default function Dashboard({ stats, recentUsers }: DashboardProps) {
                                 )}
                             </TableBody>
                         </Table>
+                        </div>
+                        <div className="md:hidden grid gap-2">
+                            {recentUsers.map((u) => (
+                                <div key={u.id} className="rounded-lg border p-3">
+                                    <div className="font-medium">{u.name}</div>
+                                    <div className="text-sm text-muted-foreground">{u.email}</div>
+                                    <div className="text-xs text-muted-foreground mt-1">Joined {new Date(u.created_at).toLocaleDateString()}</div>
+                                </div>
+                            ))}
+                            {recentUsers.length === 0 && (
+                                <div className="rounded-lg border p-3 text-sm text-muted-foreground">No users yet</div>
+                            )}
+                        </div>
                     </CardContent>
                 </Card>
             </div>

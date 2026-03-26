@@ -67,22 +67,23 @@ export function RolesTable({ roles, allPermissions }: RolesTableProps) {
 
     return (
         <div className="rounded-lg border">
-            <Table>
+            <div className="hidden md:block w-full overflow-x-auto">
+            <Table className="min-w-[640px]">
                 <TableHeader>
                     <TableRow>
-                        <TableHead>Role Name</TableHead>
-                        <TableHead>Permissions</TableHead>
-                        <TableHead>Created</TableHead>
+                        <TableHead className="whitespace-nowrap">Role Name</TableHead>
+                        <TableHead className="hidden md:table-cell">Permissions</TableHead>
+                        <TableHead className="hidden sm:table-cell">Created</TableHead>
                         <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                 </TableHeader>
                 <TableBody>
                     {roles.map((role) => (
                         <TableRow key={role.id}>
-                            <TableCell className="font-medium">
+                            <TableCell className="font-medium whitespace-nowrap">
                                 <Badge variant="outline">{role.name}</Badge>
                             </TableCell>
-                            <TableCell>
+                            <TableCell className="hidden md:table-cell">
                                 <div className="flex flex-wrap gap-1">
                                     {role.permissions.length > 0 ? (
                                         <>
@@ -115,7 +116,7 @@ export function RolesTable({ roles, allPermissions }: RolesTableProps) {
                                     )}
                                 </div>
                             </TableCell>
-                            <TableCell className="text-muted-foreground">
+                            <TableCell className="text-muted-foreground hidden sm:table-cell">
                                 {new Date(role.created_at).toLocaleDateString()}
                             </TableCell>
                             <TableCell className="text-right">
@@ -163,6 +164,43 @@ export function RolesTable({ roles, allPermissions }: RolesTableProps) {
                     ))}
                 </TableBody>
             </Table>
+            </div>
+            <div className="md:hidden grid gap-2 p-3">
+                {roles.map((role) => (
+                    <div key={role.id} className="rounded-lg border p-3">
+                        <div className="font-medium">{role.name}</div>
+                        <div className="mt-1 text-xs text-muted-foreground">
+                            {new Date(role.created_at).toLocaleDateString()}
+                        </div>
+                        <div className="mt-2 flex flex-wrap gap-1">
+                            {role.permissions.slice(0, 4).map((permission) => (
+                                <Badge key={permission.name} variant="secondary">{permission.name}</Badge>
+                            ))}
+                            {role.permissions.length > 4 && (
+                                <Badge variant="secondary">+{role.permissions.length - 4}</Badge>
+                            )}
+                        </div>
+                        <div className="mt-2 flex justify-end gap-2">
+                            <SetPermissionsDialog role={role} allPermissions={allPermissions} onSaved={(msg) => showToast(msg, 'success')} />
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button variant="outline" size="sm">Actions</Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                    <DropdownMenuItem>
+                                        <Edit className="mr-2 h-4 w-4" />
+                                        Edit Role
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem className="text-red-600" onClick={() => handleDelete(role.id)}>
+                                        <Trash2 className="mr-2 h-4 w-4" />
+                                        Delete Role
+                                    </DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                        </div>
+                    </div>
+                ))}
+            </div>
             <ToastStack toasts={toasts} onDismiss={dismissToast} />
         </div>
     );

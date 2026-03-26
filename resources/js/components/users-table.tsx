@@ -114,7 +114,8 @@ export function UsersTable({ users, roles }: UsersTableProps) {
                 onOpenChange={setEditDialogOpen}
             />
             <div className="rounded-lg border">
-                <Table>
+                <div className="hidden md:block w-full overflow-x-auto">
+                <Table className="min-w-[720px]">
                 <TableHeader>
                     <TableRow>
                         <TableHead>
@@ -135,8 +136,8 @@ export function UsersTable({ users, roles }: UsersTableProps) {
                                 Email
                             </button>
                         </TableHead>
-                        <TableHead>Phone</TableHead>
-                        <TableHead>Roles</TableHead>
+                        <TableHead className="hidden md:table-cell">Phone</TableHead>
+                        <TableHead className="hidden lg:table-cell">Roles</TableHead>
                         <TableHead>
                             <button
                                 type="button"
@@ -146,7 +147,7 @@ export function UsersTable({ users, roles }: UsersTableProps) {
                                 Status
                             </button>
                         </TableHead>
-                        <TableHead>
+                        <TableHead className="hidden sm:table-cell">
                             <button
                                 type="button"
                                 className="flex items-center gap-1 text-xs font-medium uppercase tracking-wide cursor-pointer"
@@ -161,12 +162,12 @@ export function UsersTable({ users, roles }: UsersTableProps) {
                 <TableBody>
                     {sortedUsers.map((user) => (
                         <TableRow key={user.id}>
-                            <TableCell className="font-medium">
+                            <TableCell className="font-medium whitespace-nowrap">
                                 {user.name}
                             </TableCell>
-                            <TableCell>{user.email}</TableCell>
-                            <TableCell>{user.phone_number ?? '-'}</TableCell>
-                            <TableCell>
+                            <TableCell className="whitespace-nowrap">{user.email}</TableCell>
+                            <TableCell className="hidden md:table-cell">{user.phone_number ?? '-'}</TableCell>
+                            <TableCell className="hidden lg:table-cell">
                                 <div className="flex flex-wrap gap-1">
                                     {user.roles.map((role) => (
                                         <Badge
@@ -189,7 +190,7 @@ export function UsersTable({ users, roles }: UsersTableProps) {
                                     {user.status == 1 ? 'Active' : 'Inactive'}
                                 </Badge>
                             </TableCell>
-                            <TableCell className="text-muted-foreground">
+                            <TableCell className="text-muted-foreground hidden sm:table-cell">
                                 {new Date(user.created_at).toLocaleDateString()}
                             </TableCell>
                             <TableCell className="text-right">
@@ -230,6 +231,42 @@ export function UsersTable({ users, roles }: UsersTableProps) {
                     ))}
                 </TableBody>
             </Table>
+            </div>
+            <div className="md:hidden grid gap-2 p-3">
+                {sortedUsers.map((user) => (
+                    <div key={user.id} className="rounded-lg border p-3">
+                        <div className="font-medium">{user.name}</div>
+                        <div className="text-sm text-muted-foreground">{user.email}</div>
+                        <div className="mt-1 text-xs text-muted-foreground">{user.phone_number ?? '-'}</div>
+                        <div className="mt-2 flex flex-wrap gap-1">
+                            {user.roles.map((role) => (
+                                <Badge key={role.name} variant="secondary">{role.name}</Badge>
+                            ))}
+                        </div>
+                        <div className="mt-2 flex items-center justify-between">
+                            <Badge variant={user.status == 1 ? 'default' : 'destructive'}>{user.status == 1 ? 'Active' : 'Inactive'}</Badge>
+                            <div className="text-xs text-muted-foreground">{new Date(user.created_at).toLocaleDateString()}</div>
+                        </div>
+                        <div className="mt-2 flex justify-end">
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button variant="outline" size="sm">Actions</Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                    <DropdownMenuItem onClick={() => handleEdit(user)}>
+                                        <Edit className="mr-2 h-4 w-4" />
+                                        Edit User
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem className="text-red-600" onClick={() => handleDelete(user.id)}>
+                                        <Trash2 className="mr-2 h-4 w-4" />
+                                        Delete User
+                                    </DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                        </div>
+                    </div>
+                ))}
+            </div>
         </div>
         </>
     );

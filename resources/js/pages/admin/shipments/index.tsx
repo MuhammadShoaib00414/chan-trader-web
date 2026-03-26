@@ -48,34 +48,51 @@ export default function ShipmentsIndex() {
           </div>
         </form>
         <div className="rounded-lg border">
-          <Table>
+          <div className="hidden md:block w-full overflow-x-auto">
+          <Table className="min-w-[900px]">
             <TableHeader>
               <TableRow>
                 <TableHead>ID</TableHead>
-                <TableHead>Order</TableHead>
-                <TableHead>Store</TableHead>
-                <TableHead>Carrier</TableHead>
-                <TableHead>Tracking</TableHead>
+                <TableHead className="whitespace-nowrap">Order</TableHead>
+                <TableHead className="hidden md:table-cell">Store</TableHead>
+                <TableHead className="whitespace-nowrap">Carrier</TableHead>
+                <TableHead className="whitespace-nowrap">Tracking</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Shipped</TableHead>
-                <TableHead>Delivered</TableHead>
+                <TableHead className="hidden sm:table-cell">Shipped</TableHead>
+                <TableHead className="hidden md:table-cell">Delivered</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {items?.map((s) => (
                 <TableRow key={s.id}>
                   <TableCell>{s.id}</TableCell>
-                  <TableCell>{s.order_id}</TableCell>
-                  <TableCell>{s.store_id}</TableCell>
-                  <TableCell>{s.carrier ?? '-'}</TableCell>
-                  <TableCell>{s.tracking_no ?? '-'}</TableCell>
+                  <TableCell className="whitespace-nowrap">{s.order_id}</TableCell>
+                  <TableCell className="hidden md:table-cell">{s.store_id}</TableCell>
+                  <TableCell className="whitespace-nowrap">{s.carrier ?? '-'}</TableCell>
+                  <TableCell className="whitespace-nowrap">{s.tracking_no ?? '-'}</TableCell>
                   <TableCell className="capitalize">{s.status}</TableCell>
-                  <TableCell>{s.shipped_at ? new Date(s.shipped_at).toLocaleString() : '-'}</TableCell>
-                  <TableCell>{s.delivered_at ? new Date(s.delivered_at).toLocaleString() : '-'}</TableCell>
+                  <TableCell className="hidden sm:table-cell">{s.shipped_at ? new Date(s.shipped_at).toLocaleString() : '-'}</TableCell>
+                  <TableCell className="hidden md:table-cell">{s.delivered_at ? new Date(s.delivered_at).toLocaleString() : '-'}</TableCell>
                 </TableRow>
               ))}
             </TableBody>
           </Table>
+          </div>
+          <div className="md:hidden grid gap-2 p-3">
+            {items?.map((s) => (
+              <div key={s.id} className="rounded-lg border p-3">
+                <div className="font-medium">{s.carrier ?? '-'}</div>
+                <div className="text-xs text-muted-foreground">{s.tracking_no ?? '-'}</div>
+                <div className="mt-1 text-xs capitalize text-muted-foreground">Status: {s.status}</div>
+                <div className="mt-1 text-xs text-muted-foreground">
+                  {s.shipped_at ? `Shipped ${new Date(s.shipped_at).toLocaleString()}` : 'Not shipped'}
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  {s.delivered_at ? `Delivered ${new Date(s.delivered_at).toLocaleString()}` : 'Not delivered'}
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
         {pagination && (
           <div className="flex items-center justify-between">

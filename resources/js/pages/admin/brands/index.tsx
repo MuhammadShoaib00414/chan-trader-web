@@ -169,13 +169,13 @@ export default function BrandsIndex() {
     <AppLayout breadcrumbs={[{ title: 'Brands', href: '/admin/brands' }]}>
       <Head title="Brands" />
       <div className="grid gap-6 p-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+          <div className="flex flex-1 items-center gap-2">
             <Input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search brands..."
-              className="w-[240px]"
+              className="flex-1 md:max-w-sm"
             />
             <Button variant="outline" size="sm" onClick={() => applyFilters({ page: 1 })}>
               Search
@@ -195,11 +195,11 @@ export default function BrandsIndex() {
           </div>
           <Dialog open={addOpen} onOpenChange={setAddOpen}>
             <DialogTrigger asChild>
-              <Button size="sm" onClick={() => setAddOpen(true)}>
+              <Button size="lg" onClick={() => setAddOpen(true)}>
                 <Plus className="mr-2 size-4" /> Add Brand
               </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Add Brand</DialogTitle>
               </DialogHeader>
@@ -238,7 +238,8 @@ export default function BrandsIndex() {
         </div>
 
         <div className="rounded-xl border bg-card shadow-md">
-          <Table>
+          <div className="hidden md:block w-full overflow-x-auto">
+          <Table className="min-w-[800px]">
             <TableHeader>
               <TableRow className="bg-muted/30">
                 <TableHead className="w-16 text-xs uppercase tracking-wide">
@@ -251,17 +252,17 @@ export default function BrandsIndex() {
                     Name {sortBy === 'name' ? (sortDir === 'asc' ? <ChevronUp className="size-3" /> : <ChevronDown className="size-3" />) : <ArrowUpDown className="size-3" />}
                   </button>
                 </TableHead>
-                <TableHead className="text-xs uppercase tracking-wide">
+                <TableHead className="text-xs uppercase tracking-wide hidden md:table-cell">
                   <button type="button" className="flex items-center gap-1 cursor-pointer" onClick={() => toggleSort('slug')}>
                     Slug {sortBy === 'slug' ? (sortDir === 'asc' ? <ChevronUp className="size-3" /> : <ChevronDown className="size-3" />) : <ArrowUpDown className="size-3" />}
                   </button>
                 </TableHead>
-                <TableHead className="text-xs uppercase tracking-wide">
+                <TableHead className="text-xs uppercase tracking-wide hidden sm:table-cell">
                   <button type="button" className="flex items-center gap-1 cursor-pointer" onClick={() => toggleSort('sort_order')}>
                     Order {sortBy === 'sort_order' ? (sortDir === 'asc' ? <ChevronUp className="size-3" /> : <ChevronDown className="size-3" />) : <ArrowUpDown className="size-3" />}
                   </button>
                 </TableHead>
-                <TableHead className="text-xs uppercase tracking-wide">Logo</TableHead>
+                <TableHead className="text-xs uppercase tracking-wide hidden lg:table-cell">Logo</TableHead>
                 <TableHead className="w-28 text-right text-xs uppercase tracking-wide">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -273,10 +274,10 @@ export default function BrandsIndex() {
                   onClick={() => startEdit(b)}
                 >
                   <TableCell>{b.id}</TableCell>
-                  <TableCell>{b.name}</TableCell>
-                  <TableCell>{b.slug}</TableCell>
-                  <TableCell>{b.sort_order}</TableCell>
-                  <TableCell>
+                  <TableCell className="whitespace-nowrap">{b.name}</TableCell>
+                  <TableCell className="hidden md:table-cell">{b.slug}</TableCell>
+                  <TableCell className="hidden sm:table-cell">{b.sort_order}</TableCell>
+                  <TableCell className="hidden lg:table-cell">
                     {b.logo ? (
                       <img src={`/storage/${b.logo}`} alt={b.name} className="size-8 rounded-md border object-cover" />
                     ) : (
@@ -313,6 +314,20 @@ export default function BrandsIndex() {
               ))}
             </TableBody>
           </Table>
+          </div>
+          <div className="md:hidden grid gap-2 p-3">
+            {items?.map((b) => (
+              <div key={b.id} className="rounded-lg border p-3" onClick={() => startEdit(b)}>
+                <div className="font-medium">{b.name}</div>
+                <div className="text-sm text-muted-foreground">{b.slug}</div>
+                <div className="mt-1 text-xs text-muted-foreground">Order {b.sort_order}</div>
+                <div className="mt-2 flex justify-end gap-2">
+                  <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); startEdit(b) }}>Edit</Button>
+                  <Button variant="destructive" size="sm" onClick={(e) => { e.stopPropagation(); startDelete(b) }}>Delete</Button>
+                </div>
+              </div>
+            ))}
+          </div>
           {(!items || items.length === 0) && (
             <div className="p-8 text-center text-sm text-muted-foreground">
               No brands found.
@@ -356,7 +371,7 @@ export default function BrandsIndex() {
         </div>
 
         <Dialog open={editOpen} onOpenChange={(o) => setEditOpen(o)}>
-          <DialogContent>
+          <DialogContent className="max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Edit Brand</DialogTitle>
             </DialogHeader>
