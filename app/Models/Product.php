@@ -12,8 +12,10 @@ class Product extends Model
     protected $fillable = [
         'store_id',
         'category_id',
+        'subcategory_id',
         'brand_id',
         'name',
+        'condition',
         'slug',
         'sku',
         'short_description',
@@ -21,33 +23,43 @@ class Product extends Model
         'feature_image',
         'top_image',
         'price',
+        'stock',
+        'low_stock_threshold',
         'compare_at',
         'unit',
         'warranty_months',
+        'meta_title',
+        'meta_description',
         'is_published',
+        'is_featured',
+        'is_top_selling',
         'published_at',
         'rating_avg',
         'rating_count',
     ];
 
     protected $casts = [
+        'stock' => 'integer',
+        'low_stock_threshold' => 'integer',
         'is_published' => 'boolean',
+        'is_featured' => 'boolean',
+        'is_top_selling' => 'boolean',
         'published_at' => 'datetime',
     ];
 
-    public function variants()
+    public function isLowStock()
     {
-        return $this->hasMany(ProductVariant::class);
+        return $this->stock <= $this->low_stock_threshold;
+    }
+
+    public function scopeLowStock($query)
+    {
+        return $query->whereRaw('stock <= low_stock_threshold');
     }
 
     public function images()
     {
         return $this->hasMany(ProductImage::class);
-    }
-
-    public function attributes()
-    {
-        return $this->hasMany(ProductAttribute::class);
     }
 
     public function store()
@@ -58,6 +70,11 @@ class Product extends Model
     public function category()
     {
         return $this->belongsTo(Category::class);
+    }
+
+    public function subcategory()
+    {
+        return $this->belongsTo(Subcategory::class);
     }
 
     public function brand()

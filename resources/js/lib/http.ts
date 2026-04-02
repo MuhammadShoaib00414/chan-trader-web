@@ -3,18 +3,24 @@ export function csrfToken(): string {
   return el?.content ?? ''
 }
 
-export function requestJson(method: string, url: string, data?: unknown) {
+export function requestJson(method: string, url: string, data?: any) {
+  const token = csrfToken();
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    Accept: 'application/json',
+    'X-Requested-With': 'XMLHttpRequest',
+  };
+
+  if (token) {
+    headers['X-CSRF-TOKEN'] = token;
+  }
+
   return fetch(url, {
     method,
     credentials: 'same-origin',
-    headers: {
-      'Content-Type': 'application/json',
-      Accept: 'application/json',
-      'X-Requested-With': 'XMLHttpRequest',
-      'X-CSRF-TOKEN': csrfToken(),
-    },
+    headers,
     body: data ? JSON.stringify(data) : undefined,
-  })
+  });
 }
 
 export const postJson = (url: string, data?: unknown) => requestJson('POST', url, data)
@@ -22,16 +28,26 @@ export const patchJson = (url: string, data?: unknown) => requestJson('PATCH', u
 export const delJson = (url: string, data?: unknown) => requestJson('DELETE', url, data)
 
 export function requestForm(method: string, url: string, form: FormData) {
+  const token = csrfToken();
+  const headers: Record<string, string> = {
+    Accept: 'application/json',
+    'X-Requested-With': 'XMLHttpRequest',
+  };
+
+  if (token) {
+    headers['X-CSRF-TOKEN'] = token;
+    // Also add to form body for extra reliability with some Laravel configurations
+    if (!form.has('_token')) {
+      form.append('_token', token);
+    }
+  }
+
   return fetch(url, {
     method,
     credentials: 'same-origin',
-    headers: {
-      Accept: 'application/json',
-      'X-Requested-With': 'XMLHttpRequest',
-      'X-CSRF-TOKEN': csrfToken(),
-    },
+    headers,
     body: form,
-  })
+  });
 }
 
 export const postForm = (url: string, form: FormData) => requestForm('POST', url, form)

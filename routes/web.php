@@ -9,6 +9,7 @@ use App\Models\Product;
 use App\Models\Shipment;
 use App\Models\Store;
 use App\Models\Subcategory;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Route;
@@ -27,6 +28,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         $user = auth()->user();
         $isSuper = $user?->hasRole('super-admin');
         $isVendor = $user?->hasRole('vendor');
+        $now = Carbon::now();
 
         $recentUsers = \App\Models\User::latest()
             ->take(5)
@@ -48,8 +50,15 @@ Route::middleware(['auth', 'verified'])->group(function () {
                 'stores' => Store::count(),
                 'products' => Product::count(),
                 'orders' => Order::count(),
+                'pending_orders' => Order::where('status', 'pending')->count(),
                 'payments' => Payment::count(),
                 'shipments' => Shipment::count(),
+                'sales' => [
+                    'today' => Order::whereDate('created_at', Carbon::today())->where('payment_status', 'paid')->sum('grand_total'),
+                    'week' => Order::whereBetween('created_at', [$now->copy()->startOfWeek(), $now->copy()->endOfWeek()])->where('payment_status', 'paid')->sum('grand_total'),
+                    'month' => Order::whereMonth('created_at', $now->month)->whereYear('created_at', $now->year)->where('payment_status', 'paid')->sum('grand_total'),
+                    'year' => Order::whereYear('created_at', $now->year)->where('payment_status', 'paid')->sum('grand_total'),
+                ],
             ];
         } elseif ($isVendor) {
             $storeIds = Store::where('owner_id', $user->id)->pluck('id');
@@ -59,8 +68,15 @@ Route::middleware(['auth', 'verified'])->group(function () {
             $stats = [
                 'my_products' => Product::whereIn('store_id', $storeIds)->count(),
                 'my_orders' => Order::whereIn('id', $orderIds)->count(),
+                'pending_orders' => Order::whereIn('id', $orderIds)->where('status', 'pending')->count(),
                 'my_payments' => Payment::whereIn('order_id', $orderIds)->count(),
                 'my_shipments' => Shipment::whereIn('store_id', $storeIds)->count(),
+                'sales' => [
+                    'today' => Order::whereIn('id', $orderIds)->whereDate('created_at', Carbon::today())->where('payment_status', 'paid')->sum('grand_total'),
+                    'week' => Order::whereIn('id', $orderIds)->whereBetween('created_at', [$now->copy()->startOfWeek(), $now->copy()->endOfWeek()])->where('payment_status', 'paid')->sum('grand_total'),
+                    'month' => Order::whereIn('id', $orderIds)->whereMonth('created_at', $now->month)->whereYear('created_at', $now->year)->where('payment_status', 'paid')->sum('grand_total'),
+                    'year' => Order::whereIn('id', $orderIds)->whereYear('created_at', $now->year)->where('payment_status', 'paid')->sum('grand_total'),
+                ],
             ];
         } else {
             $stats = [
@@ -255,20 +271,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::post('products/{product}/feature-image', [\App\Http\Controllers\Admin\ProductController::class, 'uploadFeatureImage'])
                 ->middleware('permission:products.update');
             Route::post('products/{product}/top-image', [\App\Http\Controllers\Admin\ProductController::class, 'uploadTopImage'])
-                ->middleware('permission:products.update');
-
-            Route::post('products/{product}/variants', [\App\Http\Controllers\Admin\ProductVariantController::class, 'store'])
-                ->middleware('permission:products.update');
-            Route::patch('products/{product}/variants/{variant}', [\App\Http\Controllers\Admin\ProductVariantController::class, 'update'])
-                ->middleware('permission:products.update');
-            Route::delete('products/{product}/variants/{variant}', [\App\Http\Controllers\Admin\ProductVariantController::class, 'destroy'])
-                ->middleware('permission:products.update');
-
-            Route::post('products/{product}/attributes', [\App\Http\Controllers\Admin\ProductAttributeController::class, 'store'])
-                ->middleware('permission:products.update');
-            Route::patch('products/{product}/attributes/{attribute}', [\App\Http\Controllers\Admin\ProductAttributeController::class, 'update'])
-                ->middleware('permission:products.update');
-            Route::delete('products/{product}/attributes/{attribute}', [\App\Http\Controllers\Admin\ProductAttributeController::class, 'destroy'])
                 ->middleware('permission:products.update');
 
             Route::get('orders', [\App\Http\Controllers\Admin\OrderController::class, 'index'])
@@ -512,7 +514,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
                 $product->load('store:id,owner_id');
                 abort_unless($product->store && $product->store->owner_id === auth()->id(), 403);
             }
-            $product->load(['variants', 'images', 'attributes']);
+            $product->load(['images', 'category:id,name', 'subcategory:id,name', 'brand:id,name', 'store:id,name']);
 
             return Inertia::render('admin/products/show', [
                 'product' => $product,

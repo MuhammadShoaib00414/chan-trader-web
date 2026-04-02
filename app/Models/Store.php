@@ -18,6 +18,8 @@ class Store extends Model
         'email',
         'phone',
         'description',
+        'address',
+        'city',
         'socials',
         'rating_avg',
         'followers_count',

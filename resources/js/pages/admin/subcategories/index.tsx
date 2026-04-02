@@ -1,4 +1,5 @@
 import AppLayout from '@/layouts/app-layout'
+// Refresh module
 import { Head, router, usePage } from '@inertiajs/react'
 import { useEffect, useMemo, useState } from 'react'
 import { Button } from '@/components/ui/button'
@@ -223,10 +224,21 @@ export default function SubcategoriesIndex() {
       <Head title="Subcategories" />
 
       <div className="grid gap-6 p-4">
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search subcategories..." className="w-[240px]" />
-            <select className="h-9 rounded-md border bg-background px-2 text-sm" value={categoryId} onChange={(e) => setCategoryId(e.target.value)}>
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex flex-col sm:flex-row flex-1 items-stretch sm:items-center gap-3">
+            <div className="relative flex-1 max-w-sm">
+              <Input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search subcategories..."
+                className="w-full"
+              />
+            </div>
+            <select
+              className="h-9 rounded-md border bg-background px-3 text-sm focus:ring-2 focus:ring-primary outline-none"
+              value={categoryId}
+              onChange={(e) => setCategoryId(e.target.value)}
+            >
               <option value="">All categories</option>
               {categories.map((c) => (
                 <option key={c.id} value={c.id}>
@@ -234,38 +246,45 @@ export default function SubcategoriesIndex() {
                 </option>
               ))}
             </select>
-            <Button variant="outline" size="sm" onClick={() => applyFilters({ page: 1 })}>
-              Search
-            </Button>
-            {(query || categoryId) && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  setQuery('')
-                  setCategoryId('')
-                  applyFilters({ q: undefined, category_id: undefined, page: 1 })
-                }}
-              >
-                Clear
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" className="flex-1 sm:flex-none" onClick={() => applyFilters({ page: 1 })}>
+                Search
               </Button>
-            )}
+              {(query || categoryId) && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="flex-1 sm:flex-none"
+                  onClick={() => {
+                    setQuery('')
+                    setCategoryId('')
+                    applyFilters({ q: undefined, category_id: undefined, page: 1 })
+                  }}
+                >
+                  Clear
+                </Button>
+              )}
+            </div>
           </div>
 
           <Dialog open={addOpen} onOpenChange={setAddOpen}>
             <DialogTrigger asChild>
-              <Button size="sm" onClick={() => setAddOpen(true)}>
+              <Button className="w-full md:w-auto" onClick={() => setAddOpen(true)}>
                 <Plus className="mr-2 size-4" /> Add Subcategory
               </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="max-w-[95vw] sm:max-w-lg overflow-y-auto max-h-[90vh]">
               <DialogHeader>
                 <DialogTitle>Add Subcategory</DialogTitle>
               </DialogHeader>
-              <div className="grid gap-3">
-                <div>
-                  <label className="mb-1 block text-sm">Category</label>
-                  <select className="w-full rounded-md border px-2 py-2" value={form.category_id} onChange={(e) => setForm({ ...form, category_id: e.target.value })}>
+              <div className="grid gap-4 py-4">
+                <div className="grid gap-2">
+                  <label className="text-sm font-medium">Category</label>
+                  <select
+                    className="w-full rounded-md border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary"
+                    value={form.category_id}
+                    onChange={(e) => setForm({ ...form, category_id: e.target.value })}
+                  >
                     {categories.map((c) => (
                       <option key={c.id} value={c.id}>
                         {c.name}
@@ -273,117 +292,186 @@ export default function SubcategoriesIndex() {
                     ))}
                   </select>
                 </div>
-                <div>
-                  <label className="mb-1 block text-sm">Name</label>
-                  <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value, slug: slugify(e.target.value) })} placeholder="Ceramic capacitors" />
+                <div className="grid gap-2">
+                  <label className="text-sm font-medium">Name</label>
+                  <Input
+                    value={form.name}
+                    onChange={(e) => setForm({ ...form, name: e.target.value, slug: slugify(e.target.value) })}
+                    placeholder="Ceramic capacitors"
+                  />
                 </div>
-                <div>
-                  <label className="mb-1 block text-sm">Slug</label>
+                <div className="grid gap-2">
+                  <label className="text-sm font-medium">Slug</label>
                   <Input value={form.slug} onChange={(e) => setForm({ ...form, slug: e.target.value })} placeholder="ceramic-capacitors" />
                 </div>
-                <div>
-                  <label className="mb-1 block text-sm">Order</label>
+                <div className="grid gap-2">
+                  <label className="text-sm font-medium">Order</label>
                   <Input type="number" placeholder="Auto" value={form.sort_order} onChange={(e) => setForm({ ...form, sort_order: e.target.value })} />
                 </div>
-                <div className="flex items-center gap-2">
-                  <Checkbox checked={form.is_active} onCheckedChange={(v) => setForm({ ...form, is_active: !!v })} />
-                  <span className="text-sm">Active</span>
+                <div className="flex items-center gap-3 p-2 rounded-md border bg-muted/20">
+                  <Checkbox id="is_active" checked={form.is_active} onCheckedChange={(v) => setForm({ ...form, is_active: !!v })} />
+                  <label htmlFor="is_active" className="text-sm font-medium cursor-pointer">Mark as Active</label>
                 </div>
-                <div>
-                  <label className="mb-1 block text-sm">Image</label>
-                  <Input type="file" accept=".png,.jpg,.jpeg,.webp,.svg" onChange={(e) => setForm({ ...form, imageFile: e.target.files?.[0] ?? null })} />
+                <div className="grid gap-2">
+                  <label className="text-sm font-medium">Image</label>
+                  <Input
+                    type="file"
+                    className="cursor-pointer"
+                    accept=".png,.jpg,.jpeg,.webp,.svg"
+                    onChange={(e) => setForm({ ...form, imageFile: e.target.files?.[0] ?? null })}
+                  />
                 </div>
               </div>
-              <DialogFooter>
-                <Button onClick={addSubcategory}>Save</Button>
+              <DialogFooter className="gap-2 sm:gap-0">
+                <Button variant="outline" onClick={() => setAddOpen(false)}>Cancel</Button>
+                <Button onClick={addSubcategory}>Save Subcategory</Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
         </div>
 
-        <div className="rounded-xl border bg-card shadow-md">
+        <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
           <div className="hidden md:block w-full overflow-x-auto">
-          <Table className="min-w-[800px]">
+          <Table>
             <TableHeader>
-              <TableRow className="bg-muted/30">
-                <TableHead className="w-16 text-xs uppercase tracking-wide">
-                  <button type="button" className="flex items-center gap-1 cursor-pointer" onClick={() => toggleSort('id')}>
+              <TableRow className="bg-muted/50 hover:bg-muted/50">
+                <TableHead className="w-16">
+                  <button type="button" className="flex items-center gap-1 font-semibold" onClick={() => toggleSort('id')}>
                     ID {sortBy === 'id' ? (sortDir === 'asc' ? <ChevronUp className="size-3" /> : <ChevronDown className="size-3" />) : <ArrowUpDown className="size-3" />}
                   </button>
                 </TableHead>
-                <TableHead className="text-xs uppercase tracking-wide">
-                  <button type="button" className="flex items-center gap-1 cursor-pointer" onClick={() => toggleSort('name')}>
+                <TableHead>
+                  <button type="button" className="flex items-center gap-1 font-semibold" onClick={() => toggleSort('name')}>
                     Name {sortBy === 'name' ? (sortDir === 'asc' ? <ChevronUp className="size-3" /> : <ChevronDown className="size-3" />) : <ArrowUpDown className="size-3" />}
                   </button>
                 </TableHead>
-                <TableHead className="text-xs uppercase tracking-wide hidden md:table-cell">Category</TableHead>
-                <TableHead className="text-xs uppercase tracking-wide">
-                  <button type="button" className="flex items-center gap-1 cursor-pointer" onClick={() => toggleSort('is_active')}>
-                    Active {sortBy === 'is_active' ? (sortDir === 'asc' ? <ChevronUp className="size-3" /> : <ChevronDown className="size-3" />) : <ArrowUpDown className="size-3" />}
+                <TableHead className="font-semibold">Category</TableHead>
+                <TableHead>
+                  <button type="button" className="flex items-center gap-1 font-semibold" onClick={() => toggleSort('is_active')}>
+                    Status {sortBy === 'is_active' ? (sortDir === 'asc' ? <ChevronUp className="size-3" /> : <ChevronDown className="size-3" />) : <ArrowUpDown className="size-3" />}
                   </button>
                 </TableHead>
-                <TableHead className="text-xs uppercase tracking-wide hidden sm:table-cell">
-                  <button type="button" className="flex items-center gap-1 cursor-pointer" onClick={() => toggleSort('sort_order')}>
+                <TableHead className="text-center">
+                  <button type="button" className="flex items-center justify-center gap-1 w-full font-semibold" onClick={() => toggleSort('sort_order')}>
                     Order {sortBy === 'sort_order' ? (sortDir === 'asc' ? <ChevronUp className="size-3" /> : <ChevronDown className="size-3" />) : <ArrowUpDown className="size-3" />}
                   </button>
                 </TableHead>
-                <TableHead className="text-xs uppercase tracking-wide hidden lg:table-cell">Image</TableHead>
-                <TableHead className="w-28 text-right text-xs uppercase tracking-wide">Actions</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {items.map((s, i) => (
-                <TableRow key={s.id} className={i % 2 === 1 ? 'bg-muted/10 hover:bg-muted/20' : 'hover:bg-muted/20'}>
-                  <TableCell>{s.id}</TableCell>
-                  <TableCell className="whitespace-nowrap">{s.name}</TableCell>
-                  <TableCell className="hidden md:table-cell">{s.category?.name ?? `#${s.category_id}`}</TableCell>
+              {items.map((s) => (
+                <TableRow key={s.id} className="hover:bg-muted/30 transition-colors">
+                  <TableCell className="font-medium text-muted-foreground">{s.id}</TableCell>
                   <TableCell>
-                    <Badge variant={s.is_active ? 'secondary' : 'outline'}>{s.is_active ? 'Enabled' : 'Disabled'}</Badge>
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-lg border bg-muted/10 flex items-center justify-center overflow-hidden shrink-0">
+                        {s.image ? (
+                          <img src={`/storage/${s.image}`} alt={s.name} className="h-full w-full object-cover" />
+                        ) : (
+                          <span className="text-[10px] text-muted-foreground font-bold uppercase">{s.name.substring(0, 2)}</span>
+                        )}
+                      </div>
+                      <span className="font-semibold">{s.name}</span>
+                    </div>
                   </TableCell>
-                  <TableCell className="hidden sm:table-cell">{s.sort_order ?? ''}</TableCell>
-                  <TableCell className="hidden lg:table-cell">
-                    {s.image ? <img src={`/storage/${s.image}`} alt={s.name} className="size-8 rounded-md border object-cover" /> : <span className="text-xs text-muted-foreground">None</span>}
+                  <TableCell>
+                    <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20">
+                      {s.category?.name ?? `#${s.category_id}`}
+                    </Badge>
                   </TableCell>
+                  <TableCell>
+                    <Badge variant={s.is_active ? 'secondary' : 'destructive'} className={s.is_active ? 'bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 border-emerald-500/20' : ''}>
+                      {s.is_active ? 'Active' : 'Inactive'}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-center font-mono text-xs">{s.sort_order ?? '0'}</TableCell>
                   <TableCell className="text-right">
-                    <Button variant="ghost" size="icon" title="Edit" className="rounded-full border bg-blue-50 text-blue-600 hover:bg-blue-100" onClick={() => startEdit(s)}>
-                      <Pencil className="size-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon" title="Delete" className="rounded-full border bg-rose-50 text-rose-600 hover:bg-rose-100" onClick={() => startDelete(s)}>
-                      <Trash2 className="size-4" />
-                    </Button>
+                    <div className="flex justify-end gap-2">
+                      <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full hover:bg-blue-50 hover:text-blue-600" onClick={() => startEdit(s)}>
+                        <Pencil className="size-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full hover:bg-rose-50 hover:text-rose-600" onClick={() => startDelete(s)}>
+                        <Trash2 className="size-4" />
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
             </TableBody>
           </Table>
           </div>
-          <div className="md:hidden grid gap-2 p-3">
+
+          {/* Mobile Grid View */}
+          <div className="md:hidden grid grid-cols-1 sm:grid-cols-2 gap-4 p-4">
             {items.map((s) => (
-              <div key={s.id} className="rounded-lg border p-3">
-                <div className="font-medium">{s.name}</div>
-                <div className="text-sm text-muted-foreground">{s.category?.name ?? `#${s.category_id}`}</div>
-                <div className="mt-1 flex items-center justify-between">
-                  <Badge variant={s.is_active ? 'secondary' : 'outline'}>{s.is_active ? 'Enabled' : 'Disabled'}</Badge>
-                  <div className="text-xs text-muted-foreground">Order {s.sort_order ?? ''}</div>
+              <div key={s.id} className="rounded-xl border bg-card p-4 shadow-sm space-y-4 hover:shadow-md transition-shadow">
+                <div className="flex items-center gap-3">
+                  <div className="h-12 w-12 rounded-lg border bg-muted/10 flex items-center justify-center overflow-hidden shrink-0">
+                    {s.image ? (
+                      <img src={`/storage/${s.image}`} alt={s.name} className="h-full w-full object-cover" />
+                    ) : (
+                      <span className="text-xs text-muted-foreground font-bold uppercase">{s.name.substring(0, 2)}</span>
+                    )}
+                  </div>
+                  <div className="min-w-0">
+                    <div className="font-bold text-base truncate">{s.name}</div>
+                    <div className="text-xs text-muted-foreground">ID: #{s.id}</div>
+                  </div>
                 </div>
-                <div className="mt-2 flex justify-end gap-2">
-                  <Button variant="outline" size="sm" onClick={() => startEdit(s)}>Edit</Button>
-                  <Button variant="destructive" size="sm" onClick={() => startDelete(s)}>Delete</Button>
+                
+                <div className="grid grid-cols-2 gap-2 text-sm">
+                  <div className="space-y-1">
+                    <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">Category</div>
+                    <div className="font-medium truncate">{s.category?.name ?? 'N/A'}</div>
+                  </div>
+                  <div className="space-y-1">
+                    <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">Status</div>
+                    <Badge variant={s.is_active ? 'secondary' : 'outline'} className={s.is_active ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' : ''}>
+                      {s.is_active ? 'Active' : 'Inactive'}
+                    </Badge>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between pt-2 border-t">
+                  <div className="text-xs font-medium text-muted-foreground">Order: {s.sort_order ?? '0'}</div>
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm" className="h-8 px-3" onClick={() => startEdit(s)}>
+                      <Pencil className="mr-2 size-3" /> Edit
+                    </Button>
+                    <Button variant="outline" size="sm" className="h-8 px-3 text-rose-600 hover:bg-rose-50 hover:text-rose-700 border-rose-100" onClick={() => startDelete(s)}>
+                      <Trash2 className="size-3" />
+                    </Button>
+                  </div>
                 </div>
               </div>
             ))}
           </div>
-          {(!items || items.length === 0) && <div className="p-8 text-center text-sm text-muted-foreground">No subcategories found.</div>}
+
+          {(!items || items.length === 0) && (
+            <div className="flex flex-col items-center justify-center p-12 text-center">
+              <div className="rounded-full bg-muted p-4 mb-4">
+                <Plus className="h-8 w-8 text-muted-foreground" />
+              </div>
+              <h3 className="text-lg font-semibold">No subcategories found</h3>
+              <p className="text-sm text-muted-foreground max-w-xs mx-auto mt-1">
+                Try adjusting your search or filters to find what you're looking for.
+              </p>
+            </div>
+          )}
 
           {pagination && (
-            <div className="flex items-center justify-between p-3">
-              <div className="text-sm text-muted-foreground">
-                Page {pagination.current_page} of {pagination.last_page} · Total {pagination.total}
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 border-t bg-muted/5">
+              <div className="text-sm text-muted-foreground order-2 sm:order-1">
+                Showing <span className="font-medium">{(pagination.current_page - 1) * pagination.per_page + 1}</span> to <span className="font-medium">{Math.min(pagination.current_page * pagination.per_page, pagination.total)}</span> of <span className="font-medium">{pagination.total}</span> subcategories
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 order-1 sm:order-2">
                 <Button variant="outline" size="sm" disabled={!canPrev} onClick={() => applyFilters({ page: (pagination?.current_page ?? 1) - 1 })}>
-                  Prev
+                  Previous
                 </Button>
+                <div className="flex items-center justify-center min-w-[80px] text-sm font-medium">
+                  Page {pagination.current_page} of {pagination.last_page}
+                </div>
                 <Button variant="outline" size="sm" disabled={!canNext} onClick={() => applyFilters({ page: (pagination?.current_page ?? 1) + 1 })}>
                   Next
                 </Button>
@@ -393,14 +481,18 @@ export default function SubcategoriesIndex() {
         </div>
 
         <Dialog open={editOpen} onOpenChange={setEditOpen}>
-          <DialogContent>
+          <DialogContent className="max-w-[95vw] sm:max-w-lg overflow-y-auto max-h-[90vh]">
             <DialogHeader>
               <DialogTitle>Edit Subcategory</DialogTitle>
             </DialogHeader>
-            <div className="grid gap-3">
-              <div>
-                <label className="mb-1 block text-sm">Category</label>
-                <select className="w-full rounded-md border px-2 py-2" value={form.category_id} onChange={(e) => setForm({ ...form, category_id: e.target.value })}>
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <label className="text-sm font-medium">Category</label>
+                <select
+                  className="w-full rounded-md border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary"
+                  value={form.category_id}
+                  onChange={(e) => setForm({ ...form, category_id: e.target.value })}
+                >
                   {categories.map((c) => (
                     <option key={c.id} value={c.id}>
                       {c.name}
@@ -408,52 +500,63 @@ export default function SubcategoriesIndex() {
                   ))}
                 </select>
               </div>
-              <div>
-                <label className="mb-1 block text-sm">Name</label>
+              <div className="grid gap-2">
+                <label className="text-sm font-medium">Name</label>
                 <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value, slug: slugify(e.target.value) })} />
               </div>
-              <div>
-                <label className="mb-1 block text-sm">Slug</label>
+              <div className="grid gap-2">
+                <label className="text-sm font-medium">Slug</label>
                 <Input value={form.slug} onChange={(e) => setForm({ ...form, slug: e.target.value })} />
               </div>
-              <div>
-                <label className="mb-1 block text-sm">Order</label>
+              <div className="grid gap-2">
+                <label className="text-sm font-medium">Order</label>
                 <Input type="number" value={form.sort_order} onChange={(e) => setForm({ ...form, sort_order: e.target.value })} />
               </div>
-              <div className="flex items-center gap-2">
-                <Checkbox checked={form.is_active} onCheckedChange={(v) => setForm({ ...form, is_active: !!v })} />
-                <span className="text-sm">Active</span>
+              <div className="flex items-center gap-3 p-2 rounded-md border bg-muted/20">
+                <Checkbox id="edit_is_active" checked={form.is_active} onCheckedChange={(v) => setForm({ ...form, is_active: !!v })} />
+                <label htmlFor="edit_is_active" className="text-sm font-medium cursor-pointer">Subcategory is Active</label>
               </div>
-              <div>
-                <label className="mb-1 block text-sm">Image</label>
-                <Input type="file" accept=".png,.jpg,.jpeg,.webp,.svg" onChange={(e) => setForm({ ...form, imageFile: e.target.files?.[0] ?? null })} />
-                {editing?.image && (
-                  <div className="mt-2">
-                    <img src={`/storage/${editing.image}`} alt={editing.name} className="size-10 rounded-md border object-cover" />
-                  </div>
-                )}
+              <div className="grid gap-2">
+                <label className="text-sm font-medium">Image</label>
+                <div className="flex items-center gap-4">
+                  {editing?.image && (
+                    <div className="shrink-0 h-16 w-16 rounded-lg border overflow-hidden">
+                      <img src={`/storage/${editing.image}`} alt={editing.name} className="h-full w-full object-cover" />
+                    </div>
+                  )}
+                  <Input
+                    type="file"
+                    className="cursor-pointer"
+                    accept=".png,.jpg,.jpeg,.webp,.svg"
+                    onChange={(e) => setForm({ ...form, imageFile: e.target.files?.[0] ?? null })}
+                  />
+                </div>
               </div>
             </div>
-            <DialogFooter>
+            <DialogFooter className="gap-2 sm:gap-0">
+              <Button variant="outline" onClick={() => setEditOpen(false)}>Cancel</Button>
               <Button onClick={saveEdit}>Save Changes</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
 
         <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
-          <DialogContent>
+          <DialogContent className="max-w-[90vw] sm:max-w-md">
             <DialogHeader>
-              <DialogTitle>Delete Subcategory</DialogTitle>
+              <DialogTitle className="text-rose-600">Delete Subcategory</DialogTitle>
             </DialogHeader>
-            <p className="text-sm text-muted-foreground">
-              Are you sure you want to delete “{deleting?.name}”? This action cannot be undone.
-            </p>
-            <DialogFooter>
+            <div className="py-4">
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                Are you sure you want to delete <span className="font-bold text-foreground">“{deleting?.name}”</span>?
+                This action is permanent and cannot be undone. All linked products will lose this subcategory.
+              </p>
+            </div>
+            <DialogFooter className="gap-2 sm:gap-0">
               <Button variant="outline" onClick={() => setDeleteOpen(false)}>
-                Cancel
+                Keep it
               </Button>
               <Button variant="destructive" onClick={confirmDelete}>
-                Delete
+                Yes, Delete
               </Button>
             </DialogFooter>
           </DialogContent>

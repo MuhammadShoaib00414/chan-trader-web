@@ -89,17 +89,25 @@ class ProductController extends Controller
         $validated = $request->validate([
             'store_id' => ['required', 'exists:stores,id'],
             'category_id' => ['required', 'exists:categories,id'],
+            'subcategory_id' => ['nullable', 'exists:subcategories,id'],
             'brand_id' => ['nullable', 'exists:brands,id'],
             'name' => ['required', 'string', 'max:180'],
+            'condition' => ['nullable', 'string', 'in:New,Used,Imported'],
             'slug' => ['required', 'string', 'max:200', 'unique:products,slug'],
             'sku' => ['required', 'string', 'max:64', 'unique:products,sku'],
             'short_description' => ['nullable', 'string', 'max:300'],
             'description' => ['nullable', 'string'],
             'feature_image' => ['nullable', 'image', 'max:5120'],
             'price' => ['required', 'numeric'],
+            'stock' => ['nullable', 'integer', 'min:0'],
+            'low_stock_threshold' => ['nullable', 'integer', 'min:0'],
             'compare_at' => ['nullable', 'numeric'],
             'unit' => ['nullable', 'string', 'max:32'],
             'warranty_months' => ['nullable', 'integer'],
+            'meta_title' => ['nullable', 'string', 'max:180'],
+            'meta_description' => ['nullable', 'string', 'max:160'],
+            'is_featured' => ['nullable', 'boolean'],
+            'is_top_selling' => ['nullable', 'boolean'],
         ]);
 
         // Vendors can only create products for their own store(s)
@@ -131,8 +139,10 @@ class ProductController extends Controller
         $validated = $request->validate([
             'store_id' => ['sometimes', 'exists:stores,id'],
             'category_id' => ['sometimes', 'exists:categories,id'],
+            'subcategory_id' => ['nullable', 'exists:subcategories,id'],
             'brand_id' => ['nullable', 'exists:brands,id'],
             'name' => ['sometimes', 'string', 'max:180'],
+            'condition' => ['nullable', 'string', 'in:New,Used,Imported'],
             'slug' => ['sometimes', 'string', 'max:200', Rule::unique('products', 'slug')->ignore($product->id)],
             'sku' => ['sometimes', 'string', 'max:64', Rule::unique('products', 'sku')->ignore($product->id)],
             'short_description' => ['nullable', 'string', 'max:300'],
@@ -140,9 +150,15 @@ class ProductController extends Controller
             'feature_image' => ['nullable', 'string', 'max:255'],
             'top_image' => ['nullable', 'string', 'max:255'],
             'price' => ['sometimes', 'numeric'],
+            'stock' => ['nullable', 'integer', 'min:0'],
+            'low_stock_threshold' => ['nullable', 'integer', 'min:0'],
             'compare_at' => ['nullable', 'numeric'],
             'unit' => ['nullable', 'string', 'max:32'],
             'warranty_months' => ['nullable', 'integer'],
+            'meta_title' => ['nullable', 'string', 'max:180'],
+            'meta_description' => ['nullable', 'string', 'max:160'],
+            'is_featured' => ['nullable', 'boolean'],
+            'is_top_selling' => ['nullable', 'boolean'],
         ]);
         $product->update($validated);
 

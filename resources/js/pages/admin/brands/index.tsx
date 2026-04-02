@@ -11,7 +11,7 @@ import { ToastStack } from '@/components/ui/toast-stack';
 const slugify = (s: string) => s.toLowerCase().trim().replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-').replace(/-+/g, '-');
 
 export default function BrandsIndex() {
-  type BrandItem = { id: number; name: string; slug: string; sort_order: number; logo?: string | null };
+  type BrandItem = { id: number; name: string; slug: string; sort_order: number; logo?: string | null; description?: string | null };
   type Pagination = { total: number; per_page: number; current_page: number; last_page: number };
   type PageProps = { items: BrandItem[]; pagination?: Pagination; filters?: { q?: string; sort_by?: string; sort_dir?: 'asc' | 'desc' } };
   const { props } = usePage<PageProps>();
@@ -23,17 +23,18 @@ export default function BrandsIndex() {
   const [addOpen, setAddOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
-  const [form, setForm] = useState<{ name: string; slug: string; sort_order: string; logoFile?: File | null }>({
+  const [form, setForm] = useState<{ name: string; slug: string; sort_order: string; description: string; logoFile?: File | null }>({
     name: '',
     slug: '',
     sort_order: '',
+    description: '',
     logoFile: null,
   });
   const [editing, setEditing] = useState<BrandItem | null>(null);
   const [deleting, setDeleting] = useState<BrandItem | null>(null);
   const [toasts, setToasts] = useState<Array<{ id: number; title: string; variant: 'success' | 'error' }>>([]);
 
-  const resetForm = () => setForm({ name: '', slug: '', sort_order: '', logoFile: null });
+  const resetForm = () => setForm({ name: '', slug: '', sort_order: '', description: '', logoFile: null });
 
   const dismissToast = (id: number) => setToasts((ts) => ts.filter((t) => t.id !== id));
 
@@ -88,6 +89,7 @@ export default function BrandsIndex() {
     fd.append('name', form.name);
     fd.append('slug', form.slug);
     if (form.sort_order) fd.append('sort_order', form.sort_order);
+    if (form.description) fd.append('description', form.description);
     if (form.logoFile) fd.append('logo', form.logoFile);
     const res = await postForm('/api/admin/brands', fd);
     if (res.ok) {
@@ -107,7 +109,7 @@ export default function BrandsIndex() {
 
   const startEdit = (b: BrandItem) => {
     setEditing(b);
-    setForm({ name: b.name, slug: b.slug, sort_order: String(b.sort_order ?? ''), logoFile: null });
+    setForm({ name: b.name, slug: b.slug, sort_order: String(b.sort_order ?? ''), description: b.description ?? '', logoFile: null });
     setEditOpen(true);
   };
 
@@ -117,6 +119,7 @@ export default function BrandsIndex() {
     fd.append('name', form.name);
     fd.append('slug', form.slug);
     if (form.sort_order) fd.append('sort_order', form.sort_order);
+    if (form.description) fd.append('description', form.description);
     if (form.logoFile) fd.append('logo', form.logoFile);
     const res = await patchForm(`/api/admin/brands/${editing.id}`, fd);
     if (res.ok) {
@@ -223,6 +226,14 @@ export default function BrandsIndex() {
                     placeholder="Auto"
                     value={form.sort_order}
                     onChange={(e) => setForm({ ...form, sort_order: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm">Description</label>
+                  <Input
+                    value={form.description}
+                    onChange={(e) => setForm({ ...form, description: e.target.value })}
+                    placeholder="Brand description..."
                   />
                 </div>
                 <div>
@@ -390,6 +401,13 @@ export default function BrandsIndex() {
                   type="number"
                   value={form.sort_order}
                   onChange={(e) => setForm({ ...form, sort_order: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm">Description</label>
+                <Input
+                  value={form.description}
+                  onChange={(e) => setForm({ ...form, description: e.target.value })}
                 />
               </div>
               <div>

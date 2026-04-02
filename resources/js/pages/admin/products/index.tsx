@@ -294,7 +294,8 @@ export default function ProductsIndex() {
                 <TableHead>Price</TableHead>
                 <TableHead className="hidden sm:table-cell">Discount</TableHead>
                 <TableHead className="hidden lg:table-cell">Thumb</TableHead>
-                <TableHead className="hidden md:table-cell">Meta</TableHead>
+                <TableHead className="hidden md:table-cell">Store</TableHead>
+                <TableHead className="hidden md:table-cell">Category</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -325,11 +326,11 @@ export default function ProductsIndex() {
                   <TableCell className="hidden lg:table-cell">
                     {p.thumb ? <img src={p.thumb} alt="" className="h-8 w-8 rounded object-cover" /> : '-'}
                   </TableCell>
-                  <TableCell className="hidden md:table-cell">
-                    <div className="flex flex-wrap gap-1">
-                      {p.store?.name && <span className="rounded bg-neutral-100 px-2 py-0.5 text-xs text-neutral-700 dark:bg-neutral-800 dark:text-neutral-200">{p.store.name}</span>}
-                      {p.category?.name && <span className="rounded bg-neutral-100 px-2 py-0.5 text-xs text-neutral-700 dark:bg-neutral-800 dark:text-neutral-200">{p.category.name}</span>}
-                    </div>
+                  <TableCell className="hidden md:table-cell text-xs">
+                    {p.store?.name ?? '-'}
+                  </TableCell>
+                  <TableCell className="hidden md:table-cell text-xs">
+                    {p.category?.name ?? '-'}
                   </TableCell>
                   <TableCell className="text-right">
                     <Button size="sm" variant="outline" asChild>
@@ -353,9 +354,9 @@ export default function ProductsIndex() {
                     <span>{price}</span>
                     {compare ? <span className="ml-2 text-xs text-muted-foreground line-through">{compare}</span> : null}
                   </div>
-                  <div className="mt-1 flex flex-wrap gap-1">
-                    {p.store?.name && <span className="rounded bg-neutral-100 px-2 py-0.5 text-xs text-neutral-700 dark:bg-neutral-800 dark:text-neutral-200">{p.store.name}</span>}
-                    {p.category?.name && <span className="rounded bg-neutral-100 px-2 py-0.5 text-xs text-neutral-700 dark:bg-neutral-800 dark:text-neutral-200">{p.category.name}</span>}
+                  <div className="mt-1 flex flex-col gap-1 text-xs text-muted-foreground">
+                    {p.store?.name && <div><span className="font-medium">Store:</span> {p.store.name}</div>}
+                    {p.category?.name && <div><span className="font-medium">Category:</span> {p.category.name}</div>}
                   </div>
                   <div className="mt-2 flex justify-end">
                     <Button size="sm" variant="outline" asChild>

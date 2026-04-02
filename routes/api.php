@@ -54,12 +54,14 @@ Route::name('api.')->group(function () {
 
     // Public APP APIs (mobile/web app)
     Route::prefix('app')->group(function () {
+        Route::get('/home', [AppProductController::class, 'home']);
         Route::get('/categories', [AppCategoryController::class, 'index']);
         Route::get('/subcategories', [AppSubcategoryController::class, 'index']);
         Route::get('/brands', [AppBrandController::class, 'index']);
         Route::get('/stores', [AppStoreController::class, 'index']);
         Route::get('/stores/{store}', [AppStoreController::class, 'show']);
         Route::get('/products', [AppProductController::class, 'index']);
+        Route::get('/products/category-counts', [AppProductController::class, 'categoryCounts']);
         Route::get('/promotions', [AppPromotionController::class, 'index']);
     });
 
@@ -73,6 +75,7 @@ Route::name('api.')->group(function () {
         Route::group(['prefix' => 'user'], function () {
             Route::get('/', [UserController::class, 'me']);
             Route::post('/logout', [LoginController::class, 'logout']);
+            Route::delete('/account', [UserController::class, 'deleteAccount']);
         });
 
         // ********************* User Management *********************

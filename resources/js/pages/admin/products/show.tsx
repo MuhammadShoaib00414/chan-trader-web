@@ -9,24 +9,24 @@ import { delJson, patchJson, postJson, postForm } from '@/lib/http';
 import { ToastStack } from '@/components/ui/toast-stack';
 
 export default function ProductShow() {
-  type Variant = { id: number; sku: string | null; price: number | null; stock: number; is_active: boolean };
   type Image = { id: number; path: string; is_primary: boolean };
-  type Attribute = { id: number; name: string; value: string; unit: string | null };
   type ProductDetails = {
     id: number;
     name: string;
     slug: string;
     sku: string;
     price: number;
+    stock: number;
+    low_stock_threshold: number;
     compare_at?: number | null;
     store_id?: number;
     category_id?: number;
     brand_id?: number | null;
     feature_image?: string | null;
     top_image?: string | null;
-    variants: Variant[];
+    meta_title?: string | null;
+    meta_description?: string | null;
     images: Image[];
-    attributes: Attribute[];
   };
   type Ref = { id: number; name: string };
   const { props } = usePage<{ product: ProductDetails; stores: Ref[]; categories: Ref[]; brands: Ref[] }>();
@@ -34,14 +34,6 @@ export default function ProductShow() {
   const stores = props.stores ?? [];
   const categories = props.categories ?? [];
   const brands = props.brands ?? [];
-
-  const [vSku, setVSku] = useState('');
-  const [vPrice, setVPrice] = useState('');
-  const [vStock, setVStock] = useState('');
-
-  const [aName, setAName] = useState('');
-  const [aValue, setAValue] = useState('');
-  const [aUnit, setAUnit] = useState('');
 
   const [imgPath, setImgPath] = useState('');
   const [galleryFile, setGalleryFile] = useState<File | null>(null);
@@ -82,11 +74,15 @@ export default function ProductShow() {
   const [pSlug, setPSlug] = useState(product.slug);
   const [pSku, setPSku] = useState(product.sku ?? '');
   const [pPrice, setPPrice] = useState(String(product.price ?? ''));
+  const [pStock, setPStock] = useState(String(product.stock ?? '0'));
+  const [pLowStock, setPLowStock] = useState(String(product.low_stock_threshold ?? '10'));
   const [pDiscount, setPDiscount] = useState(initialDiscount);
   const [pThumb, setPThumb] = useState(product.feature_image ?? '');
   const [pStoreId, setPStoreId] = useState<number>(product.store_id ?? stores?.[0]?.id ?? 0);
   const [pCategoryId, setPCategoryId] = useState<number>(product.category_id ?? categories?.[0]?.id ?? 0);
   const [pBrandId, setPBrandId] = useState<number>(product.brand_id ?? 0);
+  const [pMetaTitle, setPMetaTitle] = useState(product.meta_title ?? '');
+  const [pMetaDescription, setPMetaDescription] = useState(product.meta_description ?? '');
   const slugify = (s: string) =>
     s
       .toLowerCase()
@@ -103,7 +99,11 @@ export default function ProductShow() {
     category_id?: number;
     brand_id?: number | null;
     price?: number;
+    stock?: number;
+    low_stock_threshold?: number;
     compare_at?: number | null;
+    meta_title?: string | null;
+    meta_description?: string | null;
   };
   const saveBasics = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -115,6 +115,10 @@ export default function ProductShow() {
     if (pStoreId) payload.store_id = pStoreId;
     if (pCategoryId) payload.category_id = pCategoryId;
     if (pBrandId) payload.brand_id = pBrandId;
+    if (pMetaTitle || pMetaTitle === '') payload.meta_title = pMetaTitle || null;
+    if (pMetaDescription || pMetaDescription === '') payload.meta_description = pMetaDescription || null;
+    if (pStock) payload.stock = Number(pStock);
+    if (pLowStock) payload.low_stock_threshold = Number(pLowStock);
     if (pPrice) {
       const priceVal = Number(pPrice);
       if (!Number.isNaN(priceVal)) payload.price = priceVal;
@@ -136,94 +140,6 @@ export default function ProductShow() {
       showToast('Product updated.', 'success');
     } else {
       showToast(await errorMessageFromResponse(res), 'error');
-    }
-  };
-
-  const [variantEdits, setVariantEdits] = useState<Record<number, { sku: string; price: string; stock: string }>>({});
-  const [attrEdits, setAttrEdits] = useState<Record<number, { name: string; value: string; unit: string }>>({});
-
-  const getVariantEdit = (v: Variant) => variantEdits[v.id] ?? { sku: v.sku ?? '', price: v.price != null ? String(v.price) : '', stock: String(v.stock) };
-  const getAttrEdit = (a: Attribute) => attrEdits[a.id] ?? { name: a.name, value: a.value, unit: a.unit ?? '' };
-
-  const setVariantField = (id: number, field: 'sku' | 'price' | 'stock', val: string) =>
-    setVariantEdits((prev) => ({
-      ...prev,
-      [id]: {
-        ...(prev[id] ?? { sku: '', price: '', stock: '' }),
-        [field]: val,
-      },
-    }));
-
-  const setAttrField = (id: number, field: 'name' | 'value' | 'unit', val: string) =>
-    setAttrEdits((prev) => ({
-      ...prev,
-      [id]: {
-        ...(prev[id] ?? { name: '', value: '', unit: '' }),
-        [field]: val,
-      },
-    }));
-
-  const addVariant = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const res = await postJson(`/api/admin/products/${product.id}/variants`, {
-      sku: vSku || null,
-      price: vPrice ? Number(vPrice) : null,
-      stock: vStock ? Number(vStock) : 0,
-    });
-    if (res.ok) {
-      setVSku('');
-      setVPrice('');
-      setVStock('');
-      router.reload({ only: ['product'] });
-    }
-  };
-
-  const saveVariant = async (v: Variant) => {
-    const e = getVariantEdit(v);
-    const res = await patchJson(`/api/admin/products/${product.id}/variants/${v.id}`, {
-      sku: e.sku || null,
-      price: e.price ? Number(e.price) : null,
-      stock: e.stock ? Number(e.stock) : 0,
-    });
-    if (res.ok) {
-      router.reload({ only: ['product'] });
-    }
-  };
-
-  const deleteVariant = async (v: Variant) => {
-    const res = await delJson(`/api/admin/products/${product.id}/variants/${v.id}`);
-    if (res.ok) {
-      router.reload({ only: ['product'] });
-    }
-  };
-
-  const addAttribute = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const res = await postJson(`/api/admin/products/${product.id}/attributes`, { name: aName, value: aValue, unit: aUnit || null });
-    if (res.ok) {
-      setAName('');
-      setAValue('');
-      setAUnit('');
-      router.reload({ only: ['product'] });
-    }
-  };
-
-  const saveAttribute = async (a: Attribute) => {
-    const e = getAttrEdit(a);
-    const res = await patchJson(`/api/admin/products/${product.id}/attributes/${a.id}`, {
-      name: e.name,
-      value: e.value,
-      unit: e.unit || null,
-    });
-    if (res.ok) {
-      router.reload({ only: ['product'] });
-    }
-  };
-
-  const deleteAttribute = async (a: Attribute) => {
-    const res = await delJson(`/api/admin/products/${product.id}/attributes/${a.id}`);
-    if (res.ok) {
-      router.reload({ only: ['product'] });
     }
   };
 
@@ -303,10 +219,18 @@ export default function ProductShow() {
                 <Input value={pPrice} onChange={(e) => setPPrice(e.target.value)} placeholder="0.00" type="number" step="0.01" />
               </div>
               <div>
+                <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Stock</label>
+                <Input value={pStock} onChange={(e) => setPStock(e.target.value)} placeholder="0" type="number" />
+              </div>
+              <div>
+                <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Low Stock Alert at</label>
+                <Input value={pLowStock} onChange={(e) => setPLowStock(e.target.value)} placeholder="10" type="number" />
+              </div>
+              <div>
                 <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Discount (%)</label>
                 <Input value={pDiscount} onChange={(e) => setPDiscount(e.target.value)} placeholder="0" type="number" min="0" max="99" />
               </div>
-              <div className="md:col-span-3">
+              <div className="md:col-span-2">
                 <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Thumbnail URL</label>
                 <Input value={pThumb} onChange={(e) => setPThumb(e.target.value)} placeholder="/storage/products/..." />
               </div>
@@ -335,6 +259,14 @@ export default function ProductShow() {
                   ))}
                 </select>
               </div>
+              <div className="md:col-span-3">
+                <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Meta Title</label>
+                <Input value={pMetaTitle} onChange={(e) => setPMetaTitle(e.target.value)} placeholder="SEO Title" />
+              </div>
+              <div className="md:col-span-3">
+                <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Meta Description</label>
+                <Input value={pMetaDescription} onChange={(e) => setPMetaDescription(e.target.value)} placeholder="SEO Description" />
+              </div>
               <div className="md:col-span-2 flex items-end gap-2">
                 <Button type="submit">Save</Button>
                 <Button type="button" variant="outline" onClick={() => {
@@ -342,233 +274,18 @@ export default function ProductShow() {
                   setPSlug(product.slug);
                   setPSku(product.sku ?? '');
                   setPPrice(String(product.price ?? ''));
+                  setPStock(String(product.stock ?? '0'));
+                  setPLowStock(String(product.low_stock_threshold ?? '10'));
                   setPDiscount(initialDiscount);
                   setPThumb(product.feature_image ?? '');
                   setPStoreId(product.store_id ?? stores?.[0]?.id ?? 0);
                   setPCategoryId(product.category_id ?? categories?.[0]?.id ?? 0);
                   setPBrandId(product.brand_id ?? 0);
+                  setPMetaTitle(product.meta_title ?? '');
+                  setPMetaDescription(product.meta_description ?? '');
                 }}>Reset</Button>
               </div>
             </form>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="border-b bg-muted/30">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <span className="text-2xl">📦</span>
-              Product Variants
-            </CardTitle>
-            <CardDescription>Manage different versions of this product (size, color, etc.)</CardDescription>
-          </CardHeader>
-          <CardContent className="pt-6">
-            <div className="mb-6 rounded-lg border-2 border-dashed p-4 bg-muted/20">
-              <h4 className="text-sm font-semibold mb-3">Add New Variant</h4>
-              <form onSubmit={addVariant} className="grid grid-cols-1 gap-3 md:grid-cols-4">
-                <div>
-                  <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Variant SKU</label>
-                  <Input value={vSku} onChange={(e) => setVSku(e.target.value)} placeholder="e.g., SKU-001-RED" />
-                </div>
-                <div>
-                  <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Price</label>
-                  <Input value={vPrice} onChange={(e) => setVPrice(e.target.value)} placeholder="0.00" type="number" step="0.01" />
-                </div>
-                <div>
-                  <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Stock Quantity</label>
-                  <Input value={vStock} onChange={(e) => setVStock(e.target.value)} placeholder="0" type="number" />
-                </div>
-                <div className="flex items-end">
-                  <Button type="submit" className="w-full">Add Variant</Button>
-                </div>
-              </form>
-            </div>
-            
-            {product.variants && product.variants.length > 0 ? (
-              <div className="rounded-lg border">
-                <div className="hidden md:block w-full overflow-x-auto">
-                <Table className="min-w-[800px]">
-                  <TableHeader>
-                    <TableRow className="bg-muted/50">
-                      <TableHead className="w-16">ID</TableHead>
-                      <TableHead className="whitespace-nowrap">SKU</TableHead>
-                      <TableHead className="whitespace-nowrap">Price</TableHead>
-                      <TableHead className="whitespace-nowrap">Stock</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {product.variants.map((v) => (
-                      <TableRow key={v.id}>
-                        <TableCell className="font-medium">{v.id}</TableCell>
-                        <TableCell>
-                          <Input 
-                            value={getVariantEdit(v).sku} 
-                            onChange={(e) => setVariantField(v.id, 'sku', e.target.value)} 
-                            placeholder="SKU" 
-                            className="max-w-[200px]"
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <Input 
-                            value={getVariantEdit(v).price} 
-                            onChange={(e) => setVariantField(v.id, 'price', e.target.value)} 
-                            placeholder="Price" 
-                            type="number" 
-                            step="0.01"
-                            className="max-w-[120px]"
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <Input 
-                            value={getVariantEdit(v).stock} 
-                            onChange={(e) => setVariantField(v.id, 'stock', e.target.value)} 
-                            placeholder="Stock" 
-                            type="number"
-                            className="max-w-[100px]"
-                          />
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end gap-2">
-                            <Button size="sm" variant="outline" onClick={() => saveVariant(v)}>Save</Button>
-                            <Button size="sm" variant="destructive" onClick={() => deleteVariant(v)}>Delete</Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-                </div>
-                <div className="md:hidden grid gap-2 p-3">
-                  {product.variants.map((v) => (
-                    <div key={v.id} className="rounded-lg border p-3">
-                      <div className="text-xs text-muted-foreground">#{v.id}</div>
-                      <div className="mt-1">
-                        <Input value={getVariantEdit(v).sku} onChange={(e) => setVariantField(v.id, 'sku', e.target.value)} placeholder="SKU" />
-                      </div>
-                      <div className="mt-1">
-                        <Input value={getVariantEdit(v).price} onChange={(e) => setVariantField(v.id, 'price', e.target.value)} placeholder="Price" type="number" step="0.01" />
-                      </div>
-                      <div className="mt-1">
-                        <Input value={getVariantEdit(v).stock} onChange={(e) => setVariantField(v.id, 'stock', e.target.value)} placeholder="Stock" type="number" />
-                      </div>
-                      <div className="mt-2 flex justify-end gap-2">
-                        <Button size="sm" variant="outline" onClick={() => saveVariant(v)}>Save</Button>
-                        <Button size="sm" variant="destructive" onClick={() => deleteVariant(v)}>Delete</Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ) : (
-              <div className="text-center py-8 text-muted-foreground">
-                No variants yet. Add one above to get started.
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="border-b bg-muted/30">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <span className="text-2xl">🏷️</span>
-              Product Attributes
-            </CardTitle>
-            <CardDescription>Define specifications and technical details</CardDescription>
-          </CardHeader>
-          <CardContent className="pt-6">
-            <div className="mb-6 rounded-lg border-2 border-dashed p-4 bg-muted/20">
-              <h4 className="text-sm font-semibold mb-3">Add New Attribute</h4>
-              <form onSubmit={addAttribute} className="grid grid-cols-1 gap-3 md:grid-cols-4">
-                <div>
-                  <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Name</label>
-                  <Input value={aName} onChange={(e) => setAName(e.target.value)} placeholder="e.g., Weight" />
-                </div>
-                <div>
-                  <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Value</label>
-                  <Input value={aValue} onChange={(e) => setAValue(e.target.value)} placeholder="e.g., 500" />
-                </div>
-                <div>
-                  <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Unit (optional)</label>
-                  <Input value={aUnit} onChange={(e) => setAUnit(e.target.value)} placeholder="e.g., grams" />
-                </div>
-                <div className="flex items-end">
-                  <Button type="submit" className="w-full">Add Attribute</Button>
-                </div>
-              </form>
-            </div>
-            
-            {product.attributes && product.attributes.length > 0 ? (
-              <div className="rounded-lg border">
-                <div className="hidden md:block w-full overflow-x-auto">
-                <Table className="min-w-[700px]">
-                  <TableHeader>
-                    <TableRow className="bg-muted/50">
-                      <TableHead className="whitespace-nowrap">Name</TableHead>
-                      <TableHead className="whitespace-nowrap">Value</TableHead>
-                      <TableHead className="hidden sm:table-cell">Unit</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {product.attributes.map((a) => (
-                      <TableRow key={a.id}>
-                        <TableCell>
-                          <Input 
-                            value={getAttrEdit(a).name} 
-                            onChange={(e) => setAttrField(a.id, 'name', e.target.value)} 
-                            className="max-w-[200px]"
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <Input 
-                            value={getAttrEdit(a).value} 
-                            onChange={(e) => setAttrField(a.id, 'value', e.target.value)} 
-                            className="max-w-[200px]"
-                          />
-                        </TableCell>
-                        <TableCell className="hidden sm:table-cell">
-                          <Input 
-                            value={getAttrEdit(a).unit} 
-                            onChange={(e) => setAttrField(a.id, 'unit', e.target.value)} 
-                            className="max-w-[150px]"
-                          />
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end gap-2">
-                            <Button size="sm" variant="outline" onClick={() => saveAttribute(a)}>Save</Button>
-                            <Button size="sm" variant="destructive" onClick={() => deleteAttribute(a)}>Delete</Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-                </div>
-                <div className="md:hidden grid gap-2 p-3">
-                  {product.attributes.map((a) => (
-                    <div key={a.id} className="rounded-lg border p-3">
-                      <div className="mt-1">
-                        <Input value={getAttrEdit(a).name} onChange={(e) => setAttrField(a.id, 'name', e.target.value)} />
-                      </div>
-                      <div className="mt-1">
-                        <Input value={getAttrEdit(a).value} onChange={(e) => setAttrField(a.id, 'value', e.target.value)} />
-                      </div>
-                      <div className="mt-1">
-                        <Input value={getAttrEdit(a).unit} onChange={(e) => setAttrField(a.id, 'unit', e.target.value)} />
-                      </div>
-                      <div className="mt-2 flex justify-end gap-2">
-                        <Button size="sm" variant="outline" onClick={() => saveAttribute(a)}>Save</Button>
-                        <Button size="sm" variant="destructive" onClick={() => deleteAttribute(a)}>Delete</Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ) : (
-              <div className="text-center py-8 text-muted-foreground">
-                No attributes yet. Add one above to get started.
-              </div>
-            )}
           </CardContent>
         </Card>
 

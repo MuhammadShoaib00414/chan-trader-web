@@ -5,10 +5,11 @@ namespace Database\Seeders;
 use App\Models\Brand;
 use App\Models\Category;
 use App\Models\Product;
+use App\Models\Subcategory;
 use App\Models\Store;
 use App\Models\User;
-// use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 
@@ -19,6 +20,14 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
+        // Truncate tables to remove old data
+        DB::statement('SET FOREIGN_KEY_CHECKS=0;');
+        Product::truncate();
+        Subcategory::truncate();
+        Category::truncate();
+        Brand::truncate();
+        DB::statement('SET FOREIGN_KEY_CHECKS=1;');
+
         // Seed roles and permissions first
         $this->call(RolesAndPermissionsSeeder::class);
 
@@ -63,91 +72,53 @@ class DatabaseSeeder extends Seeder
 
         $this->command->info('Core users created successfully!');
         $this->command->info('Super Admin: admin@example.com / password');
-        $this->command->info('Admin: manager@example.com / password');
+        $this->command->info('Admin: chantraders7171@gmail.com / Chan7171');
         $this->command->info('User: test@example.com / password');
 
-        // Seed catalog basics (Categories, Brands, base Stores, etc.)
-        $this->call(AdminCatalogSeeder::class);
-
-        // Create two Vendor users, each with their own store and 3 products
-        $categories = Category::orderBy('id')->get(['id', 'name']);
-        $brands = Brand::orderBy('id')->get(['id', 'name']);
-
-        if ($categories->isEmpty() || $brands->isEmpty()) {
-            $this->command?->warn('No categories/brands found after AdminCatalogSeeder; skipping vendor products.');
-
-            return;
-        }
-
-        $vendorSpecs = [
+        // Create Vendors and Stores
+        $vendors = [
             [
-                'email' => 'vendor1@example.com',
-                'first_name' => 'Vendor',
-                'last_name' => 'One',
-                'store_slug' => 'vendor-1-store',
-                'store_name' => 'Vendor 1 Store',
-            ],
-            [
-                'email' => 'vendor2@example.com',
-                'first_name' => 'Vendor',
-                'last_name' => 'Two',
-                'store_slug' => 'vendor-2-store',
-                'store_name' => 'Vendor 2 Store',
+                'first_name' => 'Chan',
+                'last_name' => 'Traders',
+                'email' => 'chantraders7171@gmail.com',
+                'store_name' => 'Chan Traders',
+                'store_slug' => 'chan-traders',
             ],
         ];
 
-        foreach ($vendorSpecs as $spec) {
+        foreach ($vendors as $spec) {
             $vendor = User::firstOrCreate(
                 ['email' => $spec['email']],
                 [
                     'first_name' => $spec['first_name'],
                     'last_name' => $spec['last_name'],
-                    'password' => Hash::make('password'),
+                    'password' => Hash::make('Chan7171'),
                     'email_verified_at' => now(),
                     'status' => User::STATUS_ACTIVE,
                 ]
             );
-            $vendor->assignRole('vendor');
+            $vendor->assignRole('admin');
 
             $store = Store::firstOrCreate(
                 ['slug' => $spec['store_slug']],
                 [
                     'owner_id' => $vendor->id,
                     'name' => $spec['store_name'],
+                    'city' => 'Karachi',
+                    'address' => 'Saddar, Karachi',
                     'status' => 'active',
                 ]
             );
-
-            foreach (range(1, 3) as $i) {
-                $category = $categories->random();
-                $brand = $brands->random();
-
-                $baseName = "{$spec['store_name']} Product {$i}";
-                $slugBase = Str::slug($baseName);
-                $slug = $slugBase.'-'.Str::lower(Str::random(5));
-                $sku = 'SKU-'.Str::upper(Str::random(8));
-
-                Product::firstOrCreate(
-                    ['sku' => $sku],
-                    [
-                        'store_id' => $store->id,
-                        'category_id' => $category->id,
-                        'brand_id' => $brand->id,
-                        'name' => $baseName,
-                        'slug' => $slug,
-                        'short_description' => 'Vendor demo product seeded for development.',
-                        'description' => 'This is a vendor-specific product created by DatabaseSeeder.',
-                        'price' => random_int(500, 5000) / 100,
-                        'compare_at' => null,
-                        'unit' => 'pcs',
-                        'warranty_months' => null,
-                        'is_published' => true,
-                        'published_at' => now(),
-                    ]
-                );
-            }
-
-            $this->command->info("Vendor seeded: {$spec['email']} / password (store: {$spec['store_name']})");
         }
+
+        // Seed catalog basics in ordered sequence
+        $this->call([
+            CategorySeeder::class,
+            SubcategorySeeder::class,
+            BrandSeeder::class,
+            ProductsSeeder::class,
+        ]);
+
+        $this->command->info('Inventory system seeded successfully!');
     }
 }

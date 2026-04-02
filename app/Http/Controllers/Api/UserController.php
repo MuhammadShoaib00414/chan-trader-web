@@ -163,6 +163,29 @@ class UserController extends AppBaseController
     }
 
     /**
+     * Delete authenticated user's account with reason.
+     */
+    public function deleteAccount(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        $validated = $request->validate([
+            'reason' => 'required|string|max:500',
+        ]);
+
+        // Create deletion reason record
+        \App\Models\AccountDeletionReason::create([
+            'user_id' => $user->id,
+            'reason' => $validated['reason'],
+        ]);
+
+        // Soft delete the user
+        $user->delete();
+
+        return $this->successResponse([], 'Account deleted successfully');
+    }
+
+    /**
      * Assign roles to user.
      */
     public function assignRoles(Request $request, User $user): JsonResponse

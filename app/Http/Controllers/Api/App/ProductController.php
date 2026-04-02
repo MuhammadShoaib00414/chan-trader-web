@@ -52,9 +52,6 @@ class ProductController extends AppBaseController
     public function index(Request $request)
     {
         $query = Product::query()
-            ->with(['images' => function ($q) {
-                $q->where('is_primary', true)->select('id', 'product_id', 'path', 'is_primary');
-            }])
             ->with(['store:id,name', 'category:id,name']);
 
         if ($request->filled('q')) {
@@ -70,6 +67,12 @@ class ProductController extends AppBaseController
         if ($request->filled('store_id')) {
             $query->where('store_id', (int) $request->get('store_id'));
         }
+        if ($request->filled('is_featured')) {
+            $query->where('is_featured', $request->boolean('is_featured'));
+        }
+        if ($request->filled('is_top_selling')) {
+            $query->where('is_top_selling', $request->boolean('is_top_selling'));
+        }
 
         $sortBy = in_array($request->get('sort_by'), ['created_at', 'price', 'name']) ? $request->get('sort_by') : 'created_at';
         $sortDir = in_array($request->get('sort_dir'), ['asc', 'desc']) ? $request->get('sort_dir') : 'desc';
@@ -77,18 +80,23 @@ class ProductController extends AppBaseController
 
         $products = $query->orderBy($sortBy, $sortDir)->paginate($perPage)->withQueryString();
 
-        $items = $products->through(function ($p) {
+        $items = $products->getCollection()->map(function ($p) {
             return [
                 'id' => $p->id,
                 'name' => $p->name,
                 'slug' => $p->slug,
                 'sku' => $p->sku,
+                'condition' => $p->condition,
                 'price' => $p->price,
-                'thumb' => $p->feature_image ?: optional($p->images->first())->path,
+                'compare_at' => $p->compare_at,
                 'feature_image' => $p->feature_image,
-                'top_image' => $p->top_image,
-                'has_primary_image' => $p->images->isNotEmpty(),
-                'store' => $p->store ? ['id' => $p->store->id, 'name' => $p->store->name] : null,
+                'rating_avg' => $p->rating_avg,
+                'rating_count' => $p->rating_count,
+                'store' => $p->store ? [
+                    'id' => $p->store->id, 
+                    'name' => $p->store->name,
+                    'city' => $p->store->city
+                ] : null,
                 'category' => $p->category ? ['id' => $p->category->id, 'name' => $p->category->name] : null,
             ];
         });
@@ -101,13 +109,82 @@ class ProductController extends AppBaseController
                 'current_page' => $products->currentPage(),
                 'last_page' => $products->lastPage(),
             ],
-            'filters' => [
-                'q' => $request->get('q'),
-                'category_id' => $request->get('category_id'),
-                'store_id' => $request->get('store_id'),
-                'sort_by' => $sortBy,
-                'sort_dir' => $sortDir,
-            ],
         ], 'Products retrieved');
+    }
+
+    /**
+     * Home Screen Data
+     * 
+     * @group APP APIs
+     */
+    public function home()
+    {
+        $categories = \App\Models\Category::where('is_active', true)
+            ->orderBy('sort_order')
+            ->limit(8)
+            ->get(['id', 'name', 'image']);
+
+        $topSelling = Product::where('is_published', true)
+            ->where('is_top_selling', true)
+            ->with('store:id,name')
+            ->latest()
+            ->limit(10)
+            ->get()
+            ->map(fn($p) => [
+                'id' => $p->id,
+                'name' => $p->name,
+                'price' => $p->price,
+                'feature_image' => $p->feature_image,
+                'rating_avg' => $p->rating_avg,
+                'rating_count' => $p->rating_count,
+                'store_name' => optional($p->store)->name,
+            ]);
+
+        $featured = Product::where('is_published', true)
+            ->where('is_featured', true)
+            ->with('store:id,name')
+            ->latest()
+            ->limit(10)
+            ->get()
+            ->map(fn($p) => [
+                'id' => $p->id,
+                'name' => $p->name,
+                'price' => $p->price,
+                'feature_image' => $p->feature_image,
+                'rating_avg' => $p->rating_avg,
+                'rating_count' => $p->rating_count,
+                'store_name' => optional($p->store)->name,
+            ]);
+
+        $popularStores = \App\Models\Store::where('status', 'active')
+            ->orderByDesc('rating_avg')
+            ->limit(5)
+            ->get(['id', 'name', 'logo', 'city', 'rating_avg', 'products_count']);
+
+        return $this->successResponse([
+            'categories' => $categories,
+            'top_selling' => $topSelling,
+            'featured_products' => $featured,
+            'popular_stores' => $popularStores,
+        ], 'Home data retrieved');
+    }
+
+    /**
+     * Get category-wise product counts
+     *
+     * @group APP APIs
+     */
+    public function categoryCounts()
+    {
+        $counts = \App\Models\Category::where('is_active', true)
+            ->withCount(['products' => function ($query) {
+                $query->where('is_published', true);
+            }])
+            ->orderBy('sort_order')
+            ->get(['id', 'name', 'products_count']);
+
+        return $this->successResponse([
+            'categories' => $counts,
+        ], 'Category product counts retrieved');
     }
 }
