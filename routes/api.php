@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\VendorController as AdminVendorController;
 use App\Http\Controllers\Api\App\BrandController as AppBrandController;
 use App\Http\Controllers\Api\App\CategoryController as AppCategoryController;
 use App\Http\Controllers\Api\App\ProductController as AppProductController;
@@ -9,6 +10,7 @@ use App\Http\Controllers\Api\App\SubcategoryController as AppSubcategoryControll
 use App\Http\Controllers\Api\Auth\LoginController;
 use App\Http\Controllers\Api\Auth\OtpController;
 use App\Http\Controllers\Api\Auth\PasswordController;
+use App\Http\Controllers\Api\Auth\ProfileController;
 use App\Http\Controllers\Api\Auth\RegisterController;
 use App\Http\Controllers\Api\Auth\SocialLoginController;
 use App\Http\Controllers\Api\UserController;
@@ -74,6 +76,7 @@ Route::name('api.')->group(function () {
 
         Route::group(['prefix' => 'user'], function () {
             Route::get('/', [UserController::class, 'me']);
+            Route::post('/update-profile', [ProfileController::class, 'update']);
             Route::post('/logout', [LoginController::class, 'logout']);
             Route::delete('/account', [UserController::class, 'deleteAccount']);
         });
@@ -91,5 +94,12 @@ Route::name('api.')->group(function () {
         Route::get('permissions', [\App\Http\Controllers\Api\PermissionController::class, 'index']);
         Route::get('permissions/grouped', [\App\Http\Controllers\Api\PermissionController::class, 'grouped']);
         Route::get('permissions/{permission}', [\App\Http\Controllers\Api\PermissionController::class, 'show']);
+
+        // Super-admin vendor management (Passport)
+        Route::prefix('admin')->middleware('role:super-admin')->group(function () {
+            Route::get('vendors', [AdminVendorController::class, 'indexJson']);
+            Route::post('vendors', [AdminVendorController::class, 'store']);
+            Route::patch('vendors/{vendor}', [AdminVendorController::class, 'update']);
+        });
     });
 });

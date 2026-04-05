@@ -172,35 +172,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('permissions/{permission}', [\App\Http\Controllers\Api\PermissionController::class, 'show']);
 
         Route::prefix('admin')->group(function () {
+            Route::get('vendors', [\App\Http\Controllers\Admin\VendorController::class, 'indexJson'])
+                ->middleware('role:super-admin');
             Route::post('vendors', [\App\Http\Controllers\Admin\VendorController::class, 'store'])
                 ->middleware('role:super-admin');
-            Route::get('vendors', function () {
-                abort_unless(auth()->user()?->hasRole('super-admin'), 403);
-                $vendors = \App\Models\User::role('vendor')
-                    ->orderBy('first_name')
-                    ->get(['id', 'first_name', 'last_name', 'email', 'phone_number', 'status']);
-                $items = $vendors->map(function ($v) {
-                    $store = Store::where('owner_id', $v->id)->first(['id', 'name', 'slug', 'status']);
-
-                    return [
-                        'id' => $v->id,
-                        'name' => trim($v->first_name.' '.$v->last_name),
-                        'email' => $v->email,
-                        'phone_number' => $v->phone_number,
-                        'status' => $v->status,
-                        'store' => $store ? [
-                            'id' => $store->id,
-                            'name' => $store->name,
-                            'slug' => $store->slug,
-                            'status' => $store->status,
-                        ] : null,
-                    ];
-                });
-
-                return Inertia::render('admin/vendors/index', [
-                    'vendors' => $items,
-                ]);
-            })->name('admin.vendors.index');
+            Route::patch('vendors/{vendor}', [\App\Http\Controllers\Admin\VendorController::class, 'update'])
+                ->middleware('role:super-admin');
             Route::get('categories', [\App\Http\Controllers\Admin\CategoryController::class, 'index'])
                 ->middleware('permission:categories.manage');
             Route::post('categories', [\App\Http\Controllers\Admin\CategoryController::class, 'store'])
@@ -308,33 +285,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     });
 
     Route::prefix('admin')->group(function () {
-        Route::get('vendors', function () {
-            abort_unless(auth()->user()?->hasRole('super-admin'), 403);
-            $vendors = \App\Models\User::role('vendor')
-                ->orderBy('first_name')
-                ->get(['id', 'first_name', 'last_name', 'email', 'phone_number', 'status']);
-            $items = $vendors->map(function ($v) {
-                $store = Store::where('owner_id', $v->id)->first(['id', 'name', 'slug', 'status']);
-
-                return [
-                    'id' => $v->id,
-                    'name' => trim($v->first_name.' '.$v->last_name),
-                    'email' => $v->email,
-                    'phone_number' => $v->phone_number,
-                    'status' => $v->status,
-                    'store' => $store ? [
-                        'id' => $store->id,
-                        'name' => $store->name,
-                        'slug' => $store->slug,
-                        'status' => $store->status,
-                    ] : null,
-                ];
-            });
-
-            return Inertia::render('admin/vendors/index', [
-                'vendors' => $items,
-            ]);
-        })->name('admin.vendors.index');
+        Route::get('vendors', [\App\Http\Controllers\Admin\VendorController::class, 'index'])
+            ->middleware('role:super-admin')
+            ->name('admin.vendors.index');
         Route::get('stores', function () {
             $items = Store::orderBy('name')->get(['id', 'name', 'slug', 'status']);
 

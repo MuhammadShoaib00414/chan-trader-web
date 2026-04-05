@@ -16,6 +16,7 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
+import { requestJson } from '@/lib/http';
 import { router } from '@inertiajs/react';
 import { Edit, MoreHorizontal, Trash2 } from 'lucide-react';
 import { useState } from 'react';
@@ -39,9 +40,10 @@ interface Role {
 interface UsersTableProps {
     users: User[];
     roles: Role[];
+    onToast?: (message: string, variant?: 'success' | 'error') => void;
 }
 
-export function UsersTable({ users, roles }: UsersTableProps) {
+export function UsersTable({ users, roles, onToast }: UsersTableProps) {
     const [editingUser, setEditingUser] = useState<User | null>(null);
     const [editDialogOpen, setEditDialogOpen] = useState(false);
     const [sortBy, setSortBy] = useState<'name' | 'email' | 'created_at' | 'status'>('name');
@@ -52,12 +54,21 @@ export function UsersTable({ users, roles }: UsersTableProps) {
         setEditDialogOpen(true);
     };
 
-    const handleDelete = (userId: number) => {
-        if (confirm('Are you sure you want to delete this user?')) {
-            router.delete(`/api/users/${userId}`, {
-                preserveScroll: true,
-            });
+    const handleDelete = async (userId: number) => {
+        if (!confirm('Are you sure you want to delete this user?')) {
+            return;
         }
+        const res = await requestJson('DELETE', `/api/users/${userId}`, {});
+        if (res.ok) {
+            onToast?.('User deleted.', 'success');
+            router.reload({ only: ['users'] });
+            return;
+        }
+        const body = await res.json().catch(() => ({}));
+        onToast?.(
+            (body as { message?: string }).message ?? 'Could not delete user.',
+            'error',
+        );
     };
 
     const toggleSort = (key: 'name' | 'email' | 'created_at' | 'status') => {
@@ -112,6 +123,7 @@ export function UsersTable({ users, roles }: UsersTableProps) {
                 roles={roles}
                 open={editDialogOpen}
                 onOpenChange={setEditDialogOpen}
+                onToast={onToast}
             />
             <div className="rounded-lg border">
                 <div className="hidden md:block w-full overflow-x-auto">

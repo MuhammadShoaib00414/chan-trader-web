@@ -22,7 +22,13 @@ type VendorItem = {
   shop_name?: string | null;
   city_district?: string | null;
   address?: string | null;
-  store: { id: number; name: string; slug: string; status: string } | null;
+  store: {
+    id: number;
+    name: string;
+    slug: string;
+    status: string;
+    business_whatsapp_url?: string | null;
+  } | null;
 };
 
 interface VendorsPageProps {
@@ -42,6 +48,7 @@ export default function VendorsIndex({ vendors }: VendorsPageProps) {
   const [mobileNumber, setMobileNumber] = useState('');
   const [locationCity, setLocationCity] = useState('');
   const [address, setAddress] = useState('');
+  const [businessWhatsappUrl, setBusinessWhatsappUrl] = useState('');
   const [statusValue, setStatusValue] = useState<'1' | '0'>('1');
 
   const [openReset, setOpenReset] = useState(false);
@@ -63,6 +70,7 @@ export default function VendorsIndex({ vendors }: VendorsPageProps) {
   const [editShopName, setEditShopName] = useState('');
   const [editCity, setEditCity] = useState('');
   const [editAddress, setEditAddress] = useState('');
+  const [editBusinessWhatsapp, setEditBusinessWhatsapp] = useState('');
 
   const [toasts, setToasts] = useState<Array<{ id: number; title: string; variant: 'success' | 'error' }>>([]);
   const dismissToast = (id: number) => setToasts((ts) => ts.filter((t) => t.id !== id));
@@ -157,6 +165,7 @@ export default function VendorsIndex({ vendors }: VendorsPageProps) {
       store_name: storeName,
       shop_name: shopName || storeName,
       phone_number: mobileNumber || null,
+      business_whatsapp_url: businessWhatsappUrl.trim() || null,
       city_district: locationCity || null,
       address: address || null,
       status: Number(statusValue),
@@ -165,7 +174,9 @@ export default function VendorsIndex({ vendors }: VendorsPageProps) {
     if (res.ok) {
       setOpen(false);
       setFirstName(''); setLastName(''); setEmail(''); setPassword(''); setPasswordConfirmation('');
-      setStoreName(''); setShopName(''); setMobileNumber(''); setLocationCity(''); setAddress(''); setStatusValue('1');
+      setStoreName(''); setShopName(''); setMobileNumber(''); setLocationCity(''); setAddress('');
+      setBusinessWhatsappUrl('');
+      setStatusValue('1');
       showToast('Vendor created.', 'success');
       router.reload({ only: ['vendors'] });
     } else {
@@ -251,13 +262,14 @@ export default function VendorsIndex({ vendors }: VendorsPageProps) {
     setEditShopName(v.shop_name ?? '');
     setEditCity(v.city_district ?? '');
     setEditAddress(v.address ?? '');
+    setEditBusinessWhatsapp(v.store?.business_whatsapp_url ?? '');
     setEditOpen(true);
   };
 
   const submitEditVendor = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editVendor) return;
-    const res = await requestJson('PUT', `/api/users/${editVendor.id}`, {
+    const res = await requestJson('PATCH', `/api/admin/vendors/${editVendor.id}`, {
       first_name: editFirst,
       last_name: editLast,
       email: editEmail,
@@ -266,6 +278,7 @@ export default function VendorsIndex({ vendors }: VendorsPageProps) {
       shop_name: editShopName || null,
       city_district: editCity || null,
       address: editAddress || null,
+      business_whatsapp_url: editBusinessWhatsapp.trim() || null,
     });
     if (res.ok) {
       setEditOpen(false);
@@ -319,6 +332,11 @@ export default function VendorsIndex({ vendors }: VendorsPageProps) {
                     </div>
                     <Input placeholder="Shop name" value={shopName} onChange={(e) => setShopName(e.target.value)} />
                     <Input placeholder="Mobile number" value={mobileNumber} onChange={(e) => setMobileNumber(e.target.value)} />
+                    <Input
+                      placeholder="Business WhatsApp link (https://wa.me/...)"
+                      value={businessWhatsappUrl}
+                      onChange={(e) => setBusinessWhatsappUrl(e.target.value)}
+                    />
                     <div className="grid grid-cols-2 gap-2">
                       <Input placeholder="Location / City" value={locationCity} onChange={(e) => setLocationCity(e.target.value)} />
                       <Input placeholder="Store name" value={storeName} onChange={(e) => setStoreName(e.target.value)} />
@@ -563,6 +581,11 @@ export default function VendorsIndex({ vendors }: VendorsPageProps) {
                 </div>
                 <Input placeholder="Email" type="email" value={editEmail} onChange={(e) => setEditEmail(e.target.value)} />
                 <Input placeholder="Phone number" value={editPhone} onChange={(e) => setEditPhone(e.target.value)} />
+                <Input
+                  placeholder="Business WhatsApp link (https://wa.me/...)"
+                  value={editBusinessWhatsapp}
+                  onChange={(e) => setEditBusinessWhatsapp(e.target.value)}
+                />
                 <Input placeholder="Shop name" value={editShopName} onChange={(e) => setEditShopName(e.target.value)} />
                 <div className="grid grid-cols-2 gap-2">
                   <Input placeholder="Location / City" value={editCity} onChange={(e) => setEditCity(e.target.value)} />

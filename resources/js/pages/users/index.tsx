@@ -9,6 +9,7 @@ import {
 } from '@/components/ui/card';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
+import { ToastStack } from '@/components/ui/toast-stack';
 import { Head } from '@inertiajs/react';
 import { Input } from '@/components/ui/input';
 import { useMemo, useState } from 'react';
@@ -45,6 +46,19 @@ export default function UsersIndex({ users = [], roles = [] }: UsersIndexProps) 
     const [query, setQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
     const [roleFilter, setRoleFilter] = useState<string>('all');
+    const [toasts, setToasts] = useState<
+        Array<{ id: number; title: string; variant: 'success' | 'error' }>
+    >([]);
+    const dismissToast = (id: number) =>
+        setToasts((ts) => ts.filter((t) => t.id !== id));
+    const showToast = (
+        title: string,
+        variant: 'success' | 'error' = 'success',
+    ) => {
+        const id = Date.now() + Math.floor(Math.random() * 1000);
+        setToasts((ts) => [...ts, { id, title, variant }]);
+        setTimeout(() => dismissToast(id), 2500);
+    };
 
     const filtered = useMemo(
         () =>
@@ -135,15 +149,16 @@ export default function UsersIndex({ users = [], roles = [] }: UsersIndexProps) 
                                     onChange={(e) => setQuery(e.target.value)}
                                     className="md:w-64"
                                 />
-                                <CreateUserDialog roles={roles} />
+                                <CreateUserDialog roles={roles} onToast={showToast} />
                             </div>
                         </div>
                     </CardHeader>
                     <CardContent>
-                        <UsersTable users={filtered} roles={roles} />
+                        <UsersTable users={filtered} roles={roles} onToast={showToast} />
                     </CardContent>
                 </Card>
             </div>
+            <ToastStack toasts={toasts} onDismiss={dismissToast} />
         </AppLayout>
     );
 }

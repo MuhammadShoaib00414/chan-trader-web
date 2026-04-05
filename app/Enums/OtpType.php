@@ -2,6 +2,8 @@
 
 namespace App\Enums;
 
+use Illuminate\Validation\Rule;
+
 enum OtpType: string
 {
     case EMAIL_VERIFICATION = 'verification';
@@ -11,7 +13,7 @@ enum OtpType: string
     {
         return match ($this) {
             self::EMAIL_VERIFICATION => false,
-            self::PASSWORD_RESET => true,
+            self::PASSWORD_RESET => false,
         };
     }
 
@@ -34,7 +36,7 @@ enum OtpType: string
     public function getValidationRules(): array
     {
         return [
-            'email' => 'required|email|exists:users,email',
+            'email' => ['required', 'email', Rule::exists('users', 'email')->whereNull('deleted_at')],
         ];
     }
 }

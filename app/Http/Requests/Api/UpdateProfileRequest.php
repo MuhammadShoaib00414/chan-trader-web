@@ -5,7 +5,7 @@ namespace App\Http\Requests\Api;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
-class RegisterRequest extends FormRequest
+class UpdateProfileRequest extends FormRequest
 {
     protected function prepareForValidation(): void
     {
@@ -34,38 +34,62 @@ class RegisterRequest extends FormRequest
         ]);
     }
 
-    /**
-     * Determine if the user is authorized to make this request.
-     */
     public function authorize(): bool
     {
         return true;
     }
 
+    public function withValidator($validator): void
+    {
+        $validator->after(function ($validator) {
+            // Scribe (and similar tools) resolve rules without an authenticated user; skip this check then.
+            if (! $this->user('api')) {
+                return;
+            }
+
+            $hasField = collect(['first_name', 'last_name', 'email', 'phone_number'])
+                ->contains(fn (string $key) => $this->filled($key));
+
+            if (! $hasField) {
+                $validator->errors()->add(
+                    'profile',
+                    'Provide at least one of: first_name, last_name, email, phone_number.'
+                );
+            }
+        });
+    }
+
     /**
-     * Get the validation rules that apply to the request.
-     *
      * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
      */
     public function rules(): array
     {
+        $user = $this->user('api');
+
+        $emailUnique = Rule::unique('users', 'email')->whereNull('deleted_at');
+        $phoneUnique = Rule::unique('users', 'phone_number')->whereNull('deleted_at');
+        if ($user) {
+            $emailUnique = $emailUnique->ignore($user->id);
+            $phoneUnique = $phoneUnique->ignore($user->id);
+        }
+
         return [
-            'full_name' => 'required|string|min:3|max:255',
-            'email' => ['required', 'email:rfc,dns', 'max:255', Rule::unique('users', 'email')->whereNull('deleted_at')],
-            'phone_number' => ['required', 'regex:/^03\d{9}$/', Rule::unique('users', 'phone_number')->whereNull('deleted_at')],
-            'password' => 'required|min:8|confirmed',
-            // 'shop_name' => 'required|string|max:255',
-            'city_district' => 'required|string|max:255',
-            'address' => 'required|string',
-            'avatar' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:1024',
+            'first_name' => ['sometimes', 'string', 'min:1', 'max:255'],
+            'last_name' => ['sometimes', 'string', 'min:1', 'max:255'],
+            'email' => [
+                'sometimes',
+                'email',
+                'max:255',
+                $emailUnique,
+            ],
+            'phone_number' => [
+                'sometimes',
+                'regex:/^03\d{9}$/',
+                $phoneUnique,
+            ],
         ];
     }
 
-    /**
-     * Custom error messages for validation rules.
-     *
-     * @return array<string,string>
-     */
     public function messages(): array
     {
         return [

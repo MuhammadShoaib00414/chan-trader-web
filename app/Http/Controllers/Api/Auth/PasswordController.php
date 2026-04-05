@@ -57,7 +57,7 @@ class PasswordController extends AppBaseController
      * @group Password
      *
      * @bodyParam email string required User's email address. Example: john@example.com
-     * @bodyParam reset_token string required Reset token from OTP verification. Example: abc123def456ghi789
+     * // @bodyParam reset_token string required Reset token from OTP verification. Example: abc123def456ghi789
      * @bodyParam password string required New password (min 8 characters). Example: newpassword123
      * @bodyParam password_confirmation string required New password confirmation. Example: newpassword123
      *
@@ -96,18 +96,21 @@ class PasswordController extends AppBaseController
         }
 
         // Verify reset token from password_reset_tokens table
-        $passwordReset = DB::table('password_reset_tokens')
-            ->where('email', $user->email)
-            ->first();
+        // $passwordReset = DB::table('password_reset_tokens')
+        //     ->where('email', $user->email)
+        //     ->first();
 
-        if (! $passwordReset || ! Hash::check($request->reset_token, $passwordReset->token)) {
-            return $this->errorResponse('Invalid or expired reset token', 400);
+        // if (! $passwordReset || ! Hash::check($request->reset_token, $passwordReset->token)) {
+        //     return $this->errorResponse('Invalid or expired reset token', 400);
+        // }
+
+        // Update password (forgot-password flow treats the account as verified)
+        $user->email_verified_at = $user->email_verified_at ?? now();
+        if ((int) $user->status !== User::STATUS_ACTIVE) {
+            $user->status = User::STATUS_ACTIVE;
         }
-
-        // Update password
-        $user->update([
-            'password' => $request->password, // Password is automatically hashed by model casting
-        ]);
+        $user->password = $request->password;
+        $user->save();
 
         // Clear reset token from password_reset_tokens table
         DB::table('password_reset_tokens')

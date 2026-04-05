@@ -38,6 +38,7 @@ class StoreController extends AppBaseController
                 'banner' => $s->banner,
                 'rating_avg' => $s->rating_avg,
                 'products_count' => $s->products_count,
+                'business_whatsapp_url' => $s->business_whatsapp_url,
             ];
         });
 
@@ -71,6 +72,7 @@ class StoreController extends AppBaseController
             'products_count' => $store->products_count,
             'followers_count' => $store->followers_count,
             'description' => $store->description,
+            'business_whatsapp_url' => $store->business_whatsapp_url,
         ], 'Store retrieved');
     }
 }

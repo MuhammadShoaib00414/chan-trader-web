@@ -17,6 +17,7 @@ class Store extends Model
         'banner',
         'email',
         'phone',
+        'business_whatsapp_url',
         'description',
         'address',
         'city',

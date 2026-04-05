@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Api;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class SendOtpRequest extends FormRequest
 {
@@ -22,7 +23,7 @@ class SendOtpRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'email' => 'required|email|exists:users,email',
+            'email' => ['required', 'email', Rule::exists('users', 'email')->whereNull('deleted_at')],
         ];
     }
 }

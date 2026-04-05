@@ -116,4 +116,25 @@ class User extends Authenticatable implements MustVerifyEmail
     {
         return $this->hasOne(AccountDeletionReason::class);
     }
+
+    protected static function booted(): void
+    {
+        static::deleting(function (User $user) {
+            if ($user->isForceDeleting()) {
+                return;
+            }
+
+            // Prefix "delete." to existing email
+            $newEmail = 'delete.'.$user->email;
+
+            static::withoutEvents(function () use ($user, $newEmail) {
+                static::whereKey($user->getKey())->update([
+                    'email' => $newEmail,
+                ]);
+            });
+
+            // Update model instance
+            $user->email = $newEmail;
+        });
+    }
 }

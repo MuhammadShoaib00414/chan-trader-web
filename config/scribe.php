@@ -91,6 +91,11 @@ return [
     'groups' => [
         'default' => 'Endpoints',
         'order' => [
+            'Auth',
+            'OTP',
+            'Password',
+            'Social',
+            'APP APIs',
             'Authentication',
             'Endpoints',
         ],

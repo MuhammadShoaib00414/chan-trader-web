@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Api;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class ResetPasswordRequest extends FormRequest
 {
@@ -22,8 +23,8 @@ class ResetPasswordRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'email' => 'required|email|exists:users,email',
-            'reset_token' => 'required',
+            'email' => ['required', 'email', Rule::exists('users', 'email')->whereNull('deleted_at')],
+            // 'reset_token' => 'required',
             'password' => 'required|min:8|confirmed',
         ];
     }

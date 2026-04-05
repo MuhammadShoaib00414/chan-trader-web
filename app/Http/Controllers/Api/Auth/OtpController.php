@@ -129,16 +129,6 @@ class OtpController extends AppBaseController
      *   "message": "User not found",
      *   "data": null
      * }
-     * @response 400 scenario="email not verified" {
-     *   "success": false,
-     *   "message": "Please verify your email first. A new verification code has been sent to your email.",
-     *   "data": {
-     *     "message": "Please verify your email first. A new verification code has been sent to your email.",
-     *     "email": "john@example.com",
-     *     "requires_email_verification": true,
-     *     "otp": "1234"
-     *   }
-     * }
      *
      * @unauthenticated
      */
@@ -259,21 +249,12 @@ class OtpController extends AppBaseController
      *   "message": "Invalid OTP",
      *   "data": null
      * }
-     * @response 400 scenario="email not verified" {
-     *   "success": false,
-     *   "message": "Please verify your email first",
-     *   "data": null
-     * }
      *
      * @unauthenticated
      */
     public function verifyPasswordResetOTP(VerifyPasswordResetOtpRequest $request)
     {
         $user = User::where('email', $request->email)->first();
-
-        if (! $user->email_verified_at) {
-            return $this->errorResponse('Please verify your email first', 400);
-        }
 
         // log attempt
         Log::info('Password reset OTP attempt', [
@@ -304,13 +285,16 @@ class OtpController extends AppBaseController
             ]
         );
 
-        $user->update([
-            'otp' => null,
-            'otp_expires_at' => null,
-        ]);
+        $user->email_verified_at = $user->email_verified_at ?? now();
+        if ((int) $user->status !== User::STATUS_ACTIVE) {
+            $user->status = User::STATUS_ACTIVE;
+        }
+        $user->otp = null;
+        $user->otp_expires_at = null;
+        $user->save();
 
         return $this->successResponse([
-            'user' => new UserResource($user),
+            'user' => new UserResource($user->fresh()),
             'reset_token' => $reset_token,
         ], 'OTP verified successfully');
     }

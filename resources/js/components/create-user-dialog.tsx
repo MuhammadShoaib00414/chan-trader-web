@@ -10,7 +10,8 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useForm } from '@inertiajs/react';
+import { requestJson } from '@/lib/http';
+import { router } from '@inertiajs/react';
 import { LoaderCircle, Plus } from 'lucide-react';
 import { useState } from 'react';
 
@@ -21,35 +22,87 @@ interface Role {
 
 interface CreateUserDialogProps {
     roles: Role[];
+    onToast?: (message: string, variant?: 'success' | 'error') => void;
 }
 
-export function CreateUserDialog({ roles }: CreateUserDialogProps) {
+export function CreateUserDialog({ roles, onToast }: CreateUserDialogProps) {
     const [open, setOpen] = useState(false);
-    const { data, setData, post, processing, errors, reset } = useForm({
+    const [processing, setProcessing] = useState(false);
+    const [errors, setErrors] = useState<Record<string, string>>({});
+    const [data, setData] = useState({
         first_name: '',
         last_name: '',
         email: '',
         password: '',
         password_confirmation: '',
+        phone_number: '',
+        city_district: '',
+        address: '',
         roles: ['vendor'] as string[],
         status: 1,
     });
 
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-
-        post('/api/users', {
-            preserveScroll: true,
-            onSuccess: () => {
-                setOpen(false);
-                reset();
-            },
+    const reset = () => {
+        setErrors({});
+        setData({
+            first_name: '',
+            last_name: '',
+            email: '',
+            password: '',
+            password_confirmation: '',
+            phone_number: '',
+            city_district: '',
+            address: '',
+            roles: ['vendor'],
+            status: 1,
         });
+    };
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setProcessing(true);
+        setErrors({});
+
+        const payload = {
+            first_name: data.first_name,
+            last_name: data.last_name,
+            email: data.email,
+            password: data.password,
+            password_confirmation: data.password_confirmation,
+            phone_number: data.phone_number || null,
+            city_district: data.city_district || null,
+            address: data.address || null,
+            roles: data.roles,
+            status: data.status === 1,
+            role: data.roles[0] ?? undefined,
+        };
+
+        const res = await requestJson('POST', '/api/users', payload);
+        setProcessing(false);
+
+        if (res.ok) {
+            setOpen(false);
+            reset();
+            onToast?.('User created successfully.', 'success');
+            router.reload({ only: ['users'] });
+            return;
+        }
+
+        const body = await res.json().catch(() => ({}));
+        const next: Record<string, string> = {};
+        if (body.errors && typeof body.errors === 'object') {
+            for (const [k, v] of Object.entries(body.errors as Record<string, string[]>)) {
+                if (Array.isArray(v) && v[0]) {
+                    next[k] = v[0];
+                }
+            }
+        }
+        setErrors(next);
     };
 
     const handleRoleChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
         const value = event.target.value;
-        setData('roles', value ? [value] : []);
+        setData((d) => ({ ...d, roles: value ? [value] : [] }));
     };
 
     return (
@@ -77,7 +130,7 @@ export function CreateUserDialog({ roles }: CreateUserDialogProps) {
                                 id="first_name"
                                 value={data.first_name}
                                 onChange={(e) =>
-                                    setData('first_name', e.target.value)
+                                    setData((d) => ({ ...d, first_name: e.target.value }))
                                 }
                                 placeholder="John"
                                 required
@@ -95,7 +148,7 @@ export function CreateUserDialog({ roles }: CreateUserDialogProps) {
                                 id="last_name"
                                 value={data.last_name}
                                 onChange={(e) =>
-                                    setData('last_name', e.target.value)
+                                    setData((d) => ({ ...d, last_name: e.target.value }))
                                 }
                                 placeholder="Doe"
                                 required
@@ -114,7 +167,7 @@ export function CreateUserDialog({ roles }: CreateUserDialogProps) {
                                 type="email"
                                 value={data.email}
                                 onChange={(e) =>
-                                    setData('email', e.target.value)
+                                    setData((d) => ({ ...d, email: e.target.value }))
                                 }
                                 placeholder="john@example.com"
                                 required
@@ -130,9 +183,9 @@ export function CreateUserDialog({ roles }: CreateUserDialogProps) {
                             <Label htmlFor="phone_number">Mobile Number</Label>
                             <Input
                                 id="phone_number"
-                                value={(data as any).phone_number ?? ''}
+                                value={data.phone_number}
                                 onChange={(e) =>
-                                    setData('phone_number' as any, e.target.value)
+                                    setData((d) => ({ ...d, phone_number: e.target.value }))
                                 }
                                 placeholder="+1 555 123 4567"
                             />
@@ -142,9 +195,9 @@ export function CreateUserDialog({ roles }: CreateUserDialogProps) {
                             <Label htmlFor="city_district">Location / City</Label>
                             <Input
                                 id="city_district"
-                                value={(data as any).city_district ?? ''}
+                                value={data.city_district}
                                 onChange={(e) =>
-                                    setData('city_district' as any, e.target.value)
+                                    setData((d) => ({ ...d, city_district: e.target.value }))
                                 }
                                 placeholder="City or District"
                             />
@@ -157,7 +210,7 @@ export function CreateUserDialog({ roles }: CreateUserDialogProps) {
                                 type="password"
                                 value={data.password}
                                 onChange={(e) =>
-                                    setData('password', e.target.value)
+                                    setData((d) => ({ ...d, password: e.target.value }))
                                 }
                                 placeholder="••••••••"
                                 required
@@ -178,10 +231,10 @@ export function CreateUserDialog({ roles }: CreateUserDialogProps) {
                                 type="password"
                                 value={data.password_confirmation}
                                 onChange={(e) =>
-                                    setData(
-                                        'password_confirmation',
-                                        e.target.value,
-                                    )
+                                    setData((d) => ({
+                                        ...d,
+                                        password_confirmation: e.target.value,
+                                    }))
                                 }
                                 placeholder="••••••••"
                                 required
@@ -197,9 +250,9 @@ export function CreateUserDialog({ roles }: CreateUserDialogProps) {
                             <Label htmlFor="address">Address</Label>
                             <Input
                                 id="address"
-                                value={(data as any).address ?? ''}
+                                value={data.address}
                                 onChange={(e) =>
-                                    setData('address' as any, e.target.value)
+                                    setData((d) => ({ ...d, address: e.target.value }))
                                 }
                                 placeholder="Street, building, etc."
                             />
@@ -210,13 +263,16 @@ export function CreateUserDialog({ roles }: CreateUserDialogProps) {
                             <select
                                 id="status"
                                 className="w-full rounded-md border px-2 py-2"
-                                value={(data as any).status ?? 1}
+                                value={String(data.status)}
                                 onChange={(e) =>
-                                    setData('status' as any, Number(e.target.value))
+                                    setData((d) => ({
+                                        ...d,
+                                        status: Number(e.target.value),
+                                    }))
                                 }
                             >
-                                <option value={1}>Active</option>
-                                <option value={0}>Inactive</option>
+                                <option value="1">Active</option>
+                                <option value="0">Inactive</option>
                             </select>
                         </div>
 

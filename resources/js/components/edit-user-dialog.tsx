@@ -9,6 +9,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { requestJson } from '@/lib/http';
 import { router, useForm } from '@inertiajs/react';
 import { LoaderCircle } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -34,6 +35,7 @@ interface EditUserDialogProps {
     roles: Role[];
     open: boolean;
     onOpenChange: (open: boolean) => void;
+    onToast?: (message: string, variant?: 'success' | 'error') => void;
 }
 
 export function EditUserDialog({
@@ -41,8 +43,10 @@ export function EditUserDialog({
     roles,
     open,
     onOpenChange,
+    onToast,
 }: EditUserDialogProps) {
     const [processing, setProcessing] = useState(false);
+    const [formError, setFormError] = useState<string | null>(null);
     const { data, setData, errors, reset } = useForm({
         first_name: '',
         last_name: '',
@@ -57,6 +61,7 @@ export function EditUserDialog({
     });
 
     useEffect(() => {
+        setFormError(null);
         if (user) {
             const nameParts = user.name.split(' ');
             setData({
@@ -75,40 +80,57 @@ export function EditUserDialog({
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [user]);
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
         if (!user) return;
 
         setProcessing(true);
+        setFormError(null);
 
-        // Prepare data, excluding empty password fields
-        const updateData = {
+        // Prepare data, excluding empty password fields (JSON API — not Inertia visit)
+        const updateData: Record<string, unknown> = {
             first_name: data.first_name,
             last_name: data.last_name,
             email: data.email,
             roles: data.roles,
-            status: data.status,
-            phone_number: (data as any).phone_number ?? null,
-            city_district: (data as any).city_district ?? null,
-            address: (data as any).address ?? null,
-            ...(data.password && data.password.trim() !== '' && {
-                password: data.password,
-                password_confirmation: data.password_confirmation,
-            }),
+            status: data.status === 1,
+            phone_number: (data as any).phone_number || null,
+            city_district: (data as any).city_district || null,
+            address: (data as any).address || null,
         };
+        if (data.password && data.password.trim() !== '') {
+            updateData.password = data.password;
+            updateData.password_confirmation = data.password_confirmation;
+        }
 
-        router.put(`/api/users/${user.id}`, updateData, {
-            preserveScroll: true,
-            onSuccess: () => {
-                onOpenChange(false);
-                reset();
-                setProcessing(false);
-            },
-            onError: () => {
-                setProcessing(false);
-            },
-        });
+        const res = await requestJson('PUT', `/api/users/${user.id}`, updateData);
+        setProcessing(false);
+
+        if (res.ok) {
+            onOpenChange(false);
+            reset();
+            onToast?.('User updated successfully.', 'success');
+            router.reload({ only: ['users'] });
+            return;
+        }
+
+        let message = 'Could not update user.';
+        try {
+            const body = await res.json();
+            if (body?.message) {
+                message = body.message;
+            }
+            if (body?.errors && typeof body.errors === 'object') {
+                const first = Object.values(body.errors as Record<string, string[]>)[0];
+                if (Array.isArray(first) && first[0]) {
+                    message = first[0];
+                }
+            }
+        } catch {
+            /* ignore */
+        }
+        setFormError(message);
     };
 
     const handleRoleChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
@@ -128,6 +150,12 @@ export function EditUserDialog({
                             Update user information and role assignments.
                         </DialogDescription>
                     </DialogHeader>
+
+                    {formError && (
+                        <p className="text-sm text-red-600" role="alert">
+                            {formError}
+                        </p>
+                    )}
 
                     <div className="grid gap-4 py-4">
                         <div className="grid gap-2">
