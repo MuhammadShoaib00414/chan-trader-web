@@ -63,6 +63,7 @@ Route::name('api.')->group(function () {
         Route::get('/stores', [AppStoreController::class, 'index']);
         Route::get('/stores/{store}', [AppStoreController::class, 'show']);
         Route::get('/products', [AppProductController::class, 'index']);
+        Route::get('/products/{product}', [AppProductController::class, 'show']);
         Route::get('/products/category-counts', [AppProductController::class, 'categoryCounts']);
         Route::get('/promotions', [AppPromotionController::class, 'index']);
     });

@@ -15,6 +15,7 @@ class ProductController extends AppBaseController
      *
      * @queryParam q string Search by product name or SKU (partial match). Example: resistor
      * @queryParam category_id integer Filter by category ID. Example: 7
+     * @queryParam subcategory_id integer Filter by subcategory ID. Example: 15
      * @queryParam store_id integer Filter by store ID. Example: 12
      * @queryParam sort_by string Sort field. Allowed: created_at, price, name. Example: price
      * @queryParam sort_dir string Sort direction. Allowed: asc, desc. Example: asc
@@ -52,7 +53,7 @@ class ProductController extends AppBaseController
     public function index(Request $request)
     {
         $query = Product::query()
-            ->with(['store:id,name', 'category:id,name']);
+            ->with(['store:id,name,city', 'category:id,name', 'subcategory:id,name']);
 
         if ($request->filled('q')) {
             $q = $request->string('q')->toString();
@@ -63,6 +64,9 @@ class ProductController extends AppBaseController
         }
         if ($request->filled('category_id')) {
             $query->where('category_id', (int) $request->get('category_id'));
+        }
+        if ($request->filled('subcategory_id')) {
+            $query->where('subcategory_id', (int) $request->get('subcategory_id'));
         }
         if ($request->filled('store_id')) {
             $query->where('store_id', (int) $request->get('store_id'));
@@ -98,6 +102,7 @@ class ProductController extends AppBaseController
                     'city' => $p->store->city
                 ] : null,
                 'category' => $p->category ? ['id' => $p->category->id, 'name' => $p->category->name] : null,
+                'subcategory' => $p->subcategory ? ['id' => $p->subcategory->id, 'name' => $p->subcategory->name] : null,
             ];
         });
 
@@ -110,6 +115,91 @@ class ProductController extends AppBaseController
                 'last_page' => $products->lastPage(),
             ],
         ], 'Products retrieved');
+    }
+
+    /**
+     * Get Single Product
+     *
+     * @group APP APIs
+     *
+     * @urlParam id integer required Product ID. Example: 101
+     *
+     * @response 200 scenario="success" {
+     *   "success": true,
+     *   "message": "Product retrieved",
+     *   "data": {
+     *     "id": 101,
+     *     "name": "1kΩ Carbon Film Resistor",
+     *     "slug": "1k-ohm-carbon-film-resistor",
+     *     "sku": "RES-1K-CF",
+     *     "price": 10.5,
+     *     "compare_at": 15.0,
+     *     "stock": 100,
+     *     "condition": "new",
+     *     "short_description": "High quality carbon film resistor",
+     *     "description": "Detailed product description...",
+     *     "feature_image": "images/p101.png",
+     *     "rating_avg": 4.5,
+     *     "rating_count": 25,
+     *     "store": {
+     *       "id": 12,
+     *       "name": "Ali Store",
+     *       "email": "contact@alistore.com",
+     *       "phone": "+1234567890",
+     *       "city": "Lahore",
+     *       "address": "123 Main Street",
+     *       "rating_avg": 4.8,
+     *       "followers_count": 150
+     *     },
+     *     "category": { "id": 7, "name": "Resistors" },
+     *     "subcategory": { "id": 15, "name": "Carbon Film" },
+     *     "brand": { "id": 3, "name": "Brand Name" }
+     *   }
+     * }
+     *
+     * @unauthenticated
+     */
+    public function show($id)
+    {
+        $product = Product::with([
+            'store:id,name,email,phone,city,address,rating_avg,followers_count,business_whatsapp_url',
+            'category:id,name',
+            'subcategory:id,name',
+            'brand:id,name'
+        ])->findOrFail($id);
+
+        return $this->successResponse([
+            'id' => $product->id,
+            'name' => $product->name,
+            'slug' => $product->slug,
+            'sku' => $product->sku,
+            'condition' => $product->condition,
+            'price' => $product->price,
+            'compare_at' => $product->compare_at,
+            'stock' => $product->stock,
+            'short_description' => $product->short_description,
+            'description' => $product->description,
+            'feature_image' => $product->feature_image,
+            'top_image' => $product->top_image,
+            'unit' => $product->unit,
+            'warranty_months' => $product->warranty_months,
+            'rating_avg' => $product->rating_avg,
+            'rating_count' => $product->rating_count,
+            'store' => $product->store ? [
+                'id' => $product->store->id,
+                'name' => $product->store->name,
+                'email' => $product->store->email,
+                'phone' => $product->store->phone,
+                'business_whatsapp_url' => $product->store->business_whatsapp_url,
+                'city' => $product->store->city,
+                'address' => $product->store->address,
+                'rating_avg' => $product->store->rating_avg,
+                'followers_count' => $product->store->followers_count
+            ] : null,
+            'category' => $product->category ? ['id' => $product->category->id, 'name' => $product->category->name] : null,
+            'subcategory' => $product->subcategory ? ['id' => $product->subcategory->id, 'name' => $product->subcategory->name] : null,
+            'brand' => $product->brand ? ['id' => $product->brand->id, 'name' => $product->brand->name] : null,
+        ], 'Product retrieved');
     }
 
     /**
