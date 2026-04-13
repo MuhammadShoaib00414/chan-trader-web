@@ -84,6 +84,48 @@ class ProductController extends Controller
         ]]);
     }
 
+    public function inventory(Request $request)
+    {
+        $this->authorize('viewAny', Product::class);
+
+        $query = Product::query()->with('store:id,name');
+
+        if ($request->filled('store_id')) {
+            $query->where('store_id', (int) $request->get('store_id'));
+        }
+
+        if ($request->filled('low_stock')) {
+            $query->whereColumn('stock', '<=', 'low_stock_threshold');
+        }
+
+        $products = $query->select('id', 'store_id', 'name', 'sku', 'stock', 'low_stock_threshold')->paginate(50);
+
+        return response()->json([
+            'success' => true,
+            'data' => $products->items(),
+            'pagination' => [
+                'total' => $products->total(),
+                'per_page' => $products->perPage(),
+                'current_page' => $products->currentPage(),
+                'last_page' => $products->lastPage(),
+            ]
+        ]);
+    }
+
+    public function downloadInventory(Request $request)
+    {
+        $this->authorize('viewAny', Product::class);
+
+        // Placeholder for CSV/Excel generation
+        return response()->json([
+            'success' => true,
+            'message' => 'Inventory details ready for download',
+            'data' => [
+                'url' => url('/api/admin/inventory/export')
+            ]
+        ]);
+    }
+
     public function store(Request $request)
     {
         $validated = $request->validate([
