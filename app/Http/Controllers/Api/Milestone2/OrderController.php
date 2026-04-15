@@ -77,11 +77,14 @@ class OrderController extends AppBaseController
      *     "id": 1,
      *     "code": "ORD-ABC-123",
      *     "status": "pending",
+     *     "payment_status": "unpaid",
      *     "items": [
      *       {
      *         "id": 1,
+     *         "product_id": 101,
      *         "product_name": "Product Name",
      *         "quantity": 2,
+     *         "unit_price": 10.5,
      *         "subtotal": 21.0
      *       }
      *     ],
@@ -90,7 +93,16 @@ class OrderController extends AppBaseController
      *       "tax": 0.0,
      *       "delivery": 5.0,
      *       "total": 26.0
-     *     }
+     *     },
+     *     "shipping_address": {
+     *       "id": 1,
+     *       "title": "Home",
+     *       "address_line_1": "123 Main St",
+     *       "city": "Lahore"
+     *     },
+     *     "notes": "Deliver after 5pm",
+     *     "invoice_url": "http://localhost/api/milestone2/orders/1/invoice",
+     *     "created_at": "2026-04-12T12:00:00.000000Z"
      *   }
      * }
      */

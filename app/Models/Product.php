@@ -28,6 +28,7 @@ class Product extends Model
         'compare_at',
         'unit',
         'warranty_months',
+        'warranty_text',
         'meta_title',
         'meta_description',
         'is_published',
@@ -50,6 +51,16 @@ class Product extends Model
     public function isLowStock()
     {
         return $this->stock <= $this->low_stock_threshold;
+    }
+
+    public function isOutOfStock(): bool
+    {
+        return $this->stock <= 0;
+    }
+
+    public function getStockStatusAttribute(): string
+    {
+        return $this->isOutOfStock() ? 'Out of Stock' : 'Available';
     }
 
     public function scopeLowStock($query)

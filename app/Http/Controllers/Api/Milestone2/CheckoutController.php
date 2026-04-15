@@ -48,8 +48,13 @@ class CheckoutController extends AppBaseController
      *
      * @authenticated
      * @bodyParam title string required Address title (Home/Work). Example: Home
+     * @bodyParam name string Recipient name. Example: John Doe
+     * @bodyParam phone string Contact number. Example: +923001234567
      * @bodyParam address_line_1 string required The address. Example: 123 Main St
+     * @bodyParam address_line_2 string Secondary address info. Example: Apartment 4B
      * @bodyParam city string required The city. Example: Lahore
+     * @bodyParam state string Province or state. Example: Punjab
+     * @bodyParam postal_code string Postal/Zip code. Example: 54000
      * @bodyParam is_default boolean Whether to set as default. Example: true
      *
      * @response 201 {
@@ -155,7 +160,41 @@ class CheckoutController extends AppBaseController
      * @response 201 {
      *   "success": true,
      *   "message": "Order placed successfully",
-     *   "data": { "order_id": 1, "order_number": "ORD-2026-0412-ABC" }
+     *   "data": {
+     *     "order_id": 1,
+     *     "order_number": "ORD-2026-0412-ABC",
+     *     "status": "pending",
+     *     "items": [
+     *       {
+     *         "id": 1,
+     *         "product_id": 101,
+     *         "product_name": "Product Name",
+     *         "sku": "SKU-123",
+     *         "quantity": 2,
+     *         "unit_price": 10.5,
+     *         "subtotal": 21.0,
+     *         "feature_image": "images/p101.png"
+     *       }
+     *     ],
+     *     "price_breakdown": {
+     *       "subtotal": 21.0,
+     *       "tax": 0.0,
+     *       "delivery": 10.0,
+     *       "total": 31.0,
+     *       "currency": "PKR"
+     *     },
+     *     "shipping_address": {
+     *       "id": 1,
+     *       "title": "Home",
+     *       "name": "John Doe",
+     *       "phone": "+923001234567",
+     *       "address_line_1": "123 Main St",
+     *       "city": "Lahore"
+     *     },
+     *     "payment_method": "Cash on Delivery (COD)",
+     *     "notes": "Deliver after 5pm",
+     *     "created_at": "2026-04-12T12:00:00.000000Z"
+     *   }
      * }
      */
     public function placeOrder(Request $request)
@@ -236,9 +275,43 @@ class CheckoutController extends AppBaseController
             // Clear Cart
             $user->cartItems()->where('is_saved_for_later', false)->delete();
 
+            // Load all necessary data for the response
+            $order->load(['items.product', 'shippingAddress', 'payments']);
+
             return $this->successResponse([
                 'order_id' => $order->id,
                 'order_number' => $order->code,
+                'status' => $order->status,
+                'items' => $order->items->map(function ($item) {
+                    return [
+                        'id' => $item->id,
+                        'product_id' => $item->product_id,
+                        'product_name' => $item->name,
+                        'sku' => $item->sku,
+                        'quantity' => $item->quantity,
+                        'unit_price' => $item->unit_price,
+                        'subtotal' => $item->subtotal,
+                        'feature_image' => $item->product ? $item->product->feature_image : null,
+                    ];
+                }),
+                'price_breakdown' => [
+                    'subtotal' => $order->subtotal,
+                    'tax' => $order->tax_total,
+                    'delivery' => $order->shipping_cost,
+                    'total' => $order->grand_total,
+                    'currency' => $order->currency,
+                ],
+                'shipping_address' => $order->shippingAddress ? [
+                    'id' => $order->shippingAddress->id,
+                    'title' => $order->shippingAddress->title,
+                    'name' => $order->shippingAddress->name,
+                    'phone' => $order->shippingAddress->phone,
+                    'address_line_1' => $order->shippingAddress->address_line_1,
+                    'city' => $order->shippingAddress->city,
+                ] : null,
+                'payment_method' => 'Cash on Delivery (COD)',
+                'notes' => $order->notes,
+                'created_at' => $order->created_at,
             ], 'Order placed successfully', 201);
         });
     }

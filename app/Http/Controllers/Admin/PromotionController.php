@@ -42,7 +42,21 @@ class PromotionController extends Controller
     {
         $rules = [
             'product_id' => ['required', 'exists:products,id'],
+            'name' => ['nullable', 'string', 'max:255'],
+            'title' => ['nullable', 'string', 'max:255'],
+            'subtitle' => ['nullable', 'string', 'max:255'],
+            'description' => ['nullable', 'string'],
+            'button_text' => ['nullable', 'string', 'max:255'],
+            'button_link' => ['nullable', 'string', 'max:255'],
             'is_active' => ['boolean'],
+            'start_date' => ['nullable', 'date'],
+            'end_date' => ['nullable', 'date', 'after_or_equal:start_date'],
+            'start_datetime' => ['nullable', 'date'],
+            'end_datetime' => ['nullable', 'date', 'after_or_equal:start_datetime'],
+            'order_number' => ['integer', 'min:0'],
+            'text_color' => ['nullable', 'string', 'max:50'],
+            'background_color' => ['nullable', 'string', 'max:50'],
+            'device_type' => ['in:web,mobile'],
         ];
         $rules['image'] = $request->hasFile('image')
             ? ['nullable', 'file', 'mimes:png,jpg,jpeg,webp,svg', 'max:4096']
@@ -70,7 +84,21 @@ class PromotionController extends Controller
     {
         $rules = [
             'product_id' => ['sometimes', 'exists:products,id'],
+            'name' => ['nullable', 'string', 'max:255'],
+            'title' => ['nullable', 'string', 'max:255'],
+            'subtitle' => ['nullable', 'string', 'max:255'],
+            'description' => ['nullable', 'string'],
+            'button_text' => ['nullable', 'string', 'max:255'],
+            'button_link' => ['nullable', 'string', 'max:255'],
             'is_active' => ['boolean'],
+            'start_date' => ['nullable', 'date'],
+            'end_date' => ['nullable', 'date', 'after_or_equal:start_date'],
+            'start_datetime' => ['nullable', 'date'],
+            'end_datetime' => ['nullable', 'date', 'after_or_equal:start_datetime'],
+            'order_number' => ['integer', 'min:0'],
+            'text_color' => ['nullable', 'string', 'max:50'],
+            'background_color' => ['nullable', 'string', 'max:50'],
+            'device_type' => ['in:web,mobile'],
         ];
         $rules['image'] = $request->hasFile('image')
             ? ['nullable', 'file', 'mimes:png,jpg,jpeg,webp,svg', 'max:4096']

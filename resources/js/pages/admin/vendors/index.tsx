@@ -426,6 +426,10 @@ export default function VendorsIndex({ vendors }: VendorsPageProps) {
                   </TableHead>
                   <TableHead className="hidden md:table-cell">Phone</TableHead>
                   <TableHead className="hidden md:table-cell">Store</TableHead>
+                  <TableHead className="hidden lg:table-cell">Shop Name</TableHead>
+                  <TableHead className="hidden lg:table-cell">City</TableHead>
+                  <TableHead className="hidden lg:table-cell">Address</TableHead>
+
                   <TableHead className="hidden sm:table-cell">Store Status</TableHead>
                   <TableHead>
                     <button
@@ -446,6 +450,9 @@ export default function VendorsIndex({ vendors }: VendorsPageProps) {
                     <TableCell className="whitespace-nowrap">{v.email}</TableCell>
                     <TableCell className="hidden md:table-cell">{v.phone_number ?? '—'}</TableCell>
                     <TableCell className="hidden md:table-cell">{v.store ? v.store.name : '—'}</TableCell>
+                    <TableCell className="hidden lg:table-cell">{v.shop_name ?? '—'}</TableCell>
+                    <TableCell className="hidden lg:table-cell">{v.city_district ?? '—'}</TableCell>
+                    <TableCell className="hidden lg:table-cell">{v.address ?? '—'}</TableCell>
                     <TableCell className="hidden sm:table-cell">
                       {v.store ? (
                         <Badge variant={v.store.status === 'active' ? 'default' : 'outline'}>

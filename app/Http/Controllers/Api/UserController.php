@@ -171,7 +171,19 @@ class UserController extends AppBaseController
             $validated['password'] = Hash::make($validated['password']);
         }
 
-        $user->update(collect($validated)->except('roles')->toArray());
+        $updateFields = ['first_name', 'last_name', 'email', 'phone_number', 'city_district', 'address', 'status'];
+        
+        foreach ($updateFields as $field) {
+            if (array_key_exists($field, $validated)) {
+                $user->$field = $validated[$field];
+            }
+        }
+        
+        if (isset($validated['password'])) {
+            $user->password = $validated['password'];
+        }
+        
+        $user->save();
 
         if (isset($validated['role']) || isset($validated['roles'])) {
             $roleName = $validated['role']

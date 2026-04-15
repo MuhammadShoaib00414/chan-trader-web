@@ -31,7 +31,11 @@ class CartController extends AppBaseController
      *           "id": 101,
      *           "name": "Product Name",
      *           "price": 10.5,
-     *           "feature_image": "images/p101.png"
+     *           "feature_image": "images/p101.png",
+     *           "store": {
+     *             "id": 12,
+     *             "name": "Ali Store"
+     *           }
      *         },
      *         "quantity": 2,
      *         "is_saved_for_later": false

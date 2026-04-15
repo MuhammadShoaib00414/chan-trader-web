@@ -12,7 +12,27 @@ import { Pencil, Plus, Trash2 } from 'lucide-react'
 
 export default function PromotionsIndex() {
   type ProductRef = { id: number; name: string }
-  type PromotionItem = { id: number; product_id: number; image?: string | null; is_active: boolean; product?: { id: number; name: string } }
+  type PromotionItem = { 
+    id: number; 
+    product_id: number; 
+    name?: string | null;
+    image?: string | null;
+    title?: string | null;
+    subtitle?: string | null;
+    description?: string | null;
+    button_text?: string | null;
+    button_link?: string | null;
+    is_active: boolean;
+    start_date?: string | null;
+    end_date?: string | null;
+    start_datetime?: string | null;
+    end_datetime?: string | null;
+    order_number?: number;
+    text_color?: string | null;
+    background_color?: string | null;
+    device_type?: 'web' | 'mobile';
+    product?: { id: number; name: string } 
+  }
   type Pagination = { total: number; per_page: number; current_page: number; last_page: number }
   type PageProps = { items: PromotionItem[]; products: ProductRef[]; pagination?: Pagination; filters?: { q?: string } }
 
@@ -29,9 +49,41 @@ export default function PromotionsIndex() {
   const [editing, setEditing] = useState<PromotionItem | null>(null)
   const [deleting, setDeleting] = useState<PromotionItem | null>(null)
 
-  const [form, setForm] = useState<{ product_id: string; is_active: boolean; imageFile?: File | null }>({
+  const [form, setForm] = useState<{
+    product_id: string;
+    name: string;
+    title: string;
+    subtitle: string;
+    description: string;
+    button_text: string;
+    button_link: string;
+    is_active: boolean;
+    start_date: string;
+    end_date: string;
+    start_datetime: string;
+    end_datetime: string;
+    order_number: string;
+    text_color: string;
+    background_color: string;
+    device_type: 'web' | 'mobile';
+    imageFile?: File | null;
+  }>({
     product_id: products?.[0]?.id ? String(products[0].id) : '',
+    name: '',
+    title: '',
+    subtitle: '',
+    description: '',
+    button_text: '',
+    button_link: '',
     is_active: true,
+    start_date: '',
+    end_date: '',
+    start_datetime: '',
+    end_datetime: '',
+    order_number: '0',
+    text_color: '',
+    background_color: '',
+    device_type: 'web',
     imageFile: null,
   })
 
@@ -58,7 +110,21 @@ export default function PromotionsIndex() {
   const resetForm = () =>
     setForm({
       product_id: products?.[0]?.id ? String(products[0].id) : '',
+      name: '',
+      title: '',
+      subtitle: '',
+      description: '',
+      button_text: '',
+      button_link: '',
       is_active: true,
+      start_date: '',
+      end_date: '',
+      start_datetime: '',
+      end_datetime: '',
+      order_number: '0',
+      text_color: '',
+      background_color: '',
+      device_type: 'web',
       imageFile: null,
     })
 
@@ -76,7 +142,21 @@ export default function PromotionsIndex() {
   const addPromotion = async () => {
     const fd = new FormData()
     fd.append('product_id', form.product_id)
+    if (form.name) fd.append('name', form.name)
     fd.append('is_active', form.is_active ? '1' : '0')
+    if (form.title) fd.append('title', form.title)
+    if (form.subtitle) fd.append('subtitle', form.subtitle)
+    if (form.description) fd.append('description', form.description)
+    if (form.button_text) fd.append('button_text', form.button_text)
+    if (form.button_link) fd.append('button_link', form.button_link)
+    if (form.start_date) fd.append('start_date', form.start_date)
+    if (form.end_date) fd.append('end_date', form.end_date)
+    if (form.start_datetime) fd.append('start_datetime', form.start_datetime)
+    if (form.end_datetime) fd.append('end_datetime', form.end_datetime)
+    fd.append('order_number', form.order_number)
+    if (form.text_color) fd.append('text_color', form.text_color)
+    if (form.background_color) fd.append('background_color', form.background_color)
+    fd.append('device_type', form.device_type)
     if (form.imageFile) fd.append('image', form.imageFile)
     const res = await postForm('/api/admin/promotions', fd)
     if (res.ok) {
@@ -96,7 +176,25 @@ export default function PromotionsIndex() {
 
   const startEdit = (p: PromotionItem) => {
     setEditing(p)
-    setForm({ product_id: String(p.product_id), is_active: p.is_active, imageFile: null })
+    setForm({
+      product_id: String(p.product_id),
+      name: p.name || '',
+      title: p.title || '',
+      subtitle: p.subtitle || '',
+      description: p.description || '',
+      button_text: p.button_text || '',
+      button_link: p.button_link || '',
+      is_active: p.is_active,
+      start_date: p.start_date || '',
+      end_date: p.end_date || '',
+      start_datetime: p.start_datetime || '',
+      end_datetime: p.end_datetime || '',
+      order_number: String(p.order_number || 0),
+      text_color: p.text_color || '',
+      background_color: p.background_color || '',
+      device_type: p.device_type || 'web',
+      imageFile: null,
+    })
     setEditOpen(true)
   }
 
@@ -104,7 +202,21 @@ export default function PromotionsIndex() {
     if (!editing) return
     const fd = new FormData()
     fd.append('product_id', form.product_id)
+    if (form.name) fd.append('name', form.name)
     fd.append('is_active', form.is_active ? '1' : '0')
+    if (form.title) fd.append('title', form.title)
+    if (form.subtitle) fd.append('subtitle', form.subtitle)
+    if (form.description) fd.append('description', form.description)
+    if (form.button_text) fd.append('button_text', form.button_text)
+    if (form.button_link) fd.append('button_link', form.button_link)
+    if (form.start_date) fd.append('start_date', form.start_date)
+    if (form.end_date) fd.append('end_date', form.end_date)
+    if (form.start_datetime) fd.append('start_datetime', form.start_datetime)
+    if (form.end_datetime) fd.append('end_datetime', form.end_datetime)
+    fd.append('order_number', form.order_number)
+    if (form.text_color) fd.append('text_color', form.text_color)
+    if (form.background_color) fd.append('background_color', form.background_color)
+    fd.append('device_type', form.device_type)
     if (form.imageFile) fd.append('image', form.imageFile)
     const res = await patchForm(`/api/admin/promotions/${editing.id}`, fd)
     if (res.ok) {
@@ -186,28 +298,174 @@ export default function PromotionsIndex() {
               <DialogHeader>
                 <DialogTitle>Add Promotion</DialogTitle>
               </DialogHeader>
-              <div className="grid gap-3">
-                <div>
-                  <label className="mb-1 block text-sm">Product</label>
-                  <select
-                    className="w-full rounded-md border px-2 py-2"
-                    value={form.product_id}
-                    onChange={(e) => setForm({ ...form, product_id: e.target.value })}
-                  >
-                    {products.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.name}
-                      </option>
-                    ))}
-                  </select>
+              <div className="grid gap-4 max-h-[60vh] overflow-y-auto">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="mb-1 block text-sm font-medium">Product</label>
+                    <select
+                      className="w-full rounded-md border px-3 py-2"
+                      value={form.product_id}
+                      onChange={(e) => setForm({ ...form, product_id: e.target.value })}
+                    >
+                      {products.map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-sm font-medium">Name (Internal)</label>
+                    <Input
+                      value={form.name}
+                      onChange={(e) => setForm({ ...form, name: e.target.value })}
+                      placeholder="Internal promotion name"
+                    />
+                  </div>
                 </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="mb-1 block text-sm font-medium">Title</label>
+                    <Input
+                      value={form.title}
+                      onChange={(e) => setForm({ ...form, title: e.target.value })}
+                      placeholder="e.g. 40-50% OFF"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-sm font-medium">Subtitle</label>
+                    <Input
+                      value={form.subtitle}
+                      onChange={(e) => setForm({ ...form, subtitle: e.target.value })}
+                      placeholder="e.g. Mobile Accessories"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-sm font-medium">Description</label>
+                  <textarea
+                    className="w-full rounded-md border px-3 py-2 min-h-[80px]"
+                    value={form.description}
+                    onChange={(e) => setForm({ ...form, description: e.target.value })}
+                    placeholder="e.g. All Brands Available"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="mb-1 block text-sm font-medium">Button Text</label>
+                    <Input
+                      value={form.button_text}
+                      onChange={(e) => setForm({ ...form, button_text: e.target.value })}
+                      placeholder="e.g. Shop Now"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-sm font-medium">Button Link</label>
+                    <Input
+                      value={form.button_link}
+                      onChange={(e) => setForm({ ...form, button_link: e.target.value })}
+                      placeholder="URL for redirection"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="mb-1 block text-sm font-medium">Start Date</label>
+                    <Input
+                      type="date"
+                      value={form.start_date}
+                      onChange={(e) => setForm({ ...form, start_date: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-sm font-medium">End Date</label>
+                    <Input
+                      type="date"
+                      value={form.end_date}
+                      onChange={(e) => setForm({ ...form, end_date: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="mb-1 block text-sm font-medium">Start DateTime</label>
+                    <Input
+                      type="datetime-local"
+                      value={form.start_datetime}
+                      onChange={(e) => setForm({ ...form, start_datetime: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-sm font-medium">End DateTime</label>
+                    <Input
+                      type="datetime-local"
+                      value={form.end_datetime}
+                      onChange={(e) => setForm({ ...form, end_datetime: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="mb-1 block text-sm font-medium">Order Number</label>
+                    <Input
+                      type="number"
+                      value={form.order_number}
+                      onChange={(e) => setForm({ ...form, order_number: e.target.value })}
+                      min="0"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-sm font-medium">Text Color</label>
+                    <Input
+                      value={form.text_color}
+                      onChange={(e) => setForm({ ...form, text_color: e.target.value })}
+                      placeholder="#000000"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-sm font-medium">Background Color</label>
+                    <Input
+                      value={form.background_color}
+                      onChange={(e) => setForm({ ...form, background_color: e.target.value })}
+                      placeholder="#FFFFFF"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="mb-1 block text-sm font-medium">Device Type</label>
+                    <select
+                      className="w-full rounded-md border px-3 py-2"
+                      value={form.device_type}
+                      onChange={(e) => setForm({ ...form, device_type: e.target.value as 'web' | 'mobile' })}
+                    >
+                      <option value="web">Web</option>
+                      <option value="mobile">Mobile</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-sm font-medium">Image</label>
+                    <Input
+                      type="file"
+                      accept=".png,.jpg,.jpeg,.webp,.svg"
+                      onChange={(e) => setForm({ ...form, imageFile: e.target.files?.[0] ?? null })}
+                    />
+                  </div>
+                </div>
+
                 <div className="flex items-center gap-2">
-                  <Checkbox checked={form.is_active} onCheckedChange={(v) => setForm({ ...form, is_active: !!v })} />
-                  <span className="text-sm">Active</span>
-                </div>
-                <div>
-                  <label className="mb-1 block text-sm">Image</label>
-                  <Input type="file" accept=".png,.jpg,.jpeg,.webp,.svg" onChange={(e) => setForm({ ...form, imageFile: e.target.files?.[0] ?? null })} />
+                  <Checkbox
+                    checked={form.is_active}
+                    onCheckedChange={(v) => setForm({ ...form, is_active: !!v })}
+                  />
+                  <span className="text-sm font-medium">Active</span>
                 </div>
               </div>
               <DialogFooter>
@@ -223,7 +481,10 @@ export default function PromotionsIndex() {
             <TableHeader>
               <TableRow className="bg-muted/30">
                 <TableHead className="w-16 text-xs uppercase tracking-wide">ID</TableHead>
+                <TableHead className="text-xs uppercase tracking-wide">Name</TableHead>
+                <TableHead className="text-xs uppercase tracking-wide">Title</TableHead>
                 <TableHead className="text-xs uppercase tracking-wide">Product</TableHead>
+                <TableHead className="text-xs uppercase tracking-wide">Device</TableHead>
                 <TableHead className="text-xs uppercase tracking-wide">Active</TableHead>
                 <TableHead className="text-xs uppercase tracking-wide hidden md:table-cell">Image</TableHead>
                 <TableHead className="w-28 text-right text-xs uppercase tracking-wide">Actions</TableHead>
@@ -233,7 +494,22 @@ export default function PromotionsIndex() {
               {items.map((p) => (
                 <TableRow key={p.id} className="hover:bg-muted/20">
                   <TableCell>{p.id}</TableCell>
+                  <TableCell className="whitespace-nowrap max-w-[150px] truncate" title={p.name || ''}>
+                    {p.name || <span className="text-muted-foreground">-</span>}
+                  </TableCell>
+                  <TableCell className="whitespace-nowrap max-w-[150px] truncate" title={p.title || ''}>
+                    {p.title || <span className="text-muted-foreground">-</span>}
+                  </TableCell>
                   <TableCell className="whitespace-nowrap">{p.product?.name ?? `#${p.product_id}`}</TableCell>
+                  <TableCell className="whitespace-nowrap">
+                    <span className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${
+                      p.device_type === 'mobile' 
+                        ? 'bg-purple-100 text-purple-800' 
+                        : 'bg-blue-100 text-blue-800'
+                    }`}>
+                      {p.device_type || 'web'}
+                    </span>
+                  </TableCell>
                   <TableCell>{p.is_active ? 'Yes' : 'No'}</TableCell>
                   <TableCell className="hidden md:table-cell">
                     {p.image ? (
@@ -270,9 +546,30 @@ export default function PromotionsIndex() {
           <div className="md:hidden grid gap-2 p-3">
             {items.map((p) => (
               <div key={p.id} className="rounded-lg border p-3">
-                <div className="font-medium">{p.product?.name ?? `#${p.product_id}`}</div>
-                <div className="mt-1 text-xs text-muted-foreground">{p.is_active ? 'Active' : 'Inactive'}</div>
-                <div className="mt-2 flex justify-end gap-2">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <div className="font-medium">{p.name || `Promotion #${p.id}`}</div>
+                    {p.title && <div className="text-sm text-muted-foreground mt-1">{p.title}</div>}
+                    <div className="text-xs text-muted-foreground mt-1">{p.product?.name ?? `#${p.product_id}`}</div>
+                  </div>
+                  <span className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${
+                    p.device_type === 'mobile' 
+                      ? 'bg-purple-100 text-purple-800' 
+                      : 'bg-blue-100 text-blue-800'
+                  }`}>
+                    {p.device_type || 'web'}
+                  </span>
+                </div>
+                <div className="mt-2 flex items-center gap-2">
+                  <span className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${
+                    p.is_active 
+                      ? 'bg-green-100 text-green-800' 
+                      : 'bg-gray-100 text-gray-800'
+                  }`}>
+                    {p.is_active ? 'Active' : 'Inactive'}
+                  </span>
+                </div>
+                <div className="mt-3 flex justify-end gap-2">
                   <Button variant="outline" size="sm" onClick={() => startEdit(p)}>Edit</Button>
                   <Button variant="destructive" size="sm" onClick={() => startDelete(p)}>Delete</Button>
                 </div>
@@ -303,29 +600,180 @@ export default function PromotionsIndex() {
             <DialogHeader>
               <DialogTitle>Edit Promotion</DialogTitle>
             </DialogHeader>
-            <div className="grid gap-3">
-              <div>
-                <label className="mb-1 block text-sm">Product</label>
-                <select className="w-full rounded-md border px-2 py-2" value={form.product_id} onChange={(e) => setForm({ ...form, product_id: e.target.value })}>
-                  {products.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name}
-                    </option>
-                  ))}
-                </select>
+            <div className="grid gap-4 max-h-[60vh] overflow-y-auto">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="mb-1 block text-sm font-medium">Product</label>
+                  <select
+                    className="w-full rounded-md border px-3 py-2"
+                    value={form.product_id}
+                    onChange={(e) => setForm({ ...form, product_id: e.target.value })}
+                  >
+                    {products.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm font-medium">Name (Internal)</label>
+                  <Input
+                    value={form.name}
+                    onChange={(e) => setForm({ ...form, name: e.target.value })}
+                    placeholder="Internal promotion name"
+                  />
+                </div>
               </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="mb-1 block text-sm font-medium">Title</label>
+                  <Input
+                    value={form.title}
+                    onChange={(e) => setForm({ ...form, title: e.target.value })}
+                    placeholder="e.g. 40-50% OFF"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm font-medium">Subtitle</label>
+                  <Input
+                    value={form.subtitle}
+                    onChange={(e) => setForm({ ...form, subtitle: e.target.value })}
+                    placeholder="e.g. Mobile Accessories"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="mb-1 block text-sm font-medium">Description</label>
+                <textarea
+                  className="w-full rounded-md border px-3 py-2 min-h-[80px]"
+                  value={form.description}
+                  onChange={(e) => setForm({ ...form, description: e.target.value })}
+                  placeholder="e.g. All Brands Available"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="mb-1 block text-sm font-medium">Button Text</label>
+                  <Input
+                    value={form.button_text}
+                    onChange={(e) => setForm({ ...form, button_text: e.target.value })}
+                    placeholder="e.g. Shop Now"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm font-medium">Button Link</label>
+                  <Input
+                    value={form.button_link}
+                    onChange={(e) => setForm({ ...form, button_link: e.target.value })}
+                    placeholder="URL for redirection"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="mb-1 block text-sm font-medium">Start Date</label>
+                  <Input
+                    type="date"
+                    value={form.start_date}
+                    onChange={(e) => setForm({ ...form, start_date: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm font-medium">End Date</label>
+                  <Input
+                    type="date"
+                    value={form.end_date}
+                    onChange={(e) => setForm({ ...form, end_date: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="mb-1 block text-sm font-medium">Start DateTime</label>
+                  <Input
+                    type="datetime-local"
+                    value={form.start_datetime}
+                    onChange={(e) => setForm({ ...form, start_datetime: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm font-medium">End DateTime</label>
+                  <Input
+                    type="datetime-local"
+                    value={form.end_datetime}
+                    onChange={(e) => setForm({ ...form, end_datetime: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="mb-1 block text-sm font-medium">Order Number</label>
+                  <Input
+                    type="number"
+                    value={form.order_number}
+                    onChange={(e) => setForm({ ...form, order_number: e.target.value })}
+                    min="0"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm font-medium">Text Color</label>
+                  <Input
+                    value={form.text_color}
+                    onChange={(e) => setForm({ ...form, text_color: e.target.value })}
+                    placeholder="#000000"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm font-medium">Background Color</label>
+                  <Input
+                    value={form.background_color}
+                    onChange={(e) => setForm({ ...form, background_color: e.target.value })}
+                    placeholder="#FFFFFF"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="mb-1 block text-sm font-medium">Device Type</label>
+                  <select
+                    className="w-full rounded-md border px-3 py-2"
+                    value={form.device_type}
+                    onChange={(e) => setForm({ ...form, device_type: e.target.value as 'web' | 'mobile' })}
+                  >
+                    <option value="web">Web</option>
+                    <option value="mobile">Mobile</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm font-medium">Image</label>
+                  <Input
+                    type="file"
+                    accept=".png,.jpg,.jpeg,.webp,.svg"
+                    onChange={(e) => setForm({ ...form, imageFile: e.target.files?.[0] ?? null })}
+                  />
+                  {editing?.image && (
+                    <div className="mt-2">
+                      <img src={`/storage/${editing.image}`} alt="" className="size-12 rounded-md border object-cover" />
+                      <p className="text-xs text-muted-foreground mt-1">Current image</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
               <div className="flex items-center gap-2">
-                <Checkbox checked={form.is_active} onCheckedChange={(v) => setForm({ ...form, is_active: !!v })} />
-                <span className="text-sm">Active</span>
-              </div>
-              <div>
-                <label className="mb-1 block text-sm">Image</label>
-                <Input type="file" accept=".png,.jpg,.jpeg,.webp,.svg" onChange={(e) => setForm({ ...form, imageFile: e.target.files?.[0] ?? null })} />
-                {editing?.image && (
-                  <div className="mt-2">
-                    <img src={`/storage/${editing.image}`} alt="" className="size-12 rounded-md border object-cover" />
-                  </div>
-                )}
+                <Checkbox
+                  checked={form.is_active}
+                  onCheckedChange={(v) => setForm({ ...form, is_active: !!v })}
+                />
+                <span className="text-sm font-medium">Active</span>
               </div>
             </div>
             <DialogFooter>
