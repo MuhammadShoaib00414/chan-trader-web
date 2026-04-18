@@ -323,6 +323,7 @@ export default function Dashboard({ stats, recentUsers }: DashboardProps) {
                 )}
 
                 {/* Table Section */}
+                {!isVendor && (
                 <motion.div variants={item} className="mt-6 mb-2">
                     <Card className="shadow-xl overflow-hidden bg-white dark:bg-zinc-950 border-0 border-t-4 border-t-red-600">
                         <CardHeader className="flex flex-row items-center justify-between border-b border-zinc-100 dark:border-zinc-900 pb-4">
@@ -369,6 +370,7 @@ export default function Dashboard({ stats, recentUsers }: DashboardProps) {
                         </CardContent>
                     </Card>
                 </motion.div>
+                )}
             </motion.div>
         </AppLayout>
     );

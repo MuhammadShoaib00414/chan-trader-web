@@ -30,17 +30,20 @@ Route::middleware(['auth', 'verified'])->group(function () {
         $isVendor = $user?->hasRole('vendor');
         $now = Carbon::now();
 
-        $recentUsers = \App\Models\User::latest()
-            ->take(5)
-            ->get(['id', 'first_name', 'last_name', 'email', 'created_at'])
-            ->map(function ($user) {
-                return [
-                    'id' => $user->id,
-                    'name' => trim($user->first_name.' '.$user->last_name),
-                    'email' => $user->email,
-                    'created_at' => $user->created_at->toISOString(),
-                ];
-            });
+        $recentUsers = [];
+        if (!$isVendor) {
+            $recentUsers = \App\Models\User::latest()
+                ->take(5)
+                ->get(['id', 'first_name', 'last_name', 'email', 'created_at'])
+                ->map(function ($user) {
+                    return [
+                        'id' => $user->id,
+                        'name' => trim($user->first_name.' '.$user->last_name),
+                        'email' => $user->email,
+                        'created_at' => $user->created_at->toISOString(),
+                    ];
+                });
+        }
 
         if ($isSuper) {
             $stats = [
@@ -441,6 +444,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
             $stores = Store::orderBy('name')->get(['id', 'name']);
             $brands = Brand::orderBy('name')->get(['id', 'name']);
 
+            $isVendor = $request->user()?->hasRole('vendor') ?? false;
+            $vendorStore = null;
+            if ($isVendor) {
+                $vendorStore = Store::where('owner_id', $request->user()->id)->first(['id', 'name']);
+            }
+
             return Inertia::render('admin/products/index', [
                 'items' => $items,
                 'pagination' => [
@@ -459,6 +468,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
                 'categories' => $categories,
                 'stores' => $stores,
                 'brands' => $brands,
+                'isVendor' => $isVendor,
+                'vendorStore' => $vendorStore,
             ]);
         })->middleware('permission:products.view');
 
@@ -508,8 +519,21 @@ Route::middleware(['auth', 'verified'])->group(function () {
             $payments = Payment::where('order_id', $order->id)->latest()->get(['id', 'method', 'amount', 'status', 'paid_at']);
             $shipments = Shipment::where('order_id', $order->id)->latest()->get(['id', 'store_id', 'carrier', 'tracking_no', 'status', 'shipped_at', 'delivered_at']);
 
+            $order->load(['user:id,first_name,last_name,email,phone_number', 'shippingAddress:id,address_line_1,address_line_2,city,state,country,postal_code']);
+
             return Inertia::render('admin/orders/show', [
-                'order' => $order->only(['id', 'code', 'status', 'payment_status', 'grand_total', 'currency', 'created_at']),
+                'order' => array_merge(
+                    $order->only(['id', 'code', 'status', 'payment_status', 'grand_total', 'currency', 'created_at', 'notes']),
+                    [
+                        'customer' => $order->user ? [
+                            'id' => $order->user->id,
+                            'name' => trim(($order->user->first_name ?? '') . ' ' . ($order->user->last_name ?? '')),
+                            'email' => $order->user->email,
+                            'phone' => $order->user->phone_number,
+                        ] : null,
+                        'shipping_address' => $order->shippingAddress,
+                    ]
+                ),
                 'timeline' => $timeline,
                 'payments' => $payments,
                 'shipments' => $shipments,

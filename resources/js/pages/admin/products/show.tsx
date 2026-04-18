@@ -26,6 +26,8 @@ export default function ProductShow() {
     top_image?: string | null;
     meta_title?: string | null;
     meta_description?: string | null;
+    description?: string | null;
+    warranty_text?: string | null;
     images: Image[];
   };
   type Ref = { id: number; name: string };
@@ -83,6 +85,8 @@ export default function ProductShow() {
   const [pBrandId, setPBrandId] = useState<number>(product.brand_id ?? 0);
   const [pMetaTitle, setPMetaTitle] = useState(product.meta_title ?? '');
   const [pMetaDescription, setPMetaDescription] = useState(product.meta_description ?? '');
+  const [pDescription, setPDescription] = useState(product.description ?? '');
+  const [pWarrantyText, setPWarrantyText] = useState(product.warranty_text ?? '');
   const slugify = (s: string) =>
     s
       .toLowerCase()
@@ -104,6 +108,8 @@ export default function ProductShow() {
     compare_at?: number | null;
     meta_title?: string | null;
     meta_description?: string | null;
+    description?: string | null;
+    warranty_text?: string | null;
   };
   const saveBasics = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -117,6 +123,8 @@ export default function ProductShow() {
     if (pBrandId) payload.brand_id = pBrandId;
     if (pMetaTitle || pMetaTitle === '') payload.meta_title = pMetaTitle || null;
     if (pMetaDescription || pMetaDescription === '') payload.meta_description = pMetaDescription || null;
+    payload.description = pDescription || null;
+    payload.warranty_text = pWarrantyText || null;
     if (pStock) payload.stock = Number(pStock);
     if (pLowStock) payload.low_stock_threshold = Number(pLowStock);
     if (pPrice) {
@@ -267,6 +275,19 @@ export default function ProductShow() {
                 <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Meta Description</label>
                 <Input value={pMetaDescription} onChange={(e) => setPMetaDescription(e.target.value)} placeholder="SEO Description" />
               </div>
+              <div className="md:col-span-6">
+                <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Description</label>
+                <textarea
+                  className="w-full rounded-md border px-3 py-2 text-sm min-h-[120px] resize-y"
+                  value={pDescription}
+                  onChange={(e) => setPDescription(e.target.value)}
+                  placeholder="Full product description..."
+                />
+              </div>
+              <div className="md:col-span-3">
+                <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Warranty</label>
+                <Input value={pWarrantyText} onChange={(e) => setPWarrantyText(e.target.value)} placeholder="e.g. 1 year manufacturer warranty" />
+              </div>
               <div className="md:col-span-2 flex items-end gap-2">
                 <Button type="submit">Save</Button>
                 <Button type="button" variant="outline" onClick={() => {
@@ -283,6 +304,8 @@ export default function ProductShow() {
                   setPBrandId(product.brand_id ?? 0);
                   setPMetaTitle(product.meta_title ?? '');
                   setPMetaDescription(product.meta_description ?? '');
+                  setPDescription(product.description ?? '');
+                  setPWarrantyText(product.warranty_text ?? '');
                 }}>Reset</Button>
               </div>
             </form>

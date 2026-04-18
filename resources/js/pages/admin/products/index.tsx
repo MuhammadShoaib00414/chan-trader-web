@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { postForm } from '@/lib/http';
 import { ToastStack } from '@/components/ui/toast-stack';
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 export default function ProductsIndex() {
   type ProductItem = {
@@ -26,7 +26,7 @@ export default function ProductsIndex() {
   type StoreRef = { id: number; name: string };
   type BrandRef = { id: number; name: string };
   type Pagination = { total: number; per_page: number; current_page: number; last_page: number };
-  const { props } = usePage<{ items: any; categories: CategoryRef[]; stores: StoreRef[]; brands: BrandRef[]; pagination?: Pagination; filters?: { q?: string; category_id?: string; store_id?: string; sort_by?: string; sort_dir?: string } }>();
+  const { props } = usePage<{ items: any; categories: CategoryRef[]; stores: StoreRef[]; brands: BrandRef[]; pagination?: Pagination; filters?: { q?: string; category_id?: string; store_id?: string; sort_by?: string; sort_dir?: string }; isVendor?: boolean; vendorStore?: StoreRef | null }>();
   const rawItems = props.items;
   const items: ProductItem[] = Array.isArray(rawItems)
     ? rawItems
@@ -38,8 +38,10 @@ export default function ProductsIndex() {
   const brands = props.brands ?? [];
   const pagination = props.pagination;
   const filters = props.filters ?? {};
+  const isVendor = props.isVendor ?? false;
+  const vendorStore = props.vendorStore ?? null;
 
-  const [storeId, setStoreId] = useState<number>(stores?.[0]?.id ?? 0);
+  const [storeId, setStoreId] = useState<number>(isVendor ? (vendorStore?.id ?? 0) : (stores?.[0]?.id ?? 0));
   const [categoryId, setCategoryId] = useState<number>(categories?.[0]?.id ?? 0);
   const [brandId, setBrandId] = useState<number>(brands?.[0]?.id ?? 0);
   const [name, setName] = useState('');
@@ -47,6 +49,8 @@ export default function ProductsIndex() {
   const [sku, setSku] = useState('');
   const [price, setPrice] = useState('');
   const [compareAt, setCompareAt] = useState('');
+  const [description, setDescription] = useState('');
+  const [warrantyText, setWarrantyText] = useState('');
   const [featureImage, setFeatureImage] = useState<File | null>(null);
   const [toasts, setToasts] = useState<Array<{ id: number; title: string; variant: 'success' | 'error' }>>([]);
   const [addOpen, setAddOpen] = useState(false);
@@ -106,7 +110,8 @@ export default function ProductsIndex() {
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     const fd = new FormData();
-    fd.append('store_id', String(storeId));
+    const effectiveStoreId = isVendor ? (vendorStore?.id ?? storeId) : storeId;
+    fd.append('store_id', String(effectiveStoreId));
     fd.append('category_id', String(categoryId));
     if (brandId) fd.append('brand_id', String(brandId));
     fd.append('name', name);
@@ -114,6 +119,8 @@ export default function ProductsIndex() {
     fd.append('sku', sku);
     fd.append('price', String(price));
     if (compareAt) fd.append('compare_at', String(compareAt));
+    if (description) fd.append('description', description);
+    if (warrantyText) fd.append('warranty_text', warrantyText);
     if (featureImage) fd.append('feature_image', featureImage);
 
     const res = await postForm('/api/admin/products', fd);
@@ -123,6 +130,8 @@ export default function ProductsIndex() {
       setSku('');
       setPrice('');
       setCompareAt('');
+      setDescription('');
+      setWarrantyText('');
       setFeatureImage(null);
       showToast('Product created.', 'success');
       setAddOpen(false);
@@ -136,53 +145,53 @@ export default function ProductsIndex() {
     <AppLayout breadcrumbs={[{ title: 'Products', href: '/admin/products' }]}>
       <Head title="Products" />
       <div className="grid gap-6 p-4">
-        <div className="flex items-center justify-between gap-3">
-          <form onSubmit={submitFilters} className="grid grid-cols-2 gap-3 md:grid-cols-6 flex-1">
-          <div className="md:col-span-2">
-            <label className="mb-1 block text-sm">Search (name or SKU)</label>
-            <Input name="q" defaultValue={filters.q ?? ''} placeholder="MOSFET or SKU-0001" />
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center justify-between">
+            <h2 className="text-base font-semibold">Products</h2>
+            <Button onClick={() => setAddOpen(true)}>Add Product</Button>
           </div>
-          <div>
-            <label className="mb-1 block text-sm">Store</label>
-            <select className="w-full rounded-md border px-2 py-2" name="store_id" defaultValue={filters.store_id ?? ''}>
-              <option value="">All</option>
-              {stores?.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-            </select>
-          </div>
-          <div>
-            <label className="mb-1 block text-sm">Category</label>
-            <select className="w-full rounded-md border px-2 py-2" name="category_id" defaultValue={filters.category_id ?? ''}>
-              <option value="">All</option>
-              {categories?.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
-          </div>
-          <div className="md:col-span-2 flex items-end">
-            <Button type="submit">Filter</Button>
-          </div>
-          <div>
-            <label className="mb-1 block text-sm">Sort By</label>
-            <select className="w-full rounded-md border px-2 py-2" name="sort_by" defaultValue={filters.sort_by ?? 'created_at'}>
-              <option value="created_at">Created</option>
-              <option value="price">Price</option>
-              <option value="name">Name</option>
-            </select>
-          </div>
-          <div>
-            <label className="mb-1 block text-sm">Direction</label>
-            <select className="w-full rounded-md border px-2 py-2" name="sort_dir" defaultValue={filters.sort_dir ?? 'desc'}>
-              <option value="desc">Desc</option>
-              <option value="asc">Asc</option>
-            </select>
-          </div>
+
+          <form onSubmit={submitFilters} className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-6">
+            <div className="col-span-2 sm:col-span-3 md:col-span-2">
+              <label className="mb-1 block text-sm">Search (name or SKU)</label>
+              <Input name="q" defaultValue={filters.q ?? ''} placeholder="MOSFET or SKU-0001" />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm">Store</label>
+              <select className="w-full rounded-md border px-2 py-2" name="store_id" defaultValue={filters.store_id ?? ''}>
+                <option value="">All</option>
+                {stores?.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="mb-1 block text-sm">Category</label>
+              <select className="w-full rounded-md border px-2 py-2" name="category_id" defaultValue={filters.category_id ?? ''}>
+                <option value="">All</option>
+                {categories?.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="mb-1 block text-sm">Sort By</label>
+              <select className="w-full rounded-md border px-2 py-2" name="sort_by" defaultValue={filters.sort_by ?? 'created_at'}>
+                <option value="created_at">Created</option>
+                <option value="price">Price</option>
+                <option value="name">Name</option>
+              </select>
+            </div>
+            <div>
+              <label className="mb-1 block text-sm">Direction</label>
+              <select className="w-full rounded-md border px-2 py-2" name="sort_dir" defaultValue={filters.sort_dir ?? 'desc'}>
+                <option value="desc">Desc</option>
+                <option value="asc">Asc</option>
+              </select>
+            </div>
+            <div className="col-span-2 sm:col-span-1 flex items-end">
+              <Button type="submit" className="w-full sm:w-auto">Filter</Button>
+            </div>
           </form>
 
           <Dialog open={addOpen} onOpenChange={setAddOpen}>
-            <DialogTrigger asChild>
-              <Button size="lg" onClick={() => setAddOpen(true)}>
-                Add Product
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <DialogContent className="!max-w-5xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Add Product</DialogTitle>
               </DialogHeader>
@@ -226,20 +235,41 @@ export default function ProductsIndex() {
                   <Input value={compareAt} onChange={(e) => setCompareAt(e.target.value)} placeholder="12.00" type="number" step="0.01" />
                   <p className="text-xs text-muted-foreground mt-1">Show original price for discounts</p>
                 </div>
-                
+                <div className="md:col-span-2">
+                  <label className="mb-1.5 block text-sm font-medium">Description (optional)</label>
+                  <textarea
+                    className="w-full rounded-md border px-3 py-2 text-sm min-h-[100px] resize-y"
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    placeholder="Full product description..."
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <label className="mb-1.5 block text-sm font-medium">Warranty (optional)</label>
+                  <Input value={warrantyText} onChange={(e) => setWarrantyText(e.target.value)} placeholder="e.g. 1 year manufacturer warranty" />
+                </div>
+
                 <div className="md:col-span-2 border-t pt-4">
                   <h3 className="text-sm font-semibold mb-2 text-muted-foreground">Organization</h3>
                 </div>
-                <div>
-                  <label className="mb-1.5 block text-sm font-medium">Store *</label>
-                  <select className="w-full rounded-md border px-3 py-2" value={String(storeId)} onChange={(e) => setStoreId(Number(e.target.value))}>
-                    {stores?.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                {!isVendor && (
+                  <div>
+                    <label className="mb-1.5 block text-sm font-medium">Store *</label>
+                    <select className="w-full rounded-md border px-3 py-2" value={String(storeId)} onChange={(e) => setStoreId(Number(e.target.value))}>
+                      {stores?.map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {s.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+                {isVendor && vendorStore && (
+                  <div>
+                    <label className="mb-1.5 block text-sm font-medium">Store</label>
+                    <div className="rounded-md border px-3 py-2 text-sm bg-muted/40">{vendorStore.name}</div>
+                  </div>
+                )}
                 <div>
                   <label className="mb-1.5 block text-sm font-medium">Category *</label>
                   <select className="w-full rounded-md border px-3 py-2" value={String(categoryId)} onChange={(e) => setCategoryId(Number(e.target.value))}>

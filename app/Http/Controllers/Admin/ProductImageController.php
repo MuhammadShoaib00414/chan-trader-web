@@ -17,44 +17,44 @@ class ProductImageController extends Controller
     public function store(Request $request, Product $product)
     {
         $validated = $request->validate([
-            'files' => ['nullable', 'array', 'max:10'],
+            'files'   => ['nullable', 'array', 'max:10'],
             'files.*' => ['image', 'max:5120'],
-            'paths' => ['nullable', 'array', 'max:10'],
+            'file'    => ['nullable', 'image', 'max:5120'],
+            'paths'   => ['nullable', 'array', 'max:10'],
             'paths.*' => ['string', 'max:255'],
-            'alt' => ['nullable', 'string', 'max:150'],
+            'path'    => ['nullable', 'string', 'max:255'],
+            'alt'        => ['nullable', 'string', 'max:150'],
             'sort_order' => ['nullable', 'integer'],
             'is_primary' => ['boolean'],
         ]);
 
+        // Normalise single file/path into arrays
+        $files = $request->file('files') ?? ($request->hasFile('file') ? [$request->file('file')] : []);
+        $paths = $validated['paths'] ?? (isset($validated['path']) ? [$validated['path']] : []);
+
         $images = [];
 
-        // Handle file uploads
-        if ($request->hasFile('files')) {
-            foreach ($request->file('files') as $index => $file) {
-                $path = $file->storePublicly("products/{$product->id}", ['disk' => 'public']);
-                $images[] = $product->images()->create([
-                    'path' => "/storage/{$path}",
-                    'alt' => $validated['alt'] ?? null,
-                    'sort_order' => ($validated['sort_order'] ?? 0) + $index,
-                    'is_primary' => $index === 0 && !ProductImage::where('product_id', $product->id)->exists()
-                        ? true
-                        : (bool) ($validated['is_primary'] ?? false),
-                ]);
-            }
+        foreach ($files as $index => $file) {
+            $path = $file->storePublicly("products/{$product->id}", ['disk' => 'public']);
+            $images[] = $product->images()->create([
+                'path'       => "/storage/{$path}",
+                'alt'        => $validated['alt'] ?? null,
+                'sort_order' => ($validated['sort_order'] ?? 0) + $index,
+                'is_primary' => $index === 0 && !ProductImage::where('product_id', $product->id)->exists()
+                    ? true
+                    : (bool) ($validated['is_primary'] ?? false),
+            ]);
         }
 
-        // Handle URL-based paths
-        if (!empty($validated['paths'])) {
-            foreach ($validated['paths'] as $index => $path) {
-                $images[] = $product->images()->create([
-                    'path' => $path,
-                    'alt' => $validated['alt'] ?? null,
-                    'sort_order' => ($validated['sort_order'] ?? 0) + $index,
-                    'is_primary' => $index === 0 && !ProductImage::where('product_id', $product->id)->exists()
-                        ? true
-                        : (bool) ($validated['is_primary'] ?? false),
-                ]);
-            }
+        foreach ($paths as $index => $path) {
+            $images[] = $product->images()->create([
+                'path'       => $path,
+                'alt'        => $validated['alt'] ?? null,
+                'sort_order' => ($validated['sort_order'] ?? 0) + $index,
+                'is_primary' => $index === 0 && !ProductImage::where('product_id', $product->id)->exists()
+                    ? true
+                    : (bool) ($validated['is_primary'] ?? false),
+            ]);
         }
 
         if (empty($images)) {

@@ -174,6 +174,21 @@ export default function PromotionsIndex() {
     showToast(await errorMessageFromResponse(res), 'error')
   }
 
+  const toDateInput = (val?: string | null) => {
+    if (!val) return ''
+    // Handle "2024-01-15 10:00:00" or "2024-01-15T10:00:00.000Z" → "2024-01-15"
+    return val.split('T')[0].split(' ')[0]
+  }
+
+  const toDateTimeInput = (val?: string | null) => {
+    if (!val) return ''
+    // Handle "2024-01-15 10:00:00" → "2024-01-15T10:00:00"
+    // Handle ISO "2024-01-15T10:00:00.000Z" → "2024-01-15T10:00"
+    const normalized = val.replace(' ', 'T')
+    // Strip seconds and milliseconds beyond HH:MM for datetime-local compatibility
+    return normalized.slice(0, 16)
+  }
+
   const startEdit = (p: PromotionItem) => {
     setEditing(p)
     setForm({
@@ -185,10 +200,10 @@ export default function PromotionsIndex() {
       button_text: p.button_text || '',
       button_link: p.button_link || '',
       is_active: p.is_active,
-      start_date: p.start_date || '',
-      end_date: p.end_date || '',
-      start_datetime: p.start_datetime || '',
-      end_datetime: p.end_datetime || '',
+      start_date: toDateInput(p.start_date),
+      end_date: toDateInput(p.end_date),
+      start_datetime: toDateTimeInput(p.start_datetime),
+      end_datetime: toDateTimeInput(p.end_datetime),
       order_number: String(p.order_number || 0),
       text_color: p.text_color || '',
       background_color: p.background_color || '',
@@ -294,7 +309,7 @@ export default function PromotionsIndex() {
                 <Plus className="mr-2 size-4" /> Add Promotion
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-h-[90vh] overflow-y-auto">
+            <DialogContent className="!max-w-5xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Add Promotion</DialogTitle>
               </DialogHeader>
@@ -596,7 +611,7 @@ export default function PromotionsIndex() {
         </div>
 
         <Dialog open={editOpen} onOpenChange={setEditOpen}>
-          <DialogContent className="max-h-[90vh] overflow-y-auto">
+          <DialogContent className="!max-w-5xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Edit Promotion</DialogTitle>
             </DialogHeader>

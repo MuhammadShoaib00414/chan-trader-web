@@ -53,7 +53,13 @@ class ProductController extends AppBaseController
     public function index(Request $request)
     {
         $query = Product::query()
-            ->with(['store:id,name,city', 'category:id,name', 'subcategory:id,name']);
+            ->with([
+                'store:id,name,email,phone,city,address,rating_avg,followers_count,business_whatsapp_url',
+                'category:id,name,slug',
+                'subcategory:id,name,slug',
+                'brand:id,name,slug',
+                'images',
+            ]);
 
         if ($request->filled('q')) {
             $q = $request->string('q')->toString();
@@ -93,16 +99,40 @@ class ProductController extends AppBaseController
                 'condition' => $p->condition,
                 'price' => $p->price,
                 'compare_at' => $p->compare_at,
+                'stock' => $p->stock,
+                'unit' => $p->unit,
+                'short_description' => $p->short_description,
+                'description' => $p->description,
                 'feature_image' => $p->feature_image,
+                'top_image' => $p->top_image,
+                'warranty_months' => $p->warranty_months,
+                'warranty_text' => $p->warranty_text,
+                'is_featured' => $p->is_featured,
+                'is_top_selling' => $p->is_top_selling,
+                'is_published' => $p->is_published,
                 'rating_avg' => $p->rating_avg,
                 'rating_count' => $p->rating_count,
+                'images' => $p->images->map(fn($img) => [
+                    'id' => $img->id,
+                    'path' => $img->path,
+                    'alt' => $img->alt ?? null,
+                    'is_primary' => $img->is_primary,
+                    'sort_order' => $img->sort_order,
+                ]),
                 'store' => $p->store ? [
-                    'id' => $p->store->id, 
+                    'id' => $p->store->id,
                     'name' => $p->store->name,
-                    'city' => $p->store->city
+                    'email' => $p->store->email,
+                    'phone' => $p->store->phone,
+                    'business_whatsapp_url' => $p->store->business_whatsapp_url,
+                    'city' => $p->store->city,
+                    'address' => $p->store->address,
+                    'rating_avg' => $p->store->rating_avg,
+                    'followers_count' => $p->store->followers_count,
                 ] : null,
-                'category' => $p->category ? ['id' => $p->category->id, 'name' => $p->category->name] : null,
-                'subcategory' => $p->subcategory ? ['id' => $p->subcategory->id, 'name' => $p->subcategory->name] : null,
+                'category' => $p->category ? ['id' => $p->category->id, 'name' => $p->category->name, 'slug' => $p->category->slug] : null,
+                'subcategory' => $p->subcategory ? ['id' => $p->subcategory->id, 'name' => $p->subcategory->name, 'slug' => $p->subcategory->slug] : null,
+                'brand' => $p->brand ? ['id' => $p->brand->id, 'name' => $p->brand->name, 'slug' => $p->brand->slug] : null,
             ];
         });
 
@@ -163,9 +193,10 @@ class ProductController extends AppBaseController
     {
         $product = Product::with([
             'store:id,name,email,phone,city,address,rating_avg,followers_count,business_whatsapp_url',
-            'category:id,name',
-            'subcategory:id,name',
-            'brand:id,name'
+            'category:id,name,slug',
+            'subcategory:id,name,slug',
+            'brand:id,name,slug',
+            'images',
         ])->findOrFail($id);
 
         return $this->successResponse([
@@ -177,16 +208,25 @@ class ProductController extends AppBaseController
             'price' => $product->price,
             'compare_at' => $product->compare_at,
             'stock' => $product->stock,
-            'stock_status' => $product->stock_status,
+            'unit' => $product->unit,
             'short_description' => $product->short_description,
             'description' => $product->description,
             'feature_image' => $product->feature_image,
             'top_image' => $product->top_image,
-            'unit' => $product->unit,
             'warranty_months' => $product->warranty_months,
             'warranty_text' => $product->warranty_text,
+            'is_featured' => $product->is_featured,
+            'is_top_selling' => $product->is_top_selling,
+            'is_published' => $product->is_published,
             'rating_avg' => $product->rating_avg,
             'rating_count' => $product->rating_count,
+            'images' => $product->images->map(fn($img) => [
+                'id' => $img->id,
+                'path' => $img->path,
+                'alt' => $img->alt ?? null,
+                'is_primary' => $img->is_primary,
+                'sort_order' => $img->sort_order,
+            ]),
             'store' => $product->store ? [
                 'id' => $product->store->id,
                 'name' => $product->store->name,
@@ -196,11 +236,23 @@ class ProductController extends AppBaseController
                 'city' => $product->store->city,
                 'address' => $product->store->address,
                 'rating_avg' => $product->store->rating_avg,
-                'followers_count' => $product->store->followers_count
+                'followers_count' => $product->store->followers_count,
             ] : null,
-            'category' => $product->category ? ['id' => $product->category->id, 'name' => $product->category->name] : null,
-            'subcategory' => $product->subcategory ? ['id' => $product->subcategory->id, 'name' => $product->subcategory->name] : null,
-            'brand' => $product->brand ? ['id' => $product->brand->id, 'name' => $product->brand->name] : null,
+            'category' => $product->category ? [
+                'id' => $product->category->id,
+                'name' => $product->category->name,
+                'slug' => $product->category->slug,
+            ] : null,
+            'subcategory' => $product->subcategory ? [
+                'id' => $product->subcategory->id,
+                'name' => $product->subcategory->name,
+                'slug' => $product->subcategory->slug,
+            ] : null,
+            'brand' => $product->brand ? [
+                'id' => $product->brand->id,
+                'name' => $product->brand->name,
+                'slug' => $product->brand->slug,
+            ] : null,
         ], 'Product retrieved');
     }
 

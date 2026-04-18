@@ -11,7 +11,9 @@ export default function OrderShow() {
   type Payment = { id: number; method: string; amount: number; status: string; paid_at: string | null };
   type Shipment = { id: number; store_id: number; carrier: string | null; tracking_no: string | null; status: string; shipped_at: string | null; delivered_at: string | null };
   type StoreRef = { id: number; name: string };
-  type OrderDetails = { id: number; code: string; status: string; payment_status: string; grand_total: number; currency: string; created_at: string };
+  type Customer = { id: number; name: string; email: string; phone: string | null };
+  type ShippingAddress = { id: number; address_line_1: string | null; address_line_2: string | null; city: string | null; state: string | null; country: string | null; postal_code: string | null };
+  type OrderDetails = { id: number; code: string; status: string; payment_status: string; grand_total: number; currency: string; created_at: string; notes?: string | null; customer?: Customer | null; shipping_address?: ShippingAddress | null };
   const { props } = usePage<{ order: OrderDetails; timeline: TimelineItem[]; payments: Payment[]; shipments: Shipment[]; stores: StoreRef[] }>();
   const { order, timeline, payments, shipments, stores } = props;
 
@@ -63,6 +65,32 @@ export default function OrderShow() {
           <div className="text-lg font-medium">Order {order.code}</div>
           <div className="text-sm text-muted-foreground capitalize">Status: {order.status} • Payment: {order.payment_status} • Total: ${order.grand_total}</div>
         </div>
+
+        {(order.customer || order.shipping_address) && (
+          <div className="grid gap-4 md:grid-cols-2">
+            {order.customer && (
+              <div className="rounded-lg border p-4">
+                <div className="mb-3 font-medium">Customer</div>
+                <div className="grid gap-1 text-sm">
+                  <div><span className="text-muted-foreground">Name:</span> {order.customer.name || '—'}</div>
+                  <div><span className="text-muted-foreground">Email:</span> {order.customer.email}</div>
+                  {order.customer.phone && <div><span className="text-muted-foreground">Phone:</span> {order.customer.phone}</div>}
+                </div>
+              </div>
+            )}
+            {order.shipping_address && (
+              <div className="rounded-lg border p-4">
+                <div className="mb-3 font-medium">Shipping Address</div>
+                <div className="grid gap-1 text-sm">
+                  {order.shipping_address.address_line_1 && <div>{order.shipping_address.address_line_1}</div>}
+                  {order.shipping_address.address_line_2 && <div>{order.shipping_address.address_line_2}</div>}
+                  <div>{[order.shipping_address.city, order.shipping_address.state, order.shipping_address.postal_code].filter(Boolean).join(', ')}</div>
+                  {order.shipping_address.country && <div>{order.shipping_address.country}</div>}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         <div className="grid gap-4 md:grid-cols-2">
           <div className="rounded-lg border p-4">
