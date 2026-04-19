@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\App\ProductController as AppProductController;
 use App\Http\Controllers\Api\App\PromotionController as AppPromotionController;
 use App\Http\Controllers\Api\App\StoreController as AppStoreController;
 use App\Http\Controllers\Api\App\SubcategoryController as AppSubcategoryController;
+use App\Http\Controllers\Api\App\VoiceSearchController as AppVoiceSearchController;
 use App\Http\Controllers\Api\Auth\LoginController;
 use App\Http\Controllers\Api\Auth\OtpController;
 use App\Http\Controllers\Api\Auth\PasswordController;
@@ -66,6 +67,9 @@ Route::name('api.')->group(function () {
         Route::get('/products/{product}', [AppProductController::class, 'show']);
         Route::get('/products/category-counts', [AppProductController::class, 'categoryCounts']);
         Route::get('/promotions', [AppPromotionController::class, 'index']);
+
+        // Voice Search
+        Route::post('/voice-search', [AppVoiceSearchController::class, 'search']);
     });
 
     // Password change (requires authentication)

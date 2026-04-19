@@ -59,6 +59,10 @@ class ProductController extends AppBaseController
                 'subcategory:id,name,slug',
                 'brand:id,name,slug',
                 'images',
+                'reviews' => fn($q) => $q->where('is_visible', true)
+                    ->with('user:id,first_name,last_name,avatar')
+                    ->latest()
+                    ->limit(5),
             ]);
 
         if ($request->filled('q')) {
@@ -133,6 +137,17 @@ class ProductController extends AppBaseController
                 'category' => $p->category ? ['id' => $p->category->id, 'name' => $p->category->name, 'slug' => $p->category->slug] : null,
                 'subcategory' => $p->subcategory ? ['id' => $p->subcategory->id, 'name' => $p->subcategory->name, 'slug' => $p->subcategory->slug] : null,
                 'brand' => $p->brand ? ['id' => $p->brand->id, 'name' => $p->brand->name, 'slug' => $p->brand->slug] : null,
+                'reviews' => $p->reviews->map(fn($r) => [
+                    'id'         => $r->id,
+                    'rating'     => $r->rating,
+                    'comment'    => $r->comment,
+                    'created_at' => $r->created_at,
+                    'user'       => $r->user ? [
+                        'id'     => $r->user->id,
+                        'name'   => trim($r->user->first_name . ' ' . $r->user->last_name),
+                        'avatar' => $r->user->avatar,
+                    ] : null,
+                ]),
             ];
         });
 
@@ -197,6 +212,10 @@ class ProductController extends AppBaseController
             'subcategory:id,name,slug',
             'brand:id,name,slug',
             'images',
+            'reviews' => fn($q) => $q->where('is_visible', true)
+                ->with('user:id,first_name,last_name,avatar')
+                ->latest()
+                ->limit(5),
         ])->findOrFail($id);
 
         return $this->successResponse([
@@ -253,6 +272,17 @@ class ProductController extends AppBaseController
                 'name' => $product->brand->name,
                 'slug' => $product->brand->slug,
             ] : null,
+            'reviews' => $product->reviews->map(fn($r) => [
+                'id'         => $r->id,
+                'rating'     => $r->rating,
+                'comment'    => $r->comment,
+                'created_at' => $r->created_at,
+                'user'       => $r->user ? [
+                    'id'     => $r->user->id,
+                    'name'   => trim($r->user->first_name . ' ' . $r->user->last_name),
+                    'avatar' => $r->user->avatar,
+                ] : null,
+            ]),
         ], 'Product retrieved');
     }
 
