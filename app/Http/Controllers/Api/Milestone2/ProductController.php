@@ -62,17 +62,23 @@ class ProductController extends AppBaseController
      */
     public function show($id)
     {
-        $product = Product::with([
-            'store:id,name,email,phone,city,address,rating_avg,followers_count,business_whatsapp_url',
-            'category:id,name',
-            'subcategory:id,name',
-            'brand:id,name',
-            'reviews' => function($q) {
-                $q->where('is_visible', true)->with('user:id,first_name,last_name,avatar')->latest()->limit(5);
-            }
-        ])->findOrFail($id);
+        $product = Product::where('is_published', true)
+            ->with([
+                'store:id,name,email,phone,city,address,rating_avg,followers_count,business_whatsapp_url',
+                'category:id,name',
+                'subcategory:id,name',
+                'brand:id,name',
+                'reviews' => function($q) {
+                    $q->where('is_visible', true)->with('user:id,first_name,last_name,avatar')->latest()->limit(5);
+                }
+            ])->find($id);
 
-        $relatedProducts = Product::where('category_id', $product->category_id)
+        if (!$product) {
+            return $this->errorResponse('Product not found or not available', 404);
+        }
+
+        $relatedProducts = Product::where('is_published', true)
+            ->where('category_id', $product->category_id)
             ->where('id', '!=', $product->id)
             ->limit(10)
             ->get(['id', 'name', 'slug', 'price', 'feature_image', 'rating_avg', 'rating_count']);

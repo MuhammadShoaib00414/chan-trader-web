@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\App\ProductController as AppProductController;
 use App\Http\Controllers\Api\App\PromotionController as AppPromotionController;
 use App\Http\Controllers\Api\App\StoreController as AppStoreController;
 use App\Http\Controllers\Api\App\SubcategoryController as AppSubcategoryController;
+use App\Http\Controllers\Api\App\SuggestionsController as AppSuggestionsController;
 use App\Http\Controllers\Api\App\VoiceSearchController as AppVoiceSearchController;
 use App\Http\Controllers\Api\Auth\LoginController;
 use App\Http\Controllers\Api\Auth\OtpController;
@@ -84,6 +85,15 @@ Route::name('api.')->group(function () {
             Route::post('/update-profile', [ProfileController::class, 'update']);
             Route::post('/logout', [LoginController::class, 'logout']);
             Route::delete('/account', [UserController::class, 'deleteAccount']);
+        });
+
+        // ********************* Search Suggestions *********************
+        Route::prefix('suggestions')->group(function () {
+            Route::get('/', [AppSuggestionsController::class, 'index']);
+            Route::post('/', [AppSuggestionsController::class, 'store']);
+            Route::delete('/{id}', [AppSuggestionsController::class, 'destroy']);
+            Route::delete('/', [AppSuggestionsController::class, 'clear']);
+            Route::get('/autocomplete', [AppSuggestionsController::class, 'autocomplete']);
         });
 
         // ********************* User Management *********************

@@ -73,7 +73,7 @@ class VoiceSearchController extends AppBaseController
             explode(' ', preg_replace('/\s+/', ' ', $rawQuery)),
             fn($t) => strlen($t) > 1
         ));
-
+    //    dd($rawQuery,$tokens);
         $query = Product::query()
             ->with([
                 'store:id,name',

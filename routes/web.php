@@ -437,6 +437,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
                     'has_primary_image' => $p->images->isNotEmpty(),
                     'store' => $p->store ? ['id' => $p->store->id, 'name' => $p->store->name] : null,
                     'category' => $p->category ? ['id' => $p->category->id, 'name' => $p->category->name] : null,
+                    'is_published' => $p->is_published,
                 ];
             });
 

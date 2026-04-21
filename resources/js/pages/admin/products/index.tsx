@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { postForm } from '@/lib/http';
+import { delJson, postJson, postForm } from '@/lib/http';
 import { ToastStack } from '@/components/ui/toast-stack';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
@@ -21,6 +21,7 @@ export default function ProductsIndex() {
     thumb?: string;
     store?: { id: number; name: string } | null;
     category?: { id: number; name: string } | null;
+    is_published?: boolean;
   };
   type CategoryRef = { id: number; name: string };
   type StoreRef = { id: number; name: string };
@@ -139,6 +140,36 @@ export default function ProductsIndex() {
       return;
     }
     showToast(await errorMessageFromResponse(res), 'error');
+  };
+
+  const deleteProduct = async (productId: number) => {
+    if (!confirm('Are you sure you want to delete this product? This action cannot be undone.')) {
+      return;
+    }
+    
+    const res = await delJson(`/api/admin/products/${productId}`);
+    if (res.ok) {
+      showToast('Product deleted successfully.', 'success');
+      router.reload({ only: ['items'] });
+    } else {
+      showToast(await errorMessageFromResponse(res), 'error');
+    }
+  };
+
+  const togglePublishedStatus = async (productId: number, currentStatus: boolean) => {
+    const endpoint = currentStatus 
+      ? `/api/admin/products/${productId}/unpublish`
+      : `/api/admin/products/${productId}/publish`;
+    
+    const action = currentStatus ? 'unpublish' : 'publish';
+    
+    const res = await postJson(endpoint, {});
+    if (res.ok) {
+      showToast(`Product ${action}ed successfully.`, 'success');
+      router.reload({ only: ['items'] });
+    } else {
+      showToast(await errorMessageFromResponse(res), 'error');
+    }
   };
 
   return (
@@ -326,6 +357,7 @@ export default function ProductsIndex() {
                 <TableHead className="hidden lg:table-cell">Thumb</TableHead>
                 <TableHead className="hidden md:table-cell">Store</TableHead>
                 <TableHead className="hidden md:table-cell">Category</TableHead>
+                <TableHead className="hidden sm:table-cell">Status</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -362,10 +394,37 @@ export default function ProductsIndex() {
                   <TableCell className="hidden md:table-cell text-xs">
                     {p.category?.name ?? '-'}
                   </TableCell>
+                  <TableCell className="hidden sm:table-cell">
+                    {p.is_published ? (
+                      <span className="inline-flex items-center rounded-full bg-green-50 px-2 py-1 text-xs font-medium text-green-700">
+                        Published
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center rounded-full bg-gray-50 px-2 py-1 text-xs font-medium text-gray-700">
+                        Draft
+                      </span>
+                    )}
+                  </TableCell>
                   <TableCell className="text-right">
-                    <Button size="sm" variant="outline" asChild>
-                      <a href={`/admin/products/${p.id}`}>Manage</a>
-                    </Button>
+                    <div className="flex justify-end gap-1">
+                      <Button size="sm" variant="outline" asChild>
+                        <a href={`/admin/products/${p.id}`}>Manage</a>
+                      </Button>
+                      <Button 
+                        size="sm" 
+                        variant={p.is_published ? "secondary" : "default"}
+                        onClick={() => togglePublishedStatus(p.id, p.is_published ?? false)}
+                      >
+                        {p.is_published ? 'Unpublish' : 'Publish'}
+                      </Button>
+                      <Button 
+                        size="sm" 
+                        variant="destructive"
+                        onClick={() => deleteProduct(p.id)}
+                      >
+                        Delete
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
@@ -387,11 +446,41 @@ export default function ProductsIndex() {
                   <div className="mt-1 flex flex-col gap-1 text-xs text-muted-foreground">
                     {p.store?.name && <div><span className="font-medium">Store:</span> {p.store.name}</div>}
                     {p.category?.name && <div><span className="font-medium">Category:</span> {p.category.name}</div>}
+                    <div>
+                      <span className="font-medium">Status:</span>{' '}
+                      {p.is_published ? (
+                        <span className="inline-flex items-center rounded-full bg-green-50 px-2 py-0.5 text-xs font-medium text-green-700">
+                          Published
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center rounded-full bg-gray-50 px-2 py-0.5 text-xs font-medium text-gray-700">
+                          Draft
+                        </span>
+                      )}
+                    </div>
                   </div>
-                  <div className="mt-2 flex justify-end">
-                    <Button size="sm" variant="outline" asChild>
-                      <a href={`/admin/products/${p.id}`}>Manage</a>
-                    </Button>
+                  <div className="mt-2 flex flex-col gap-1">
+                    <div className="flex justify-end gap-1">
+                      <Button size="sm" variant="outline" asChild>
+                        <a href={`/admin/products/${p.id}`}>Manage</a>
+                      </Button>
+                      <Button 
+                        size="sm" 
+                        variant={p.is_published ? "secondary" : "default"}
+                        onClick={() => togglePublishedStatus(p.id, p.is_published ?? false)}
+                      >
+                        {p.is_published ? 'Unpublish' : 'Publish'}
+                      </Button>
+                    </div>
+                    <div className="flex justify-end">
+                      <Button 
+                        size="sm" 
+                        variant="destructive"
+                        onClick={() => deleteProduct(p.id)}
+                      >
+                        Delete
+                      </Button>
+                    </div>
                   </div>
                 </div>
               )

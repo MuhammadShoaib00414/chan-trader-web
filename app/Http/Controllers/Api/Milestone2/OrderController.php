@@ -37,7 +37,9 @@ class OrderController extends AppBaseController
      */
     public function index(Request $request)
     {
-        $query = auth()->user()->orders()->latest();
+        $query = auth()->user()->orders()
+            ->with(['items.product:id,name,slug,feature_image', 'items.store:id,name'])
+            ->latest();
 
         if ($request->filled('status')) {
             $query->where('status', $request->status);
@@ -53,6 +55,26 @@ class OrderController extends AppBaseController
                     'status' => $order->status,
                     'grand_total' => $order->grand_total,
                     'created_at' => $order->created_at,
+                    'items' => $order->items->map(function ($item) {
+                        return [
+                            'id' => $item->id,
+                            'name' => $item->name,
+                            'sku' => $item->sku,
+                            'quantity' => $item->quantity,
+                            'unit_price' => $item->unit_price,
+                            'subtotal' => $item->subtotal,
+                            'product' => $item->product ? [
+                                'id' => $item->product->id,
+                                'name' => $item->product->name,
+                                'slug' => $item->product->slug,
+                                'feature_image' => $item->product->feature_image,
+                            ] : null,
+                            'store' => $item->store ? [
+                                'id' => $item->store->id,
+                                'name' => $item->store->name,
+                            ] : null,
+                        ];
+                    }),
                 ];
             }),
             'pagination' => [
@@ -108,7 +130,9 @@ class OrderController extends AppBaseController
      */
     public function show($id)
     {
-        $order = auth()->user()->orders()->with(['items.product', 'shippingAddress'])->findOrFail($id);
+        $order = auth()->user()->orders()
+            ->with(['items.product:id,name,slug,feature_image', 'items.store:id,name', 'shippingAddress'])
+            ->findOrFail($id);
 
         return $this->successResponse([
             'id' => $order->id,
@@ -120,9 +144,20 @@ class OrderController extends AppBaseController
                     'id' => $item->id,
                     'product_id' => $item->product_id,
                     'product_name' => $item->name,
+                    'sku' => $item->sku,
                     'quantity' => $item->quantity,
                     'unit_price' => $item->unit_price,
                     'subtotal' => $item->subtotal,
+                    'product' => $item->product ? [
+                        'id' => $item->product->id,
+                        'name' => $item->product->name,
+                        'slug' => $item->product->slug,
+                        'feature_image' => $item->product->feature_image,
+                    ] : null,
+                    'store' => $item->store ? [
+                        'id' => $item->store->id,
+                        'name' => $item->store->name,
+                    ] : null,
                 ];
             }),
             'price_breakdown' => [

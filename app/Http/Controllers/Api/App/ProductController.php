@@ -53,6 +53,7 @@ class ProductController extends AppBaseController
     public function index(Request $request)
     {
         $query = Product::query()
+            ->where('is_published', true)
             ->with([
                 'store:id,name,email,phone,city,address,rating_avg,followers_count,business_whatsapp_url',
                 'category:id,name,slug',
@@ -206,17 +207,22 @@ class ProductController extends AppBaseController
      */
     public function show($id)
     {
-        $product = Product::with([
-            'store:id,name,email,phone,city,address,rating_avg,followers_count,business_whatsapp_url',
-            'category:id,name,slug',
-            'subcategory:id,name,slug',
-            'brand:id,name,slug',
-            'images',
-            'reviews' => fn($q) => $q->where('is_visible', true)
-                ->with('user:id,first_name,last_name,avatar')
-                ->latest()
-                ->limit(5),
-        ])->findOrFail($id);
+        $product = Product::where('is_published', true)
+            ->with([
+                'store:id,name,email,phone,city,address,rating_avg,followers_count,business_whatsapp_url',
+                'category:id,name,slug',
+                'subcategory:id,name,slug',
+                'brand:id,name,slug',
+                'images',
+                'reviews' => fn($q) => $q->where('is_visible', true)
+                    ->with('user:id,first_name,last_name,avatar')
+                    ->latest()
+                    ->limit(5),
+            ])->find($id);
+
+        if (!$product) {
+            return $this->errorResponse('Product not found or not available', 404);
+        }
 
         return $this->successResponse([
             'id' => $product->id,
