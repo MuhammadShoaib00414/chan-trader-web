@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 
@@ -32,12 +33,21 @@ class RoleController extends Controller
     {
         $this->authorize('create', Role::class);
 
+        $guardName = config('auth.defaults.guard', 'web');
+
         $validated = $request->validate([
-            'name' => 'required|string|unique:roles,name',
+            'name' => [
+                'required',
+                'string',
+                Rule::unique('roles', 'name')->where(fn ($query) => $query->where('guard_name', $guardName)),
+            ],
             'permissions' => 'array',
         ]);
 
-        $role = Role::create(['name' => $validated['name']]);
+        $role = Role::create([
+            'name' => $validated['name'],
+            'guard_name' => $guardName,
+        ]);
 
         if (isset($validated['permissions'])) {
             $expanded = $this->expandPermissionAliases($validated['permissions']);
@@ -73,7 +83,13 @@ class RoleController extends Controller
         $this->authorize('update', $role);
 
         $validated = $request->validate([
-            'name' => 'required|string|unique:roles,name,'.$role->id,
+            'name' => [
+                'required',
+                'string',
+                Rule::unique('roles', 'name')
+                    ->where(fn ($query) => $query->where('guard_name', $role->guard_name))
+                    ->ignore($role->id),
+            ],
             'permissions' => 'array',
         ]);
 

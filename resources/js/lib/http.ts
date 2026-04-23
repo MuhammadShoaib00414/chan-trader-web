@@ -1,3 +1,10 @@
+function syncMetaCsrfToken(token: string): void {
+  if (!token) return
+
+  const el = document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement | null
+  if (el && el.content !== token) el.content = token
+}
+
 export function csrfToken(): string {
   const el = document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement | null
   return el?.content ?? ''
@@ -5,17 +12,26 @@ export function csrfToken(): string {
 
 /**
  * Fetch a fresh CSRF token from Laravel and update the meta tag.
- * Laravel's /sanctum/csrf-cookie sets the XSRF-TOKEN cookie and refreshes the session.
+ * This app uses the web session guard, so we ask Laravel for a fresh token directly.
  */
 async function refreshCsrfToken(): Promise<void> {
-  await fetch('/sanctum/csrf-cookie', { credentials: 'same-origin' })
-  // After the cookie round-trip, grab the updated token from the cookie Laravel sets
-  const match = document.cookie.match(/(?:^|;\s*)XSRF-TOKEN=([^;]+)/)
-  if (match) {
-    const fresh = decodeURIComponent(match[1])
-    const el = document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement | null
-    if (el) el.content = fresh
-  }
+  const res = await fetch('/csrf-token', {
+    credentials: 'same-origin',
+    headers: {
+      Accept: 'application/json',
+      'X-Requested-With': 'XMLHttpRequest',
+    },
+  })
+
+  if (!res.ok) return
+
+  const data = (await res.json()) as { token?: string }
+  if (data.token) syncMetaCsrfToken(data.token)
+}
+
+async function prepareCsrfToken(): Promise<string> {
+  await refreshCsrfToken()
+  return csrfToken()
 }
 
 function buildJsonHeaders(token: string): Record<string, string> {
@@ -36,7 +52,7 @@ function buildFormHeaders(token: string): Record<string, string> {
 }
 
 export async function requestJson(method: string, url: string, data?: unknown): Promise<Response> {
-  let token = csrfToken()
+  let token = await prepareCsrfToken()
   let res = await fetch(url, {
     method,
     credentials: 'same-origin',
@@ -64,7 +80,7 @@ export const patchJson = (url: string, data?: unknown) => requestJson('PATCH', u
 export const delJson = (url: string, data?: unknown) => requestJson('DELETE', url, data)
 
 export async function requestForm(method: string, url: string, form: FormData): Promise<Response> {
-  let token = csrfToken()
+  let token = await prepareCsrfToken()
 
   const attachToken = (fd: FormData, t: string) => {
     if (t && !fd.has('_token')) fd.append('_token', t)

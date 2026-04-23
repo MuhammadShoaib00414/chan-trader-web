@@ -23,6 +23,14 @@ Route::get('/', function () {
     return redirect()->route('login');
 })->name('home');
 
+Route::get('/csrf-token', function (Request $request) {
+    $request->session()->regenerateToken();
+
+    return response()->json([
+        'token' => csrf_token(),
+    ]);
+})->name('csrf.token');
+
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', function () {
         $user = auth()->user();
@@ -442,6 +450,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
             });
 
             $categories = Category::orderBy('name')->get(['id', 'name']);
+            $subcategories = Subcategory::orderBy('name')->get(['id', 'name', 'category_id']);
             $stores = Store::orderBy('name')->get(['id', 'name']);
             $brands = Brand::orderBy('name')->get(['id', 'name']);
 
@@ -467,6 +476,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
                     'sort_dir' => $sortDir,
                 ],
                 'categories' => $categories,
+                'subcategories' => $subcategories,
                 'stores' => $stores,
                 'brands' => $brands,
                 'isVendor' => $isVendor,
@@ -485,6 +495,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
                 'product' => $product,
                 'stores' => \App\Models\Store::orderBy('name')->get(['id', 'name']),
                 'categories' => \App\Models\Category::orderBy('name')->get(['id', 'name']),
+                'subcategories' => \App\Models\Subcategory::orderBy('name')->get(['id', 'name', 'category_id']),
                 'brands' => \App\Models\Brand::orderBy('name')->get(['id', 'name']),
             ]);
         })->middleware('permission:products.view');

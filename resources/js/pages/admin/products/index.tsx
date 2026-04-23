@@ -1,6 +1,6 @@
 import AppLayout from '@/layouts/app-layout';
 import { Head, router, usePage } from '@inertiajs/react';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -24,10 +24,11 @@ export default function ProductsIndex() {
     is_published?: boolean;
   };
   type CategoryRef = { id: number; name: string };
+  type SubcategoryRef = { id: number; name: string; category_id: number };
   type StoreRef = { id: number; name: string };
   type BrandRef = { id: number; name: string };
   type Pagination = { total: number; per_page: number; current_page: number; last_page: number };
-  const { props } = usePage<{ items: any; categories: CategoryRef[]; stores: StoreRef[]; brands: BrandRef[]; pagination?: Pagination; filters?: { q?: string; category_id?: string; store_id?: string; sort_by?: string; sort_dir?: string }; isVendor?: boolean; vendorStore?: StoreRef | null }>();
+  const { props } = usePage<{ items: any; categories: CategoryRef[]; subcategories: SubcategoryRef[]; stores: StoreRef[]; brands: BrandRef[]; pagination?: Pagination; filters?: { q?: string; category_id?: string; store_id?: string; sort_by?: string; sort_dir?: string }; isVendor?: boolean; vendorStore?: StoreRef | null }>();
   const rawItems = props.items;
   const items: ProductItem[] = Array.isArray(rawItems)
     ? rawItems
@@ -35,6 +36,7 @@ export default function ProductsIndex() {
       ? (rawItems as any).data
       : [];
   const categories = props.categories;
+  const subcategories = props.subcategories ?? [];
   const stores = props.stores;
   const brands = props.brands ?? [];
   const pagination = props.pagination;
@@ -44,6 +46,7 @@ export default function ProductsIndex() {
 
   const [storeId, setStoreId] = useState<number>(isVendor ? (vendorStore?.id ?? 0) : (stores?.[0]?.id ?? 0));
   const [categoryId, setCategoryId] = useState<number>(categories?.[0]?.id ?? 0);
+  const [subcategoryId, setSubcategoryId] = useState<number>(0);
   const [brandId, setBrandId] = useState<number>(brands?.[0]?.id ?? 0);
   const [name, setName] = useState('');
   const [slug, setSlug] = useState('');
@@ -55,6 +58,11 @@ export default function ProductsIndex() {
   const [featureImage, setFeatureImage] = useState<File | null>(null);
   const [toasts, setToasts] = useState<Array<{ id: number; title: string; variant: 'success' | 'error' }>>([]);
   const [addOpen, setAddOpen] = useState(false);
+
+  const filteredSubcategories = useMemo(
+    () => subcategories.filter((subcategory) => subcategory.category_id === categoryId),
+    [categoryId, subcategories],
+  );
 
   const dismissToast = (id: number) => setToasts((ts) => ts.filter((t) => t.id !== id));
   const showToast = (title: string, variant: 'success' | 'error' = 'success') => {
@@ -114,6 +122,7 @@ export default function ProductsIndex() {
     const effectiveStoreId = isVendor ? (vendorStore?.id ?? storeId) : storeId;
     fd.append('store_id', String(effectiveStoreId));
     fd.append('category_id', String(categoryId));
+    if (subcategoryId) fd.append('subcategory_id', String(subcategoryId));
     if (brandId) fd.append('brand_id', String(brandId));
     fd.append('name', name);
     fd.append('slug', slug);
@@ -131,6 +140,7 @@ export default function ProductsIndex() {
       setSku('');
       setPrice('');
       setCompareAt('');
+      setSubcategoryId(0);
       setDescription('');
       setWarrantyText('');
       setFeatureImage(null);
@@ -303,10 +313,34 @@ export default function ProductsIndex() {
                 )}
                 <div>
                   <label className="mb-1.5 block text-sm font-medium">Category *</label>
-                  <select className="w-full rounded-md border px-3 py-2" value={String(categoryId)} onChange={(e) => setCategoryId(Number(e.target.value))}>
+                  <select
+                    className="w-full rounded-md border px-3 py-2"
+                    value={String(categoryId)}
+                    onChange={(e) => {
+                      const nextCategoryId = Number(e.target.value);
+                      setCategoryId(nextCategoryId);
+                      setSubcategoryId(0);
+                    }}
+                  >
                     {categories?.map((c) => (
                       <option key={c.id} value={c.id}>
                         {c.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium">Subcategory (optional)</label>
+                  <select
+                    className="w-full rounded-md border px-3 py-2"
+                    value={String(subcategoryId)}
+                    onChange={(e) => setSubcategoryId(Number(e.target.value))}
+                    disabled={!filteredSubcategories.length}
+                  >
+                    <option value={0}>{filteredSubcategories.length ? 'Select subcategory' : 'No subcategories available'}</option>
+                    {filteredSubcategories.map((subcategory) => (
+                      <option key={subcategory.id} value={subcategory.id}>
+                        {subcategory.name}
                       </option>
                     ))}
                   </select>

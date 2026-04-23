@@ -6,10 +6,10 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { UserInfo } from '@/components/user-info';
 import { useMobileNavigation } from '@/hooks/use-mobile-navigation';
-import { logout } from '@/routes';
 import { edit } from '@/routes/profile';
 import { type User } from '@/types';
 import { Link, router } from '@inertiajs/react';
+import { requestJson } from '@/lib/http';
 import { LogOut, Settings } from 'lucide-react';
 
 interface UserMenuContentProps {
@@ -19,9 +19,14 @@ interface UserMenuContentProps {
 export function UserMenuContent({ user }: UserMenuContentProps) {
     const cleanup = useMobileNavigation();
 
-    const handleLogout = () => {
+    const handleLogout = async () => {
         cleanup();
         router.flushAll();
+
+        const res = await requestJson('POST', '/logout');
+        if (res.ok) {
+            window.location.href = '/';
+        }
     };
 
     return (
@@ -47,17 +52,11 @@ export function UserMenuContent({ user }: UserMenuContentProps) {
                 </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
-            <DropdownMenuItem asChild>
-                <Link
-                    className="block w-full"
-                    href={logout()}
-                    as="button"
-                    onClick={handleLogout}
-                    data-test="logout-button"
-                >
+            <DropdownMenuItem onClick={() => void handleLogout()} data-test="logout-button">
+                <button type="button" className="flex w-full items-center">
                     <LogOut className="mr-2" />
                     Log out
-                </Link>
+                </button>
             </DropdownMenuItem>
         </>
     );

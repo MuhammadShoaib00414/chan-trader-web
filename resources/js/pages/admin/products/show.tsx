@@ -21,6 +21,7 @@ export default function ProductShow() {
     compare_at?: number | null;
     store_id?: number;
     category_id?: number;
+    subcategory_id?: number | null;
     brand_id?: number | null;
     feature_image?: string | null;
     top_image?: string | null;
@@ -31,10 +32,12 @@ export default function ProductShow() {
     images: Image[];
   };
   type Ref = { id: number; name: string };
-  const { props } = usePage<{ product: ProductDetails; stores: Ref[]; categories: Ref[]; brands: Ref[] }>();
+  type SubcategoryRef = { id: number; name: string; category_id: number };
+  const { props } = usePage<{ product: ProductDetails; stores: Ref[]; categories: Ref[]; subcategories: SubcategoryRef[]; brands: Ref[] }>();
   const product = props.product;
   const stores = props.stores ?? [];
   const categories = props.categories ?? [];
+  const subcategories = props.subcategories ?? [];
   const brands = props.brands ?? [];
 
   const [imgPath, setImgPath] = useState('');
@@ -82,6 +85,7 @@ export default function ProductShow() {
   const [pThumb, setPThumb] = useState(product.feature_image ?? '');
   const [pStoreId, setPStoreId] = useState<number>(product.store_id ?? stores?.[0]?.id ?? 0);
   const [pCategoryId, setPCategoryId] = useState<number>(product.category_id ?? categories?.[0]?.id ?? 0);
+  const [pSubcategoryId, setPSubcategoryId] = useState<number>(product.subcategory_id ?? 0);
   const [pBrandId, setPBrandId] = useState<number>(product.brand_id ?? 0);
   const [pMetaTitle, setPMetaTitle] = useState(product.meta_title ?? '');
   const [pMetaDescription, setPMetaDescription] = useState(product.meta_description ?? '');
@@ -101,6 +105,7 @@ export default function ProductShow() {
     feature_image?: string | null;
     store_id?: number;
     category_id?: number;
+    subcategory_id?: number | null;
     brand_id?: number | null;
     price?: number;
     stock?: number;
@@ -111,6 +116,11 @@ export default function ProductShow() {
     description?: string | null;
     warranty_text?: string | null;
   };
+  const filteredSubcategories = useMemo(
+    () => subcategories.filter((subcategory) => subcategory.category_id === pCategoryId),
+    [pCategoryId, subcategories],
+  );
+
   const saveBasics = async (e: React.FormEvent) => {
     e.preventDefault();
     const payload: UpdatePayload = {};
@@ -120,6 +130,7 @@ export default function ProductShow() {
     if (pThumb || pThumb === '') payload.feature_image = pThumb || null;
     if (pStoreId) payload.store_id = pStoreId;
     if (pCategoryId) payload.category_id = pCategoryId;
+    payload.subcategory_id = pSubcategoryId || null;
     if (pBrandId) payload.brand_id = pBrandId;
     if (pMetaTitle || pMetaTitle === '') payload.meta_title = pMetaTitle || null;
     if (pMetaDescription || pMetaDescription === '') payload.meta_description = pMetaDescription || null;
@@ -252,9 +263,31 @@ export default function ProductShow() {
               </div>
               <div>
                 <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Category</label>
-                <select className="w-full rounded-md border px-3 py-2" value={String(pCategoryId)} onChange={(e) => setPCategoryId(Number(e.target.value))}>
+                <select
+                  className="w-full rounded-md border px-3 py-2"
+                  value={String(pCategoryId)}
+                  onChange={(e) => {
+                    const nextCategoryId = Number(e.target.value);
+                    setPCategoryId(nextCategoryId);
+                    setPSubcategoryId(0);
+                  }}
+                >
                   {categories?.map((c) => (
                     <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Subcategory</label>
+                <select
+                  className="w-full rounded-md border px-3 py-2"
+                  value={String(pSubcategoryId)}
+                  onChange={(e) => setPSubcategoryId(Number(e.target.value))}
+                  disabled={!filteredSubcategories.length}
+                >
+                  <option value="0">{filteredSubcategories.length ? 'Select subcategory' : 'No subcategories available'}</option>
+                  {filteredSubcategories.map((subcategory) => (
+                    <option key={subcategory.id} value={subcategory.id}>{subcategory.name}</option>
                   ))}
                 </select>
               </div>
@@ -301,6 +334,7 @@ export default function ProductShow() {
                   setPThumb(product.feature_image ?? '');
                   setPStoreId(product.store_id ?? stores?.[0]?.id ?? 0);
                   setPCategoryId(product.category_id ?? categories?.[0]?.id ?? 0);
+                  setPSubcategoryId(product.subcategory_id ?? 0);
                   setPBrandId(product.brand_id ?? 0);
                   setPMetaTitle(product.meta_title ?? '');
                   setPMetaDescription(product.meta_description ?? '');
