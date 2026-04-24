@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Store extends Model
@@ -31,6 +32,9 @@ class Store extends Model
 
     protected $casts = [
         'socials' => 'array',
+        'rating_avg' => 'float',
+        'followers_count' => 'integer',
+        'products_count' => 'integer',
         'verified_at' => 'datetime',
     ];
 
@@ -42,5 +46,10 @@ class Store extends Model
     public function unavailabilityDurations()
     {
         return $this->hasMany(UnavailabilityDuration::class);
+    }
+
+    public function products(): HasMany
+    {
+        return $this->hasMany(Product::class);
     }
 }

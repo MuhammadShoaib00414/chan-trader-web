@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\App;
 
 use App\Http\Controllers\AppBaseController;
 use App\Models\Product;
+use App\Models\Store;
 use Illuminate\Http\Request;
 
 class ProductController extends AppBaseController
@@ -52,19 +53,7 @@ class ProductController extends AppBaseController
      */
     public function index(Request $request)
     {
-        $query = Product::query()
-            ->where('is_published', true)
-            ->with([
-                'store:id,name,email,phone,city,address,rating_avg,followers_count,business_whatsapp_url',
-                'category:id,name,slug',
-                'subcategory:id,name,slug',
-                'brand:id,name,slug',
-                'images',
-                'reviews' => fn($q) => $q->where('is_visible', true)
-                    ->with('user:id,first_name,last_name,avatar')
-                    ->latest()
-                    ->limit(5),
-            ]);
+        $query = $this->appProductQuery();
 
         if ($request->filled('q')) {
             $q = $request->string('q')->toString();
@@ -95,62 +84,9 @@ class ProductController extends AppBaseController
 
         $products = $query->orderBy($sortBy, $sortDir)->paginate($perPage)->withQueryString();
 
-        $items = $products->getCollection()->map(function ($p) {
-            return [
-                'id' => $p->id,
-                'name' => $p->name,
-                'slug' => $p->slug,
-                'sku' => $p->sku,
-                'condition' => $p->condition,
-                'price' => $p->price,
-                'compare_at' => $p->compare_at,
-                'stock' => $p->stock,
-                'unit' => $p->unit,
-                'short_description' => $p->short_description,
-                'description' => $p->description,
-                'feature_image' => $p->feature_image,
-                'top_image' => $p->top_image,
-                'warranty_months' => $p->warranty_months,
-                'warranty_text' => $p->warranty_text,
-                'is_featured' => $p->is_featured,
-                'is_top_selling' => $p->is_top_selling,
-                'is_published' => $p->is_published,
-                'rating_avg' => $p->rating_avg,
-                'rating_count' => $p->rating_count,
-                'images' => $p->images->map(fn($img) => [
-                    'id' => $img->id,
-                    'path' => $img->path,
-                    'alt' => $img->alt ?? null,
-                    'is_primary' => $img->is_primary,
-                    'sort_order' => $img->sort_order,
-                ]),
-                'store' => $p->store ? [
-                    'id' => $p->store->id,
-                    'name' => $p->store->name,
-                    'email' => $p->store->email,
-                    'phone' => $p->store->phone,
-                    'business_whatsapp_url' => $p->store->business_whatsapp_url,
-                    'city' => $p->store->city,
-                    'address' => $p->store->address,
-                    'rating_avg' => $p->store->rating_avg,
-                    'followers_count' => $p->store->followers_count,
-                ] : null,
-                'category' => $p->category ? ['id' => $p->category->id, 'name' => $p->category->name, 'slug' => $p->category->slug] : null,
-                'subcategory' => $p->subcategory ? ['id' => $p->subcategory->id, 'name' => $p->subcategory->name, 'slug' => $p->subcategory->slug] : null,
-                'brand' => $p->brand ? ['id' => $p->brand->id, 'name' => $p->brand->name, 'slug' => $p->brand->slug] : null,
-                'reviews' => $p->reviews->map(fn($r) => [
-                    'id'         => $r->id,
-                    'rating'     => $r->rating,
-                    'comment'    => $r->comment,
-                    'created_at' => $r->created_at,
-                    'user'       => $r->user ? [
-                        'id'     => $r->user->id,
-                        'name'   => trim($r->user->first_name . ' ' . $r->user->last_name),
-                        'avatar' => $r->user->avatar,
-                    ] : null,
-                ]),
-            ];
-        });
+        $items = $products->getCollection()
+            ->map(fn ($product) => $this->formatAppProduct($product))
+            ->values();
 
         return $this->successResponse([
             'items' => $items,
@@ -207,89 +143,13 @@ class ProductController extends AppBaseController
      */
     public function show($id)
     {
-        $product = Product::where('is_published', true)
-            ->with([
-                'store:id,name,email,phone,city,address,rating_avg,followers_count,business_whatsapp_url',
-                'category:id,name,slug',
-                'subcategory:id,name,slug',
-                'brand:id,name,slug',
-                'images',
-                'reviews' => fn($q) => $q->where('is_visible', true)
-                    ->with('user:id,first_name,last_name,avatar')
-                    ->latest()
-                    ->limit(5),
-            ])->find($id);
+        $product = $this->appProductQuery()->find($id);
 
         if (!$product) {
             return $this->errorResponse('Product not found or not available', 404);
         }
 
-        return $this->successResponse([
-            'id' => $product->id,
-            'name' => $product->name,
-            'slug' => $product->slug,
-            'sku' => $product->sku,
-            'condition' => $product->condition,
-            'price' => $product->price,
-            'compare_at' => $product->compare_at,
-            'stock' => $product->stock,
-            'unit' => $product->unit,
-            'short_description' => $product->short_description,
-            'description' => $product->description,
-            'feature_image' => $product->feature_image,
-            'top_image' => $product->top_image,
-            'warranty_months' => $product->warranty_months,
-            'warranty_text' => $product->warranty_text,
-            'is_featured' => $product->is_featured,
-            'is_top_selling' => $product->is_top_selling,
-            'is_published' => $product->is_published,
-            'rating_avg' => $product->rating_avg,
-            'rating_count' => $product->rating_count,
-            'images' => $product->images->map(fn($img) => [
-                'id' => $img->id,
-                'path' => $img->path,
-                'alt' => $img->alt ?? null,
-                'is_primary' => $img->is_primary,
-                'sort_order' => $img->sort_order,
-            ]),
-            'store' => $product->store ? [
-                'id' => $product->store->id,
-                'name' => $product->store->name,
-                'email' => $product->store->email,
-                'phone' => $product->store->phone,
-                'business_whatsapp_url' => $product->store->business_whatsapp_url,
-                'city' => $product->store->city,
-                'address' => $product->store->address,
-                'rating_avg' => $product->store->rating_avg,
-                'followers_count' => $product->store->followers_count,
-            ] : null,
-            'category' => $product->category ? [
-                'id' => $product->category->id,
-                'name' => $product->category->name,
-                'slug' => $product->category->slug,
-            ] : null,
-            'subcategory' => $product->subcategory ? [
-                'id' => $product->subcategory->id,
-                'name' => $product->subcategory->name,
-                'slug' => $product->subcategory->slug,
-            ] : null,
-            'brand' => $product->brand ? [
-                'id' => $product->brand->id,
-                'name' => $product->brand->name,
-                'slug' => $product->brand->slug,
-            ] : null,
-            'reviews' => $product->reviews->map(fn($r) => [
-                'id'         => $r->id,
-                'rating'     => $r->rating,
-                'comment'    => $r->comment,
-                'created_at' => $r->created_at,
-                'user'       => $r->user ? [
-                    'id'     => $r->user->id,
-                    'name'   => trim($r->user->first_name . ' ' . $r->user->last_name),
-                    'avatar' => $r->user->avatar,
-                ] : null,
-            ]),
-        ], 'Product retrieved');
+        return $this->successResponse($this->formatAppProduct($product), 'Product retrieved');
     }
 
     /**
@@ -302,44 +162,30 @@ class ProductController extends AppBaseController
         $categories = \App\Models\Category::where('is_active', true)
             ->orderBy('sort_order')
             ->limit(8)
-            ->get(['id', 'name', 'image']);
+            ->get(['id', 'name', 'slug', 'image']);
 
-        $topSelling = Product::where('is_published', true)
+        $topSelling = $this->appProductQuery()
             ->where('is_top_selling', true)
-            ->with('store:id,name')
             ->latest()
             ->limit(10)
             ->get()
-            ->map(fn($p) => [
-                'id' => $p->id,
-                'name' => $p->name,
-                'price' => $p->price,
-                'feature_image' => $p->feature_image,
-                'rating_avg' => $p->rating_avg,
-                'rating_count' => $p->rating_count,
-                'store_name' => optional($p->store)->name,
-            ]);
+            ->map(fn ($product) => $this->formatAppProduct($product))
+            ->values();
 
-        $featured = Product::where('is_published', true)
+        $featured = $this->appProductQuery()
             ->where('is_featured', true)
-            ->with('store:id,name')
             ->latest()
             ->limit(10)
             ->get()
-            ->map(fn($p) => [
-                'id' => $p->id,
-                'name' => $p->name,
-                'price' => $p->price,
-                'feature_image' => $p->feature_image,
-                'rating_avg' => $p->rating_avg,
-                'rating_count' => $p->rating_count,
-                'store_name' => optional($p->store)->name,
-            ]);
+            ->map(fn ($product) => $this->formatAppProduct($product))
+            ->values();
 
-        $popularStores = \App\Models\Store::where('status', 'active')
+        $popularStores = $this->popularStoresQuery()
             ->orderByDesc('rating_avg')
             ->limit(5)
-            ->get(['id', 'name', 'logo', 'city', 'rating_avg', 'products_count']);
+            ->get()
+            ->map(fn (Store $store) => $this->formatAppStore($store))
+            ->values();
 
         return $this->successResponse([
             'categories' => $categories,
@@ -366,5 +212,139 @@ class ProductController extends AppBaseController
         return $this->successResponse([
             'categories' => $counts,
         ], 'Category product counts retrieved');
+    }
+
+    private function appProductQuery()
+    {
+        return Product::query()
+            ->where('is_published', true)
+            ->with($this->appProductRelations());
+    }
+
+    /**
+     * @return array<int, mixed>
+     */
+    private function appProductRelations(): array
+    {
+        return [
+            'store:id,name,email,phone,city,address,rating_avg,followers_count,business_whatsapp_url',
+            'category:id,name,slug',
+            'subcategory:id,name,slug',
+            'brand:id,name,slug',
+            'images',
+            'reviews' => fn ($query) => $query->where('is_visible', true)
+                ->with('user:id,first_name,last_name,avatar')
+                ->latest()
+                ->limit(5),
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function formatAppProduct(Product $product): array
+    {
+        $primaryImage = $product->images->firstWhere('is_primary', true) ?? $product->images->sortBy('sort_order')->first();
+
+        return [
+            'id' => $product->id,
+            'name' => $product->name,
+            'slug' => $product->slug,
+            'sku' => $product->sku,
+            'condition' => $product->condition,
+            'price' => $product->price,
+            'compare_at' => $product->compare_at,
+            'discountedPrice' => $product->discounted_price,
+            'discount_percent' => $product->discount_percent,
+            'stock' => $product->stock,
+            'unit' => $product->unit,
+            'short_description' => $product->short_description,
+            'description' => $product->description,
+            'feature_image' => $product->feature_image,
+            'top_image' => $product->top_image,
+            'thumb' => $product->feature_image ?: $primaryImage?->path,
+            'has_primary_image' => $product->images->contains(fn ($image) => (bool) $image->is_primary),
+            'warranty_months' => $product->warranty_months,
+            'warranty_text' => $product->warranty_text,
+            'is_featured' => $product->is_featured,
+            'is_top_selling' => $product->is_top_selling,
+            'is_published' => $product->is_published,
+            'rating_avg' => $product->rating_avg,
+            'rating_count' => $product->rating_count,
+            'images' => $product->images->map(fn ($image) => [
+                'id' => $image->id,
+                'path' => $image->path,
+                'alt' => $image->alt ?? null,
+                'is_primary' => $image->is_primary,
+                'sort_order' => $image->sort_order,
+            ])->values(),
+            'store' => $product->store ? [
+                'id' => $product->store->id,
+                'name' => $product->store->name,
+                'email' => $product->store->email,
+                'phone' => $product->store->phone,
+                'business_whatsapp_url' => $product->store->business_whatsapp_url,
+                'city' => $product->store->city,
+                'address' => $product->store->address,
+                'rating_avg' => $product->store->rating_avg,
+                'followers_count' => $product->store->followers_count,
+            ] : null,
+            'category' => $product->category ? [
+                'id' => $product->category->id,
+                'name' => $product->category->name,
+                'slug' => $product->category->slug,
+            ] : null,
+            'subcategory' => $product->subcategory ? [
+                'id' => $product->subcategory->id,
+                'name' => $product->subcategory->name,
+                'slug' => $product->subcategory->slug,
+            ] : null,
+            'brand' => $product->brand ? [
+                'id' => $product->brand->id,
+                'name' => $product->brand->name,
+                'slug' => $product->brand->slug,
+            ] : null,
+            'store_name' => $product->store?->name,
+            'reviews' => $product->reviews->map(fn ($review) => [
+                'id' => $review->id,
+                'rating' => $review->rating,
+                'comment' => $review->comment,
+                'created_at' => $review->created_at,
+                'user' => $review->user ? [
+                    'id' => $review->user->id,
+                    'name' => trim($review->user->first_name . ' ' . $review->user->last_name),
+                    'avatar' => $review->user->avatar,
+                ] : null,
+            ])->values(),
+        ];
+    }
+
+    private function popularStoresQuery()
+    {
+        return Store::query()
+            ->where('status', 'active')
+            ->withCount([
+                'products as products_count' => fn ($products) => $products->where('is_published', true),
+            ]);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function formatAppStore(Store $store): array
+    {
+        return [
+            'id' => $store->id,
+            'name' => $store->name,
+            'slug' => $store->slug,
+            'logo' => $store->logo,
+            'banner' => $store->banner,
+            'rating_avg' => $store->rating_avg,
+            'products_count' => $store->products_count,
+            'followers_count' => $store->followers_count,
+            'description' => $store->description,
+            'business_whatsapp_url' => $store->business_whatsapp_url,
+            'city' => $store->city,
+        ];
     }
 }

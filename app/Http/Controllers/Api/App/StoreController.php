@@ -21,7 +21,12 @@ class StoreController extends AppBaseController
      */
     public function index(Request $request)
     {
-        $query = Store::query()->where('status', 'active');
+        $query = Store::query()
+            ->where('status', 'active')
+            ->withCount([
+                'products as products_count' => fn ($products) => $products->where('is_published', true),
+            ]);
+
         if ($request->filled('q')) {
             $q = $request->string('q')->toString();
             $query->where('name', 'like', "%{$q}%");
@@ -61,6 +66,10 @@ class StoreController extends AppBaseController
         if ($store->status !== 'active') {
             return $this->errorResponse('Store not active', 404);
         }
+
+        $store->loadCount([
+            'products as products_count' => fn ($products) => $products->where('is_published', true),
+        ]);
 
         return $this->successResponse([
             'id' => $store->id,

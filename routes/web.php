@@ -237,6 +237,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
             Route::get('products', [\App\Http\Controllers\Admin\ProductController::class, 'index'])
                 ->middleware('permission:products.view');
+            Route::get('products/subcategories', [\App\Http\Controllers\Admin\ProductController::class, 'subcategories'])
+                ->middleware('permission:products.view');
             Route::post('products', [\App\Http\Controllers\Admin\ProductController::class, 'store'])
                 ->middleware('permission:products.create');
             Route::get('products/{product}', [\App\Http\Controllers\Admin\ProductController::class, 'show'])

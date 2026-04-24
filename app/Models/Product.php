@@ -40,11 +40,16 @@ class Product extends Model
     ];
 
     protected $casts = [
+        'price' => 'float',
+        'compare_at' => 'float',
         'stock' => 'integer',
         'low_stock_threshold' => 'integer',
+        'warranty_months' => 'integer',
         'is_published' => 'boolean',
         'is_featured' => 'boolean',
         'is_top_selling' => 'boolean',
+        'rating_avg' => 'float',
+        'rating_count' => 'integer',
         'published_at' => 'datetime',
     ];
 
@@ -56,6 +61,23 @@ class Product extends Model
     public function isOutOfStock(): bool
     {
         return $this->stock <= 0;
+    }
+
+    public function getDiscountedPriceAttribute(): float
+    {
+        return (float) $this->price;
+    }
+
+    public function getDiscountPercentAttribute(): ?int
+    {
+        $compareAt = (float) ($this->compare_at ?? 0);
+        $price = (float) $this->price;
+
+        if ($compareAt <= 0 || $compareAt <= $price) {
+            return null;
+        }
+
+        return (int) round((($compareAt - $price) / $compareAt) * 100);
     }
 
     public function getStockStatusAttribute(): string

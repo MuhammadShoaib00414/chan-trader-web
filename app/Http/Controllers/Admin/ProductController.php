@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Product;
 use App\Models\Store;
+use App\Models\Subcategory;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
@@ -17,6 +18,7 @@ class ProductController extends Controller
         $this->middleware('permission:products.update')->only(['update']);
         $this->middleware('permission:products.delete')->only(['destroy']);
         $this->middleware('permission:products.publish')->only(['publish', 'unpublish']);
+        $this->middleware('permission:products.view')->only(['subcategories']);
     }
 
     /**
@@ -128,10 +130,12 @@ class ProductController extends Controller
 
     public function store(Request $request)
     {
+        $selectedCategoryId = $request->integer('category_id');
+
         $validated = $request->validate([
             'store_id' => ['required', 'exists:stores,id'],
             'category_id' => ['required', 'exists:categories,id'],
-            'subcategory_id' => ['nullable', 'exists:subcategories,id'],
+            'subcategory_id' => $this->subcategoryRules($selectedCategoryId),
             'brand_id' => ['nullable', 'exists:brands,id'],
             'name' => ['required', 'string', 'max:180'],
             'condition' => ['nullable', 'string', 'in:New,Used,Imported'],
@@ -177,12 +181,33 @@ class ProductController extends Controller
         return response()->json(['success' => true, 'data' => $product]);
     }
 
+    public function subcategories(Request $request)
+    {
+        $validated = $request->validate([
+            'category_id' => ['required', 'exists:categories,id'],
+        ]);
+
+        $items = Subcategory::query()
+            ->where('category_id', (int) $validated['category_id'])
+            ->orderBy('name')
+            ->get(['id', 'name', 'category_id']);
+
+        return response()->json([
+            'success' => true,
+            'data' => $items,
+        ]);
+    }
+
     public function update(Request $request, Product $product)
     {
+        $effectiveCategoryId = $request->has('category_id')
+            ? $request->integer('category_id')
+            : (int) $product->category_id;
+
         $validated = $request->validate([
             'store_id' => ['sometimes', 'exists:stores,id'],
             'category_id' => ['sometimes', 'exists:categories,id'],
-            'subcategory_id' => ['nullable', 'exists:subcategories,id'],
+            'subcategory_id' => $this->subcategoryRules($effectiveCategoryId),
             'brand_id' => ['nullable', 'exists:brands,id'],
             'name' => ['sometimes', 'string', 'max:180'],
             'condition' => ['nullable', 'string', 'in:New,Used,Imported'],
@@ -204,9 +229,39 @@ class ProductController extends Controller
             'is_featured' => ['nullable', 'boolean'],
             'is_top_selling' => ['nullable', 'boolean'],
         ]);
+
+        if (
+            array_key_exists('category_id', $validated) &&
+            ! array_key_exists('subcategory_id', $validated) &&
+            $product->subcategory_id
+        ) {
+            $hasMatchingSubcategory = Subcategory::query()
+                ->whereKey($product->subcategory_id)
+                ->where('category_id', (int) $validated['category_id'])
+                ->exists();
+
+            if (! $hasMatchingSubcategory) {
+                $validated['subcategory_id'] = null;
+            }
+        }
+
         $product->update($validated);
 
         return response()->json(['success' => true, 'message' => 'Product updated.', 'data' => $product]);
+    }
+
+    /**
+     * @return array<int, mixed>
+     */
+    private function subcategoryRules(?int $categoryId): array
+    {
+        $rule = Rule::exists('subcategories', 'id');
+
+        if ($categoryId) {
+            $rule = $rule->where(fn ($query) => $query->where('category_id', $categoryId));
+        }
+
+        return ['nullable', $rule];
     }
 
     public function uploadFeatureImage(Request $request, Product $product)
