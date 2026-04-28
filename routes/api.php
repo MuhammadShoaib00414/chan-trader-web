@@ -15,6 +15,10 @@ use App\Http\Controllers\Api\Auth\PasswordController;
 use App\Http\Controllers\Api\Auth\ProfileController;
 use App\Http\Controllers\Api\Auth\RegisterController;
 use App\Http\Controllers\Api\Auth\SocialLoginController;
+use App\Http\Controllers\Api\SupplierController;
+use App\Http\Controllers\Api\SupplierDashboardController;
+use App\Http\Controllers\Api\SupplierPaymentController;
+use App\Http\Controllers\Api\SupplierTransactionController;
 use App\Http\Controllers\Api\UserController;
 use Illuminate\Support\Facades\Route;
 
@@ -142,6 +146,12 @@ Route::name('api.')->group(function () {
             Route::post('/payments/export', [\App\Http\Controllers\Admin\PaymentController::class, 'export']);
             Route::post('/payments/refund/{order}', [\App\Http\Controllers\Admin\PaymentController::class, 'refund']);
             Route::post('/payments/configure', [\App\Http\Controllers\Admin\PaymentController::class, 'configureGateway']);
+
+            // Supplier Management
+            Route::apiResource('/suppliers', \App\Http\Controllers\Api\SupplierController::class);
+            Route::apiResource('/supplier-transactions', \App\Http\Controllers\Api\SupplierTransactionController::class);
+            Route::apiResource('/supplier-payments', \App\Http\Controllers\Api\SupplierPaymentController::class);
+            Route::get('/supplier-dashboard', [\App\Http\Controllers\Api\SupplierDashboardController::class, 'index']);
         });
 
         // ********************* Milestone-2 APIs *********************

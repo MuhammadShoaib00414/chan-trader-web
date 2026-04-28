@@ -29,6 +29,7 @@ export default function ProductShow() {
         slug: string;
         sku: string;
         price: number;
+        purchase_price?: number | null;
         stock: number;
         low_stock_threshold: number;
         compare_at?: number | null;
@@ -116,6 +117,9 @@ export default function ProductShow() {
     const [pSlug, setPSlug] = useState(product.slug);
     const [pSku, setPSku] = useState(product.sku ?? '');
     const [pPrice, setPPrice] = useState(String(product.price ?? ''));
+    const [pPurchasePrice, setPPurchasePrice] = useState(
+        String(product.purchase_price ?? '0'),
+    );
     const [pStock, setPStock] = useState(String(product.stock ?? '0'));
     const [pLowStock, setPLowStock] = useState(
         String(product.low_stock_threshold ?? '10'),
@@ -167,6 +171,7 @@ export default function ProductShow() {
         subcategory_id?: number | null;
         brand_id?: number | null;
         price?: number;
+        purchase_price?: number;
         stock?: number;
         low_stock_threshold?: number;
         compare_at?: number | null;
@@ -294,6 +299,11 @@ export default function ProductShow() {
             } else {
                 payload.compare_at = null;
             }
+        }
+        if (pPurchasePrice) {
+            const purchasePriceVal = Number(pPurchasePrice);
+            if (!Number.isNaN(purchasePriceVal))
+                payload.purchase_price = purchasePriceVal;
         }
         const res = await patchJson(
             `/api/admin/products/${product.id}`,
@@ -440,6 +450,20 @@ export default function ProductShow() {
                                 <Input
                                     value={pPrice}
                                     onChange={(e) => setPPrice(e.target.value)}
+                                    placeholder="0.00"
+                                    type="number"
+                                    step="0.01"
+                                />
+                            </div>
+                            <div>
+                                <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
+                                    Cost Price
+                                </label>
+                                <Input
+                                    value={pPurchasePrice}
+                                    onChange={(e) =>
+                                        setPPurchasePrice(e.target.value)
+                                    }
                                     placeholder="0.00"
                                     type="number"
                                     step="0.01"
@@ -663,6 +687,11 @@ export default function ProductShow() {
                                         setPSlug(product.slug);
                                         setPSku(product.sku ?? '');
                                         setPPrice(String(product.price ?? ''));
+                                        setPPurchasePrice(
+                                            String(
+                                                product.purchase_price ?? '0',
+                                            ),
+                                        );
                                         setPStock(String(product.stock ?? '0'));
                                         setPLowStock(
                                             String(

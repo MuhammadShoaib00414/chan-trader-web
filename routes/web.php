@@ -9,6 +9,9 @@ use App\Models\Product;
 use App\Models\Shipment;
 use App\Models\Store;
 use App\Models\Subcategory;
+use App\Models\Supplier;
+use App\Models\SupplierPayment;
+use App\Models\SupplierTransaction;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
@@ -441,6 +444,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
                     'slug' => $p->slug,
                     'sku' => $p->sku,
                     'price' => $p->price,
+                    'purchase_price' => $p->purchase_price,
+                    'stock' => $p->stock,
+                    'low_stock_threshold' => $p->low_stock_threshold,
                     'compare_at' => $p->compare_at,
                     'discount_percent' => $discountPercent,
                     'thumb' => $p->feature_image ?: optional($p->images->first())->path,
@@ -643,6 +649,394 @@ Route::middleware(['auth', 'verified'])->group(function () {
                 'products' => $products,
             ]);
         })->middleware('permission:promotions.manage|promotions.view');
+
+        Route::post('suppliers', [\App\Http\Controllers\Api\SupplierController::class, 'store'])
+            ->middleware('permission:payments.view');
+        Route::put('suppliers/{supplier}', [\App\Http\Controllers\Api\SupplierController::class, 'update'])
+            ->middleware('permission:payments.view');
+        Route::delete('suppliers/{supplier}', [\App\Http\Controllers\Api\SupplierController::class, 'destroy'])
+            ->middleware('permission:payments.view');
+
+        Route::post('supplier-transactions', [\App\Http\Controllers\Api\SupplierTransactionController::class, 'store'])
+            ->middleware('permission:payments.view');
+        Route::put('supplier-transactions/{transaction}', [\App\Http\Controllers\Api\SupplierTransactionController::class, 'update'])
+            ->middleware('permission:payments.view');
+        Route::delete('supplier-transactions/{transaction}', [\App\Http\Controllers\Api\SupplierTransactionController::class, 'destroy'])
+            ->middleware('permission:payments.view');
+
+        Route::post('supplier-payments', [\App\Http\Controllers\Api\SupplierPaymentController::class, 'store'])
+            ->middleware('permission:payments.view');
+
+        Route::get('suppliers', function (Request $request) {
+            $query = Supplier::query()->with(['stores:id,name', 'transactions.payments:supplier_transaction_id,amount']);
+
+            if ($request->filled('q')) {
+                $search = $request->string('q')->toString();
+                $query->where(function ($supplierQuery) use ($search) {
+                    $supplierQuery->where('name', 'like', "%{$search}%")
+                        ->orWhere('email', 'like', "%{$search}%")
+                        ->orWhere('phone', 'like', "%{$search}%");
+                });
+            }
+
+            if ($request->filled('category')) {
+                $query->where('category', $request->string('category')->toString());
+            }
+
+            if ($request->filled('store_id')) {
+                $storeId = (int) $request->get('store_id');
+                $query->whereHas('stores', fn ($storeQuery) => $storeQuery->where('stores.id', $storeId));
+            }
+
+            $suppliers = $query->orderBy('name')->get()->map(function (Supplier $supplier) {
+                $outstandingBalance = round($supplier->transactions->sum(fn (SupplierTransaction $transaction) => $transaction->remaining_balance), 2);
+
+                return [
+                    'id' => $supplier->id,
+                    'name' => $supplier->name,
+                    'email' => $supplier->email,
+                    'phone' => $supplier->phone,
+                    'address' => $supplier->address,
+                    'category' => $supplier->category,
+                    'created_at' => $supplier->created_at?->toDateString(),
+                    'stores' => $supplier->stores->map(fn (Store $store) => [
+                        'id' => $store->id,
+                        'name' => $store->name,
+                    ])->values(),
+                    'transactions_count' => $supplier->transactions->count(),
+                    'outstanding_balance' => $outstandingBalance,
+                ];
+            });
+
+            return Inertia::render('admin/suppliers/index', [
+                'suppliers' => $suppliers,
+                'stores' => Store::orderBy('name')->get(['id', 'name']),
+                'categories' => Supplier::CATEGORIES,
+                'filters' => [
+                    'q' => $request->get('q'),
+                    'category' => $request->get('category'),
+                    'store_id' => $request->get('store_id'),
+                ],
+            ]);
+        })->middleware('permission:payments.view');
+
+        Route::get('suppliers/{supplier}', function (Supplier $supplier) {
+            $supplier->load([
+                'stores:id,name',
+                'transactions' => fn ($query) => $query->with(['store:id,name', 'payments:supplier_transaction_id,amount,paid_at,installment_number'])->latest(),
+            ]);
+
+            $payments = SupplierPayment::query()
+                ->whereHas('transaction', fn ($transactionQuery) => $transactionQuery->where('supplier_id', $supplier->id))
+                ->with(['transaction.store:id,name', 'transaction.supplier:id,name'])
+                ->orderByDesc('paid_at')
+                ->get()
+                ->map(fn (SupplierPayment $payment) => [
+                    'id' => $payment->id,
+                    'amount' => $payment->amount,
+                    'paid_at' => $payment->paid_at->toDateString(),
+                    'installment_number' => $payment->installment_number,
+                    'transaction' => [
+                        'id' => $payment->transaction->id,
+                        'store' => $payment->transaction->store ? [
+                            'id' => $payment->transaction->store->id,
+                            'name' => $payment->transaction->store->name,
+                        ] : null,
+                        'total_installments' => $payment->transaction->total_installments,
+                    ],
+                ]);
+
+            $transactions = $supplier->transactions->map(fn (SupplierTransaction $transaction) => [
+                'id' => $transaction->id,
+                'goods_value' => $transaction->goods_value,
+                'total_payable' => $transaction->total_payable,
+                'payment_duration' => $transaction->payment_duration,
+                'installment_amount' => $transaction->installment_amount,
+                'total_installments' => $transaction->total_installments,
+                'paid_installments' => $transaction->paid_installments,
+                'paid_amount' => $transaction->paid_amount,
+                'remaining_balance' => $transaction->remaining_balance,
+                'next_installment_amount' => $transaction->next_installment_amount,
+                'next_installment_due' => $transaction->next_installment_due?->toDateString(),
+                'progress_percentage' => $transaction->progress_percentage,
+                'status' => $transaction->status,
+                'created_at' => $transaction->created_at?->toDateString(),
+                'store' => $transaction->store ? [
+                    'id' => $transaction->store->id,
+                    'name' => $transaction->store->name,
+                ] : null,
+                'payments' => $transaction->payments->map(fn (SupplierPayment $payment) => [
+                    'id' => $payment->id,
+                    'amount' => $payment->amount,
+                    'paid_at' => $payment->paid_at->toDateString(),
+                    'installment_number' => $payment->installment_number,
+                ])->values(),
+            ])->values();
+
+            return Inertia::render('admin/suppliers/show', [
+                'supplier' => [
+                    'id' => $supplier->id,
+                    'name' => $supplier->name,
+                    'email' => $supplier->email,
+                    'phone' => $supplier->phone,
+                    'address' => $supplier->address,
+                    'category' => $supplier->category,
+                    'stores' => $supplier->stores->map(fn (Store $store) => [
+                        'id' => $store->id,
+                        'name' => $store->name,
+                    ])->values(),
+                ],
+                'summary' => [
+                    'transactions_count' => $transactions->count(),
+                    'total_payable' => round($transactions->sum('total_payable'), 2),
+                    'total_paid' => round($transactions->sum('paid_amount'), 2),
+                    'outstanding_balance' => round($transactions->sum('remaining_balance'), 2),
+                ],
+                'transactions' => $transactions,
+                'payments' => $payments,
+            ]);
+        })->middleware('permission:payments.view');
+
+        Route::get('supplier-transactions', function (Request $request) {
+            $query = SupplierTransaction::query()
+                ->with(['supplier:id,name,category', 'supplier.stores:id,name', 'store:id,name', 'payments:supplier_transaction_id,amount']);
+
+            if ($request->filled('q')) {
+                $search = $request->string('q')->toString();
+                $query->whereHas('supplier', function ($supplierQuery) use ($search) {
+                    $supplierQuery->where('name', 'like', "%{$search}%")
+                        ->orWhere('email', 'like', "%{$search}%");
+                });
+            }
+
+            if ($request->filled('supplier_id')) {
+                $query->where('supplier_id', (int) $request->get('supplier_id'));
+            }
+
+            if ($request->filled('store_id')) {
+                $query->where('store_id', (int) $request->get('store_id'));
+            }
+
+            if ($request->filled('status')) {
+                $query->where('status', $request->string('status')->toString());
+            }
+
+            $transactions = $query->orderByDesc('created_at')->get();
+
+            return Inertia::render('admin/suppliers/transactions', [
+                'transactions' => $transactions->map(fn (SupplierTransaction $transaction) => [
+                    'id' => $transaction->id,
+                    'supplier_id' => $transaction->supplier_id,
+                    'store_id' => $transaction->store_id,
+                    'goods_value' => $transaction->goods_value,
+                    'total_payable' => $transaction->total_payable,
+                    'payment_duration' => $transaction->payment_duration,
+                    'installment_amount' => $transaction->installment_amount,
+                    'total_installments' => $transaction->total_installments,
+                    'paid_installments' => $transaction->paid_installments,
+                    'status' => $transaction->status,
+                    'paid_amount' => $transaction->paid_amount,
+                    'remaining_balance' => $transaction->remaining_balance,
+                    'next_installment_amount' => $transaction->next_installment_amount,
+                    'next_installment_due' => $transaction->next_installment_due?->toDateString(),
+                    'created_at' => $transaction->created_at?->toDateString(),
+                    'supplier' => [
+                        'id' => $transaction->supplier->id,
+                        'name' => $transaction->supplier->name,
+                        'category' => $transaction->supplier->category,
+                        'stores' => $transaction->supplier->stores->map(fn (Store $store) => [
+                            'id' => $store->id,
+                            'name' => $store->name,
+                        ])->values(),
+                    ],
+                    'store' => $transaction->store ? [
+                        'id' => $transaction->store->id,
+                        'name' => $transaction->store->name,
+                    ] : null,
+                ])->values(),
+                'suppliers' => Supplier::with('stores:id,name')->orderBy('name')->get()->map(fn (Supplier $supplier) => [
+                    'id' => $supplier->id,
+                    'name' => $supplier->name,
+                    'category' => $supplier->category,
+                    'stores' => $supplier->stores->map(fn (Store $store) => [
+                        'id' => $store->id,
+                        'name' => $store->name,
+                    ])->values(),
+                ]),
+                'stores' => Store::orderBy('name')->get(['id', 'name']),
+                'filters' => [
+                    'q' => $request->get('q'),
+                    'supplier_id' => $request->get('supplier_id'),
+                    'store_id' => $request->get('store_id'),
+                    'status' => $request->get('status'),
+                ],
+            ]);
+        })->middleware('permission:payments.view');
+
+        Route::get('supplier-payments', function (Request $request) {
+            $paymentsQuery = SupplierPayment::query()
+                ->with(['transaction.supplier:id,name', 'transaction.store:id,name']);
+
+            if ($request->filled('q')) {
+                $search = $request->string('q')->toString();
+                $paymentsQuery->whereHas('transaction.supplier', function ($supplierQuery) use ($search) {
+                    $supplierQuery->where('name', 'like', "%{$search}%")
+                        ->orWhere('email', 'like', "%{$search}%");
+                });
+            }
+
+            if ($request->filled('supplier_id')) {
+                $supplierId = (int) $request->get('supplier_id');
+                $paymentsQuery->whereHas('transaction', fn ($transactionQuery) => $transactionQuery->where('supplier_id', $supplierId));
+            }
+
+            if ($request->filled('store_id')) {
+                $storeId = (int) $request->get('store_id');
+                $paymentsQuery->whereHas('transaction', fn ($transactionQuery) => $transactionQuery->where('store_id', $storeId));
+            }
+
+            $payments = $paymentsQuery->orderByDesc('paid_at')->get();
+
+            $transactions = SupplierTransaction::query()
+                ->with(['supplier:id,name,category', 'store:id,name', 'payments:supplier_transaction_id,amount'])
+                ->where('status', 'active')
+                ->orderByDesc('created_at')
+                ->get();
+
+            return Inertia::render('admin/suppliers/payments', [
+                'payments' => $payments->map(fn (SupplierPayment $payment) => [
+                    'id' => $payment->id,
+                    'supplier_transaction_id' => $payment->supplier_transaction_id,
+                    'amount' => $payment->amount,
+                    'paid_at' => $payment->paid_at->toDateString(),
+                    'installment_number' => $payment->installment_number,
+                    'transaction' => [
+                        'id' => $payment->transaction->id,
+                        'paid_installments' => $payment->transaction->paid_installments,
+                        'total_installments' => $payment->transaction->total_installments,
+                        'remaining_balance' => $payment->transaction->remaining_balance,
+                        'store' => $payment->transaction->store ? [
+                            'id' => $payment->transaction->store->id,
+                            'name' => $payment->transaction->store->name,
+                        ] : null,
+                        'supplier' => $payment->transaction->supplier,
+                    ],
+                ])->values(),
+                'transactions' => $transactions->map(fn (SupplierTransaction $transaction) => [
+                    'id' => $transaction->id,
+                    'supplier_id' => $transaction->supplier_id,
+                    'store_id' => $transaction->store_id,
+                    'goods_value' => $transaction->goods_value,
+                    'total_payable' => $transaction->total_payable,
+                    'payment_duration' => $transaction->payment_duration,
+                    'installment_amount' => $transaction->installment_amount,
+                    'total_installments' => $transaction->total_installments,
+                    'paid_installments' => $transaction->paid_installments,
+                    'status' => $transaction->status,
+                    'remaining_balance' => $transaction->remaining_balance,
+                    'next_installment_amount' => $transaction->next_installment_amount,
+                    'next_installment_due' => $transaction->next_installment_due?->toDateString(),
+                    'supplier' => [
+                        'id' => $transaction->supplier->id,
+                        'name' => $transaction->supplier->name,
+                        'category' => $transaction->supplier->category,
+                    ],
+                    'store' => $transaction->store ? [
+                        'id' => $transaction->store->id,
+                        'name' => $transaction->store->name,
+                    ] : null,
+                ])->values(),
+                'suppliers' => Supplier::orderBy('name')->get(['id', 'name']),
+                'stores' => Store::orderBy('name')->get(['id', 'name']),
+                'filters' => [
+                    'q' => $request->get('q'),
+                    'supplier_id' => $request->get('supplier_id'),
+                    'store_id' => $request->get('store_id'),
+                ],
+            ]);
+        })->middleware('permission:payments.view');
+
+        Route::get('supplier-dashboard', function () {
+            $transactions = SupplierTransaction::with(['supplier:id,name', 'store:id,name', 'payments:supplier_transaction_id,amount'])
+                ->where('status', 'active')
+                ->get();
+
+            $suppliersWithOutstanding = $transactions
+                ->filter(fn (SupplierTransaction $transaction) => $transaction->remaining_balance > 0)
+                ->groupBy('supplier.name')
+                ->map(function ($group, $supplierName) {
+                    return [
+                        'name' => $supplierName,
+                        'outstanding_balance' => round($group->sum(fn (SupplierTransaction $transaction) => $transaction->remaining_balance), 2),
+                    ];
+                })
+                ->sortByDesc('outstanding_balance')
+                ->values();
+
+            $now = Carbon::now()->startOfDay();
+            $currentWeekStart = $now->copy()->startOfWeek();
+            $currentWeekEnd = $now->copy()->endOfWeek();
+            $nextWeekStart = $currentWeekStart->copy()->addWeek();
+            $nextWeekEnd = $currentWeekEnd->copy()->addWeek();
+            $upcomingPayments = $transactions
+                ->map(function (SupplierTransaction $transaction) use ($currentWeekEnd, $currentWeekStart, $nextWeekEnd, $nextWeekStart) {
+                    $nextDue = $transaction->next_installment_due;
+                    if (! $nextDue) {
+                        return null;
+                    }
+
+                    $dueDate = $nextDue->copy()->startOfDay();
+                    $weekLabel = $dueDate->lt($currentWeekStart)
+                        ? 'Overdue'
+                        : ($dueDate->lte($currentWeekEnd)
+                            ? 'This Week'
+                            : ($dueDate->between($nextWeekStart, $nextWeekEnd)
+                                ? 'Next Week'
+                                : 'Week '.($currentWeekStart->diffInWeeks($dueDate->copy()->startOfWeek()) + 1)));
+
+                    return [
+                        'supplier_name' => $transaction->supplier->name,
+                        'store_name' => $transaction->store?->name,
+                        'amount' => $transaction->next_installment_amount,
+                        'due_date' => $dueDate->toDateString(),
+                        'week_label' => $weekLabel,
+                        'is_highlighted' => in_array($weekLabel, ['Overdue', 'This Week', 'Next Week'], true),
+                    ];
+                })
+                ->filter()
+                ->sortBy('due_date')
+                ->values();
+
+            return Inertia::render('admin/suppliers/dashboard', [
+                'suppliersWithOutstanding' => $suppliersWithOutstanding,
+                'upcomingPayments' => $upcomingPayments,
+                'charts' => [
+                    'outstandingBalances' => $suppliersWithOutstanding->map(fn ($item) => [
+                        'supplier' => $item['name'],
+                        'balance' => $item['outstanding_balance'],
+                    ])->toArray(),
+                    'paymentProgress' => $transactions->map(fn (SupplierTransaction $transaction) => [
+                        'supplier' => $transaction->supplier->name,
+                        'progress' => $transaction->progress_percentage,
+                        'paid' => $transaction->paid_installments,
+                        'total' => $transaction->total_installments,
+                    ])->toArray(),
+                ],
+            ]);
+        })->middleware('permission:payments.view');
+
+        Route::get('shop/dashboard', [\App\Http\Controllers\ShopManagementPageController::class, 'dashboard'])
+            ->name('shop.dashboard');
+        Route::get('shop/customers', [\App\Http\Controllers\ShopManagementPageController::class, 'customers'])
+            ->name('shop.customers');
+        Route::get('shop/sales', [\App\Http\Controllers\ShopManagementPageController::class, 'sales'])
+            ->name('shop.sales');
+    });
+
+    Route::prefix('api/shop')->group(function () {
+        Route::post('customers', [\App\Http\Controllers\Api\ShopManagementController::class, 'storeCustomer']);
+        Route::post('sales', [\App\Http\Controllers\Api\ShopManagementController::class, 'storeSale']);
+        Route::post('sales/{sale}/payments', [\App\Http\Controllers\Api\ShopManagementController::class, 'storePayment']);
     });
 });
 

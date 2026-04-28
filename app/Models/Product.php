@@ -23,6 +23,7 @@ class Product extends Model
         'feature_image',
         'top_image',
         'price',
+        'purchase_price',
         'stock',
         'low_stock_threshold',
         'compare_at',
@@ -41,6 +42,7 @@ class Product extends Model
 
     protected $casts = [
         'price' => 'float',
+        'purchase_price' => 'float',
         'compare_at' => 'float',
         'stock' => 'integer',
         'low_stock_threshold' => 'integer',
@@ -118,5 +120,10 @@ class Product extends Model
     public function reviews()
     {
         return $this->hasMany(ProductReview::class);
+    }
+
+    public function inventoryMovements()
+    {
+        return $this->hasMany(InventoryMovement::class);
     }
 }

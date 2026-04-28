@@ -36,6 +36,7 @@ class User extends Authenticatable implements MustVerifyEmail
         'pending_email',
         'password',
         'avatar',
+        'cover_image',
         'apple_id',
         'social_provider',
         'status',
@@ -94,11 +95,11 @@ class User extends Authenticatable implements MustVerifyEmail
     }
 
     /**
-     * Find user by email for social login
+     * Get the guard name for the user.
      */
-    public static function findByEmailForSocial(string $email): ?User
+    public function guardName(): string
     {
-        return static::where('email', $email)->first();
+        return 'web';
     }
 
     public function addresses()

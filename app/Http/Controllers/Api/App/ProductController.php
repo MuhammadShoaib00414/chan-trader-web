@@ -85,7 +85,9 @@ class ProductController extends AppBaseController
         $products = $query->orderBy($sortBy, $sortDir)->paginate($perPage)->withQueryString();
 
         $items = $products->getCollection()
-            ->map(fn ($product) => $this->formatAppProduct($product))
+            ->map(fn ($product) => array_merge($this->formatAppProduct($product), [
+                'stock_status' => $this->getStockStatus($product)
+            ]))
             ->values();
 
         return $this->successResponse([
@@ -149,7 +151,21 @@ class ProductController extends AppBaseController
             return $this->errorResponse('Product not found or not available', 404);
         }
 
-        return $this->successResponse($this->formatAppProduct($product), 'Product retrieved');
+        // Get related products (same category, excluding current product)
+        $relatedProducts = $this->appProductQuery()
+            ->where('category_id', $product->category_id)
+            ->where('id', '!=', $product->id)
+            ->latest()
+            ->limit(8)
+            ->get()
+            ->map(fn ($relatedProduct) => $this->formatAppProduct($relatedProduct))
+            ->values();
+
+        $productData = $this->formatAppProduct($product);
+        $productData['related_products'] = $relatedProducts;
+        $productData['stock_status'] = $this->getStockStatus($product);
+
+        return $this->successResponse($productData, 'Product retrieved');
     }
 
     /**
@@ -346,5 +362,38 @@ class ProductController extends AppBaseController
             'business_whatsapp_url' => $store->business_whatsapp_url,
             'city' => $store->city,
         ];
+    }
+
+    /**
+     * Get stock status for a product
+     *
+     * @return array<string, mixed>
+     */
+    private function getStockStatus(Product $product): array
+    {
+        $stock = $product->stock ?? 0;
+
+        if ($stock <= 0) {
+            return [
+                'status' => 'out_of_stock',
+                'message' => 'Out of stock',
+                'quantity_left' => 0,
+                'is_available' => false,
+            ];
+        } elseif ($stock <= 5) {
+            return [
+                'status' => 'low_stock',
+                'message' => 'Only ' . $stock . ' left',
+                'quantity_left' => $stock,
+                'is_available' => true,
+            ];
+        } else {
+            return [
+                'status' => 'in_stock',
+                'message' => 'In stock',
+                'quantity_left' => $stock,
+                'is_available' => true,
+            ];
+        }
     }
 }

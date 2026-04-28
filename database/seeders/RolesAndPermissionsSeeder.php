@@ -111,17 +111,17 @@ class RolesAndPermissionsSeeder extends Seeder
         $permissions = array_values(array_unique(array_merge($permissions, $uiPermissions)));
 
         foreach ($permissions as $permission) {
-            Permission::firstOrCreate(['name' => $permission]);
+            Permission::firstOrCreate(['name' => $permission, 'guard_name' => 'web']);
         }
 
         // Create roles and assign permissions
 
         // Super Admin - has all permissions
-        $superAdmin = Role::firstOrCreate(['name' => 'super-admin']);
+        $superAdmin = Role::firstOrCreate(['name' => 'super-admin', 'guard_name' => 'web']);
         $superAdmin->syncPermissions(Permission::all());
 
         // Admin - has most permissions except critical ones
-        $admin = Role::firstOrCreate(['name' => 'admin']);
+        $admin = Role::firstOrCreate(['name' => 'admin', 'guard_name' => 'web']);
         $admin->syncPermissions([
             'view users',
             'create users',
@@ -156,7 +156,7 @@ class RolesAndPermissionsSeeder extends Seeder
         ]);
 
         // Editor - can manage catalog content
-        $editor = Role::firstOrCreate(['name' => 'editor']);
+        $editor = Role::firstOrCreate(['name' => 'editor', 'guard_name' => 'web']);
         $editor->syncPermissions([
             'categories.manage',
             'subcategories.manage',
@@ -170,7 +170,7 @@ class RolesAndPermissionsSeeder extends Seeder
         ]);
 
         // Vendor - restricted to managing their own catalog (Categories, Brands, Products)
-        $vendor = Role::firstOrCreate(['name' => 'vendor']);
+        $vendor = Role::firstOrCreate(['name' => 'vendor', 'guard_name' => 'web']);
         $vendor->syncPermissions([
             'categories.manage',
             'subcategories.manage',
@@ -181,7 +181,7 @@ class RolesAndPermissionsSeeder extends Seeder
         ]);
 
         // User - basic permissions
-        $user = Role::firstOrCreate(['name' => 'user']);
+        $user = Role::firstOrCreate(['name' => 'user', 'guard_name' => 'web']);
         $user->syncPermissions([
             //
         ]);

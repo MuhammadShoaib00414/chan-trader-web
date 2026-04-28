@@ -29,6 +29,9 @@ export default function ProductsIndex() {
         slug: string;
         sku: string;
         price: number;
+        purchase_price?: number | null;
+        stock?: number;
+        low_stock_threshold?: number;
         compare_at?: number | null;
         discount_percent?: number | null;
         has_primary_image?: boolean;
@@ -91,6 +94,9 @@ export default function ProductsIndex() {
     const [slug, setSlug] = useState('');
     const [sku, setSku] = useState('');
     const [price, setPrice] = useState('');
+    const [purchasePrice, setPurchasePrice] = useState('');
+    const [stock, setStock] = useState('');
+    const [lowStockThreshold, setLowStockThreshold] = useState('10');
     const [compareAt, setCompareAt] = useState('');
     const [description, setDescription] = useState('');
     const [warrantyText, setWarrantyText] = useState('');
@@ -297,6 +303,10 @@ export default function ProductsIndex() {
         fd.append('slug', slug);
         fd.append('sku', sku);
         fd.append('price', String(price));
+        if (purchasePrice) fd.append('purchase_price', String(purchasePrice));
+        if (stock) fd.append('stock', String(stock));
+        if (lowStockThreshold)
+            fd.append('low_stock_threshold', String(lowStockThreshold));
         if (compareAt) fd.append('compare_at', String(compareAt));
         if (description) fd.append('description', description);
         if (warrantyText) fd.append('warranty_text', warrantyText);
@@ -308,6 +318,9 @@ export default function ProductsIndex() {
             setSlug('');
             setSku('');
             setPrice('');
+            setPurchasePrice('');
+            setStock('');
+            setLowStockThreshold('10');
             setCompareAt('');
             setSubcategoryId(0);
             setDescription('');
@@ -526,6 +539,50 @@ export default function ProductsIndex() {
                                         required
                                     />
                                 </div>
+                                <div>
+                                    <label className="mb-1.5 block text-sm font-medium">
+                                        Cost price
+                                    </label>
+                                    <Input
+                                        value={purchasePrice}
+                                        onChange={(e) =>
+                                            setPurchasePrice(e.target.value)
+                                        }
+                                        placeholder="8.00"
+                                        type="number"
+                                        step="0.01"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="mb-1.5 block text-sm font-medium">
+                                        Opening stock
+                                    </label>
+                                    <Input
+                                        value={stock}
+                                        onChange={(e) =>
+                                            setStock(e.target.value)
+                                        }
+                                        placeholder="0"
+                                        type="number"
+                                        min="0"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="mb-1.5 block text-sm font-medium">
+                                        Low stock alert
+                                    </label>
+                                    <Input
+                                        value={lowStockThreshold}
+                                        onChange={(e) =>
+                                            setLowStockThreshold(
+                                                e.target.value,
+                                            )
+                                        }
+                                        placeholder="10"
+                                        type="number"
+                                        min="0"
+                                    />
+                                </div>
                                 <div className="md:col-span-2">
                                     <label className="mb-1.5 block text-sm font-medium">
                                         Compare at price (optional)
@@ -733,7 +790,11 @@ export default function ProductsIndex() {
                                     <TableHead className="whitespace-nowrap">
                                         SKU
                                     </TableHead>
+                                    <TableHead>Stock</TableHead>
                                     <TableHead>Price</TableHead>
+                                    <TableHead className="hidden lg:table-cell">
+                                        Cost
+                                    </TableHead>
                                     <TableHead className="hidden sm:table-cell">
                                         Discount
                                     </TableHead>
@@ -769,14 +830,27 @@ export default function ProductsIndex() {
                                         </TableCell>
                                         <TableCell>
                                             <div className="flex flex-col text-sm">
+                                                <span>{p.stock ?? 0}</span>
+                                                <span className="text-xs text-muted-foreground">
+                                                    alert {p.low_stock_threshold ?? 0}
+                                                </span>
+                                            </div>
+                                        </TableCell>
+                                        <TableCell>
+                                            <div className="flex flex-col text-sm">
                                                 <span>Rs {p.price}</span>
                                                 {p.compare_at &&
                                                     p.compare_at > p.price && (
                                                         <span className="text-xs text-muted-foreground line-through">
                                                             Rs {p.compare_at}
                                                         </span>
-                                                    )}
+                                                )}
                                             </div>
+                                        </TableCell>
+                                        <TableCell className="hidden lg:table-cell">
+                                            {p.purchase_price != null
+                                                ? `Rs ${p.purchase_price}`
+                                                : '-'}
                                         </TableCell>
                                         <TableCell className="hidden sm:table-cell">
                                             {p.discount_percent &&
@@ -889,6 +963,10 @@ export default function ProductsIndex() {
                                                 {compare}
                                             </span>
                                         ) : null}
+                                    </div>
+                                    <div className="mt-1 text-xs text-muted-foreground">
+                                        Stock: {p.stock ?? 0} • Alert:{' '}
+                                        {p.low_stock_threshold ?? 0}
                                     </div>
                                     <div className="mt-1 flex flex-col gap-1 text-xs text-muted-foreground">
                                         {p.store?.name && (

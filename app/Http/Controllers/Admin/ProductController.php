@@ -3,10 +3,12 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\InventoryMovement;
 use App\Models\Product;
 use App\Models\Store;
 use App\Models\Subcategory;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
 class ProductController extends Controller
@@ -145,6 +147,7 @@ class ProductController extends Controller
             'description' => ['nullable', 'string'],
             'feature_image' => ['nullable', 'image', 'max:5120'],
             'price' => ['required', 'numeric'],
+            'purchase_price' => ['nullable', 'numeric', 'min:0'],
             'stock' => ['nullable', 'integer', 'min:0'],
             'low_stock_threshold' => ['nullable', 'integer', 'min:0'],
             'compare_at' => ['nullable', 'numeric'],
@@ -171,7 +174,21 @@ class ProductController extends Controller
             $validated['feature_image'] = "/storage/{$path}";
         }
 
-        $product = Product::create($validated);
+        $product = DB::transaction(function () use ($validated) {
+            $product = Product::create($validated);
+
+            if (($validated['stock'] ?? 0) > 0) {
+                InventoryMovement::create([
+                    'product_id' => $product->id,
+                    'qty' => (int) $validated['stock'],
+                    'type' => 'in',
+                    'reason' => 'Opening stock',
+                    'created_at' => now(),
+                ]);
+            }
+
+            return $product;
+        });
 
         return response()->json(['success' => true, 'message' => 'Product created.', 'data' => $product], 201);
     }
@@ -218,6 +235,7 @@ class ProductController extends Controller
             'feature_image' => ['nullable', 'string', 'max:255'],
             'top_image' => ['nullable', 'string', 'max:255'],
             'price' => ['sometimes', 'numeric'],
+            'purchase_price' => ['nullable', 'numeric', 'min:0'],
             'stock' => ['nullable', 'integer', 'min:0'],
             'low_stock_threshold' => ['nullable', 'integer', 'min:0'],
             'compare_at' => ['nullable', 'numeric'],
@@ -245,7 +263,25 @@ class ProductController extends Controller
             }
         }
 
-        $product->update($validated);
+        DB::transaction(function () use ($product, $validated) {
+            $originalStock = (int) $product->stock;
+            $product->update($validated);
+
+            if (array_key_exists('stock', $validated)) {
+                $newStock = (int) $validated['stock'];
+                $difference = $newStock - $originalStock;
+
+                if ($difference !== 0) {
+                    InventoryMovement::create([
+                        'product_id' => $product->id,
+                        'qty' => abs($difference),
+                        'type' => 'adjust',
+                        'reason' => $difference > 0 ? 'Manual stock increase' : 'Manual stock decrease',
+                        'created_at' => now(),
+                    ]);
+                }
+            }
+        });
 
         return response()->json(['success' => true, 'message' => 'Product updated.', 'data' => $product]);
     }
