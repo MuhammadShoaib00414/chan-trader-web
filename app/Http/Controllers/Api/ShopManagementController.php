@@ -9,6 +9,7 @@ use App\Models\ShopCustomer;
 use App\Models\ShopSale;
 use App\Models\ShopSaleItem;
 use App\Models\ShopSalePayment;
+use App\Models\StockItem;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -264,6 +265,53 @@ class ShopManagementController extends Controller
             'message' => 'Payment collected successfully.',
             'data' => $payment,
         ], 201);
+    }
+
+    public function storeStock(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'item_name' => ['required', 'string', 'max:180'],
+            'purchase_price' => ['required', 'numeric', 'min:0'],
+            'selling_price' => ['required', 'numeric', 'min:0'],
+        ]);
+
+        $stockItem = StockItem::create([
+            ...$validated,
+            'created_by' => $request->user()?->id,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Stock item saved successfully.',
+            'data' => $stockItem,
+        ], 201);
+    }
+
+    public function updateStock(Request $request, StockItem $stockItem): JsonResponse
+    {
+        $validated = $request->validate([
+            'item_name' => ['required', 'string', 'max:180'],
+            'purchase_price' => ['required', 'numeric', 'min:0'],
+            'selling_price' => ['required', 'numeric', 'min:0'],
+        ]);
+
+        $stockItem->update($validated);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Stock item updated successfully.',
+            'data' => $stockItem->fresh(),
+        ]);
+    }
+
+    public function destroyStock(StockItem $stockItem): JsonResponse
+    {
+        $stockItem->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Stock item deleted successfully.',
+        ]);
     }
 
     private function nextBillNumber(): string

@@ -13,6 +13,7 @@ uses(RefreshDatabase::class);
 function createShopContext(): array
 {
     $user = User::factory()->create();
+    $user->givePermissionTo('create sales', 'edit sales');
 
     $store = Store::create([
         'owner_id' => $user->id,

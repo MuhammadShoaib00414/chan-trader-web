@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Product;
 use App\Models\ShopCustomer;
 use App\Models\ShopSale;
+use App\Models\StockItem;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -165,6 +166,34 @@ class ShopManagementPageController extends Controller
             'products' => $products,
             'customers' => $customers,
             'sales' => $sales,
+        ]);
+    }
+
+    public function stock(): Response
+    {
+        $stockItems = StockItem::query()
+            ->latest()
+            ->get(['id', 'item_name', 'purchase_price', 'selling_price', 'created_at', 'updated_at'])
+            ->map(fn (StockItem $item) => [
+                'id' => $item->id,
+                'item_name' => $item->item_name,
+                'purchase_price' => $item->purchase_price,
+                'selling_price' => $item->selling_price,
+                'profit_margin' => round((float) $item->selling_price - (float) $item->purchase_price, 2),
+                'created_at' => $item->created_at?->toISOString(),
+                'updated_at' => $item->updated_at?->toISOString(),
+            ]);
+
+        $stats = [
+            'total_items' => $stockItems->count(),
+            'avg_purchase_price' => round((float) $stockItems->avg('purchase_price'), 2),
+            'avg_selling_price' => round((float) $stockItems->avg('selling_price'), 2),
+            'potential_margin' => round((float) $stockItems->sum('profit_margin'), 2),
+        ];
+
+        return Inertia::render('shop/stock', [
+            'stockItems' => $stockItems,
+            'stats' => $stats,
         ]);
     }
 }

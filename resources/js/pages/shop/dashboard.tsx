@@ -101,7 +101,7 @@ export default function ShopDashboard({ stats, lowStockProducts, recentSales }: 
                                 Daily sales, udhar accounts, low-stock alerts, and profit in one view.
                             </h1>
                             <p className="max-w-2xl text-sm text-white/80 md:text-base">
-                                This dashboard is built for fast shop operations: add stock in products, create bills in sales,
+                                This dashboard is built for fast shop operations: maintain rates in stock management, create bills in sales,
                                 and follow pending customer balances without jumping across modules.
                             </p>
                         </div>

@@ -37,6 +37,10 @@ Route::get('/csrf-token', function (Request $request) {
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', function () {
         $user = auth()->user();
+        if ($user?->can('view shop dashboard') && ! $user->can('view dashboard')) {
+            return redirect()->route('shop.dashboard');
+        }
+
         $isSuper = $user?->hasRole('super-admin');
         $isVendor = $user?->hasRole('vendor');
         $now = Carbon::now();
@@ -104,7 +108,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
             'stats' => $stats,
             'recentUsers' => $recentUsers,
         ]);
-    })->name('dashboard');
+    })->name('dashboard')->middleware('permission:view dashboard|view shop dashboard');
 
     // User Management
     Route::get('users', function () {
@@ -651,21 +655,21 @@ Route::middleware(['auth', 'verified'])->group(function () {
         })->middleware('permission:promotions.manage|promotions.view');
 
         Route::post('suppliers', [\App\Http\Controllers\Api\SupplierController::class, 'store'])
-            ->middleware('permission:payments.view');
+            ->middleware('permission:create suppliers');
         Route::put('suppliers/{supplier}', [\App\Http\Controllers\Api\SupplierController::class, 'update'])
-            ->middleware('permission:payments.view');
+            ->middleware('permission:edit suppliers');
         Route::delete('suppliers/{supplier}', [\App\Http\Controllers\Api\SupplierController::class, 'destroy'])
-            ->middleware('permission:payments.view');
+            ->middleware('permission:delete suppliers');
 
         Route::post('supplier-transactions', [\App\Http\Controllers\Api\SupplierTransactionController::class, 'store'])
-            ->middleware('permission:payments.view');
+            ->middleware('permission:create suppliers');
         Route::put('supplier-transactions/{transaction}', [\App\Http\Controllers\Api\SupplierTransactionController::class, 'update'])
-            ->middleware('permission:payments.view');
+            ->middleware('permission:edit suppliers');
         Route::delete('supplier-transactions/{transaction}', [\App\Http\Controllers\Api\SupplierTransactionController::class, 'destroy'])
-            ->middleware('permission:payments.view');
+            ->middleware('permission:delete suppliers');
 
         Route::post('supplier-payments', [\App\Http\Controllers\Api\SupplierPaymentController::class, 'store'])
-            ->middleware('permission:payments.view');
+            ->middleware('permission:edit suppliers');
 
         Route::get('suppliers', function (Request $request) {
             $query = Supplier::query()->with(['stores:id,name', 'transactions.payments:supplier_transaction_id,amount']);
@@ -718,7 +722,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
                     'store_id' => $request->get('store_id'),
                 ],
             ]);
-        })->middleware('permission:payments.view');
+        })->middleware('permission:view suppliers');
 
         Route::get('suppliers/{supplier}', function (Supplier $supplier) {
             $supplier->load([
@@ -795,7 +799,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
                 'transactions' => $transactions,
                 'payments' => $payments,
             ]);
-        })->middleware('permission:payments.view');
+        })->middleware('permission:view suppliers');
 
         Route::get('supplier-transactions', function (Request $request) {
             $query = SupplierTransaction::query()
@@ -871,7 +875,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
                     'status' => $request->get('status'),
                 ],
             ]);
-        })->middleware('permission:payments.view');
+        })->middleware('permission:view suppliers');
 
         Route::get('supplier-payments', function (Request $request) {
             $paymentsQuery = SupplierPayment::query()
@@ -954,7 +958,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
                     'store_id' => $request->get('store_id'),
                 ],
             ]);
-        })->middleware('permission:payments.view');
+        })->middleware('permission:view suppliers');
 
         Route::get('supplier-dashboard', function () {
             $transactions = SupplierTransaction::with(['supplier:id,name', 'store:id,name', 'payments:supplier_transaction_id,amount'])
@@ -1023,20 +1027,35 @@ Route::middleware(['auth', 'verified'])->group(function () {
                     ])->toArray(),
                 ],
             ]);
-        })->middleware('permission:payments.view');
+        })->middleware('permission:view suppliers');
 
         Route::get('shop/dashboard', [\App\Http\Controllers\ShopManagementPageController::class, 'dashboard'])
-            ->name('shop.dashboard');
+            ->name('shop.dashboard')
+            ->middleware('permission:view shop dashboard');
         Route::get('shop/customers', [\App\Http\Controllers\ShopManagementPageController::class, 'customers'])
-            ->name('shop.customers');
+            ->name('shop.customers')
+            ->middleware('permission:view customers');
         Route::get('shop/sales', [\App\Http\Controllers\ShopManagementPageController::class, 'sales'])
-            ->name('shop.sales');
+            ->name('shop.sales')
+            ->middleware('permission:view sales');
+        Route::get('shop/stock', [\App\Http\Controllers\ShopManagementPageController::class, 'stock'])
+            ->name('shop.stock')
+            ->middleware('permission:view stock');
     });
 
     Route::prefix('api/shop')->group(function () {
-        Route::post('customers', [\App\Http\Controllers\Api\ShopManagementController::class, 'storeCustomer']);
-        Route::post('sales', [\App\Http\Controllers\Api\ShopManagementController::class, 'storeSale']);
-        Route::post('sales/{sale}/payments', [\App\Http\Controllers\Api\ShopManagementController::class, 'storePayment']);
+        Route::post('customers', [\App\Http\Controllers\Api\ShopManagementController::class, 'storeCustomer'])
+            ->middleware('permission:create customers');
+        Route::post('sales', [\App\Http\Controllers\Api\ShopManagementController::class, 'storeSale'])
+            ->middleware('permission:create sales');
+        Route::post('sales/{sale}/payments', [\App\Http\Controllers\Api\ShopManagementController::class, 'storePayment'])
+            ->middleware('permission:edit sales');
+        Route::post('stock', [\App\Http\Controllers\Api\ShopManagementController::class, 'storeStock'])
+            ->middleware('permission:create stock');
+        Route::patch('stock/{stockItem}', [\App\Http\Controllers\Api\ShopManagementController::class, 'updateStock'])
+            ->middleware('permission:edit stock');
+        Route::delete('stock/{stockItem}', [\App\Http\Controllers\Api\ShopManagementController::class, 'destroyStock'])
+            ->middleware('permission:delete stock');
     });
 });
 

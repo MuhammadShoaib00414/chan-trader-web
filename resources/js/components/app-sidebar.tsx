@@ -79,6 +79,11 @@ const mainNavItems: NavItem[] = [
         icon: ReceiptText,
     },
     {
+        title: 'Stock Management',
+        href: '/admin/shop/stock',
+        icon: Package,
+    },
+    {
         title: 'Promotions',
         href: '/admin/promotions',
         icon: Tag,
@@ -125,6 +130,7 @@ export function AppSidebar() {
     const perms: string[] = authExt.permissions ?? [];
     const isSuperAdmin = roles?.includes('super-admin');
     const requiredPerms: Record<string, string[]> = {
+        '/dashboard': ['view dashboard'],
         '/users': ['view users'],
         '/roles': ['view roles'],
         '/admin/vendors': ['view vendors'],
@@ -133,14 +139,15 @@ export function AppSidebar() {
         '/admin/subcategories': ['subcategories.manage', 'view subcategories'],
         '/admin/brands': ['brands.manage', 'view brands'],
         '/admin/products': ['products.view', 'view products'],
-        '/admin/shop/dashboard': ['products.view', 'view products'],
-        '/admin/shop/customers': ['products.view', 'view products'],
-        '/admin/shop/sales': ['products.view', 'view products'],
+        '/admin/shop/dashboard': ['view shop dashboard'],
+        '/admin/shop/customers': ['view customers'],
+        '/admin/shop/sales': ['view sales'],
+        '/admin/shop/stock': ['view stock'],
         '/admin/promotions': ['promotions.manage', 'promotions.view', 'view promotions', 'create promotions', 'edit promotions', 'delete promotions'],
         '/admin/orders': ['orders.view', 'view orders'],
         '/admin/shipments': ['shipments.view', 'view shipments'],
         '/admin/payments': ['payments.view', 'view payments'],
-        '/admin/suppliers': ['payments.view', 'view payments'],
+        '/admin/suppliers': ['view suppliers'],
     };
     const filteredItems = mainNavItems.filter((item) => {
         const href = typeof item.href === 'string' ? item.href : item.href.url;
