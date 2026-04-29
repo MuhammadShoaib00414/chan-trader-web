@@ -3,6 +3,8 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Store extends Model
@@ -31,11 +33,31 @@ class Store extends Model
 
     protected $casts = [
         'socials' => 'array',
+        'rating_avg' => 'float',
+        'followers_count' => 'integer',
+        'products_count' => 'integer',
         'verified_at' => 'datetime',
     ];
 
     public function owner()
     {
         return $this->belongsTo(User::class, 'owner_id');
+    }
+
+    public function unavailabilityDurations()
+    {
+        return $this->hasMany(UnavailabilityDuration::class);
+    }
+
+    public function products(): HasMany
+    {
+        return $this->hasMany(Product::class);
+    }
+
+    public function suppliers(): BelongsToMany
+    {
+        return $this->belongsToMany(Supplier::class)
+            ->withTimestamps()
+            ->orderBy('name');
     }
 }

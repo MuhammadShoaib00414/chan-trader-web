@@ -196,6 +196,12 @@ class VendorController extends Controller
             if (array_key_exists('phone_number', $validated)) {
                 $storeData['phone'] = $validated['phone_number'];
             }
+            if (array_key_exists('city_district', $validated)) {
+                $storeData['city'] = $validated['city_district'];
+            }
+            if (array_key_exists('address', $validated)) {
+                $storeData['address'] = $validated['address'];
+            }
             if ($storeData !== []) {
                 $store->update($storeData);
             }

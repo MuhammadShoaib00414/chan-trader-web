@@ -1,14 +1,21 @@
 // Components
 import EmailVerificationNotificationController from '@/actions/App/Http/Controllers/Auth/EmailVerificationNotificationController';
-import { logout } from '@/routes';
 import { Form, Head } from '@inertiajs/react';
 import { LoaderCircle } from 'lucide-react';
+import { requestJson } from '@/lib/http';
 
 import TextLink from '@/components/text-link';
 import { Button } from '@/components/ui/button';
 import AuthLayout from '@/layouts/auth-layout';
 
 export default function VerifyEmail({ status }: { status?: string }) {
+    const handleLogout = async () => {
+        const res = await requestJson('POST', '/logout');
+        if (res.ok) {
+            window.location.href = '/';
+        }
+    };
+
     return (
         <AuthLayout
             title="Verify email"
@@ -37,8 +44,12 @@ export default function VerifyEmail({ status }: { status?: string }) {
                         </Button>
 
                         <TextLink
-                            href={logout()}
+                            href="#"
                             className="mx-auto block text-sm"
+                            onClick={(e) => {
+                                e.preventDefault();
+                                void handleLogout();
+                            }}
                         >
                             Log out
                         </TextLink>

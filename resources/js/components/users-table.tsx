@@ -30,6 +30,9 @@ interface User {
     roles: Array<{ name: string }>;
     status: number;
     created_at: string;
+    shop_name?: string | null;
+    city_district?: string | null;
+    address?: string | null;
 }
 
 interface Role {
@@ -150,6 +153,10 @@ export function UsersTable({ users, roles, onToast }: UsersTableProps) {
                         </TableHead>
                         <TableHead className="hidden md:table-cell">Phone</TableHead>
                         <TableHead className="hidden lg:table-cell">Roles</TableHead>
+                        <TableHead className="hidden xl:table-cell">Shop Name</TableHead>
+                        <TableHead className="hidden 2xl:table-cell">City</TableHead>
+                        <TableHead className="hidden 2xl:table-cell">Addres</TableHead>
+                        
                         <TableHead>
                             <button
                                 type="button"
@@ -191,6 +198,9 @@ export function UsersTable({ users, roles, onToast }: UsersTableProps) {
                                     ))}
                                 </div>
                             </TableCell>
+                            <TableCell className="hidden xl:table-cell">{user.shop_name ?? '-'}</TableCell>
+                            <TableCell className="hidden 2xl:table-cell">{user.city_district ?? '-'}</TableCell>
+                             <TableCell className="hidden 2xl:table-cell">{user.address ?? '-'}</TableCell>
                             <TableCell>
                                 <Badge
                                     variant={
@@ -254,6 +264,12 @@ export function UsersTable({ users, roles, onToast }: UsersTableProps) {
                             {user.roles.map((role) => (
                                 <Badge key={role.name} variant="secondary">{role.name}</Badge>
                             ))}
+                        </div>
+                        <div className="mt-1 text-sm text-muted-foreground">
+                            {user.shop_name ? `Shop: ${user.shop_name}` : ''}
+                            {user.shop_name && user.city_district ? ' | ' : ''}
+                            {user.city_district ? `City: ${user.city_district}` : ''}
+                            {user.address ? `Address: ${user.address}` : ''}
                         </div>
                         <div className="mt-2 flex items-center justify-between">
                             <Badge variant={user.status == 1 ? 'default' : 'destructive'}>{user.status == 1 ? 'Active' : 'Inactive'}</Badge>

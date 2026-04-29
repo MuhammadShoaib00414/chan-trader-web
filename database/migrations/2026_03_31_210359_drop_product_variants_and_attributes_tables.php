@@ -13,6 +13,7 @@ return new class extends Migration
     {
         Schema::table('inventory_movements', function (Blueprint $table) {
             $table->dropForeign(['product_variant_id']);
+            $table->dropIndex(['product_variant_id']);
             $table->dropColumn('product_variant_id');
         });
 

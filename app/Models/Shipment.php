@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Store;
 use Illuminate\Database\Eloquent\Model;
 
 class Shipment extends Model
@@ -21,4 +22,14 @@ class Shipment extends Model
         'shipped_at' => 'datetime',
         'delivered_at' => 'datetime',
     ];
+
+    public function order()
+    {
+        return $this->belongsTo(Order::class);
+    }
+
+    public function store()
+    {
+        return $this->belongsTo(Store::class);
+    }
 }

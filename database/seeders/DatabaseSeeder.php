@@ -117,6 +117,7 @@ class DatabaseSeeder extends Seeder
             BrandSeeder::class,
             ProductsSeeder::class,
             VendorProductsSeeder::class,
+            SupplierSeeder::class,
         ]);
 
         $this->command->info('Inventory system seeded successfully!');

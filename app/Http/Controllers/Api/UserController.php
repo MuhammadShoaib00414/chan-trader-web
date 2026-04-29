@@ -31,14 +31,23 @@ class UserController extends AppBaseController
 
         $perPage = $request->input('per_page', 15);
         $search = $request->input('search');
+        $dateFrom = $request->input('date_from');
+        $dateTo = $request->input('date_to');
 
         $users = User::with('roles.permissions')
             ->when($search, function ($query, $search) {
                 $query->where(function ($q) use ($search) {
                     $q->where('first_name', 'like', "%{$search}%")
                         ->orWhere('last_name', 'like', "%{$search}%")
-                        ->orWhere('email', 'like', "%{$search}%");
+                        ->orWhere('email', 'like', "%{$search}%")
+                        ->orWhere('phone_number', 'like', "%{$search}%");
                 });
+            })
+            ->when($dateFrom, function ($query, $dateFrom) {
+                $query->whereDate('created_at', '>=', $dateFrom);
+            })
+            ->when($dateTo, function ($query, $dateTo) {
+                $query->whereDate('created_at', '<=', $dateTo);
             })
             ->latest()
             ->paginate($perPage);
@@ -52,6 +61,33 @@ class UserController extends AppBaseController
                 'last_page' => $users->lastPage(),
             ],
         ], 'Users retrieved successfully');
+    }
+
+    public function updateStatus(Request $request, User $user): JsonResponse
+    {
+        $this->authorize('update', $user);
+
+        $validated = $request->validate([
+            'status' => 'required|integer|in:0,1', // 0: inactive/blocked, 1: active
+        ]);
+
+        $user->update(['status' => $validated['status']]);
+
+        $message = $validated['status'] == 1 ? 'User account unblocked' : 'User account blocked';
+
+        return $this->successResponse([
+            'user' => new UserResource($user),
+        ], $message);
+    }
+
+    public function export(Request $request): JsonResponse
+    {
+        $this->authorize('viewAny', User::class);
+
+        // Placeholder for data export logic
+        return $this->successResponse([
+            'url' => url('/api/admin/users/export/csv')
+        ], 'User data export generated');
     }
 
     /**
@@ -135,7 +171,19 @@ class UserController extends AppBaseController
             $validated['password'] = Hash::make($validated['password']);
         }
 
-        $user->update(collect($validated)->except('roles')->toArray());
+        $updateFields = ['first_name', 'last_name', 'email', 'phone_number', 'city_district', 'address', 'status'];
+        
+        foreach ($updateFields as $field) {
+            if (array_key_exists($field, $validated)) {
+                $user->$field = $validated[$field];
+            }
+        }
+        
+        if (isset($validated['password'])) {
+            $user->password = $validated['password'];
+        }
+        
+        $user->save();
 
         if (isset($validated['role']) || isset($validated['roles'])) {
             $roleName = $validated['role']

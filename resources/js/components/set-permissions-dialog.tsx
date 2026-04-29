@@ -24,6 +24,100 @@ import { useState } from 'react';
 import { ToastStack } from '@/components/ui/toast-stack';
 import { requestJson } from '@/lib/http';
 
+const permissionAliasMap: Record<string, Partial<Record<'read' | 'create' | 'update' | 'delete' | 'approve' | 'suspend', string[]>>> = {
+    stores: {
+        read: ['stores.view'],
+        create: ['stores.manage_staff'],
+        update: ['stores.manage_staff'],
+        delete: ['stores.manage_staff'],
+        approve: ['stores.approve'],
+        suspend: ['stores.suspend'],
+    },
+    categories: {
+        read: ['categories.manage'],
+        create: ['categories.manage'],
+        update: ['categories.manage'],
+        delete: ['categories.manage'],
+    },
+    subcategories: {
+        read: ['subcategories.manage'],
+        create: ['subcategories.manage'],
+        update: ['subcategories.manage'],
+        delete: ['subcategories.manage'],
+    },
+    brands: {
+        read: ['brands.manage'],
+        create: ['brands.manage'],
+        update: ['brands.manage'],
+        delete: ['brands.manage'],
+    },
+    products: {
+        read: ['products.view'],
+        create: ['products.create'],
+        update: ['products.update', 'products.publish'],
+        delete: ['products.delete'],
+    },
+    orders: {
+        read: ['orders.view'],
+        create: ['orders.view'],
+        update: ['orders.update'],
+        delete: ['orders.refund'],
+    },
+    payments: {
+        read: ['payments.view'],
+        create: ['payments.capture'],
+        update: ['payments.capture'],
+        delete: ['payments.capture'],
+    },
+    shipments: {
+        read: ['shipments.view'],
+        create: ['shipments.update'],
+        update: ['shipments.update'],
+        delete: ['shipments.update'],
+    },
+    promotions: {
+        read: ['promotions.view', 'promotions.manage'],
+        create: ['promotions.manage'],
+        update: ['promotions.manage'],
+        delete: ['promotions.manage'],
+    },
+};
+
+function permissionCandidates(module: string, type: 'read' | 'create' | 'update' | 'delete' | 'approve' | 'suspend'): string[] {
+    const actionMap = {
+        read: 'view',
+        create: 'create',
+        update: 'edit',
+        delete: 'delete',
+        approve: 'approve',
+        suspend: 'suspend',
+    } as const;
+
+    const dottedActionMap = {
+        read: 'view',
+        create: 'create',
+        update: 'update',
+        delete: 'delete',
+        approve: 'approve',
+        suspend: 'suspend',
+    } as const;
+
+    return [
+        `${actionMap[type]} ${module}`,
+        `${module}.${dottedActionMap[type]}`,
+        ...(permissionAliasMap[module]?.[type] ?? []),
+    ];
+}
+
+function hasPermission(
+    assignedPermissions: Array<{ name: string }>,
+    module: string,
+    type: 'read' | 'create' | 'update' | 'delete' | 'approve' | 'suspend',
+): boolean {
+    const candidates = new Set(permissionCandidates(module, type));
+    return assignedPermissions.some((permission) => candidates.has(permission.name));
+}
+
 interface Permission {
     id: number;
     name: string;
@@ -67,7 +161,14 @@ export function SetPermissionsDialog({
         setToasts((ts) => [...ts, { id, title, variant }]);
         setTimeout(() => dismissToast(id), 2500);
     };
-    const errorMessageFromResponse = (): string => 'Failed to update permissions.';
+    const errorMessageFromResponse = async (res: Response): Promise<string> => {
+        try {
+            const data = (await res.json()) as { message?: string };
+            return data.message || 'Failed to update permissions.';
+        } catch {
+            return 'Failed to update permissions.';
+        }
+    };
 
     // Group all available permissions by module
     const modules = allPermissions.reduce(
@@ -143,26 +244,16 @@ export function SetPermissionsDialog({
 
         Object.keys(modules).forEach((module) => {
             initial[module] = {
-                read:
-                    role.permissions.some((p) => p.name === `view ${module}`) ||
-                    role.permissions.some((p) => p.name === `${module}.view`),
-                create:
-                    role.permissions.some((p) => p.name === `create ${module}`) ||
-                    role.permissions.some((p) => p.name === `${module}.create`),
-                update:
-                    role.permissions.some((p) => p.name === `edit ${module}`) ||
-                    role.permissions.some((p) => p.name === `${module}.update`),
-                delete:
-                    role.permissions.some((p) => p.name === `delete ${module}`) ||
-                    role.permissions.some((p) => p.name === `${module}.delete`),
+                read: hasPermission(role.permissions, module, 'read'),
+                create: hasPermission(role.permissions, module, 'create'),
+                update: hasPermission(role.permissions, module, 'update'),
+                delete: hasPermission(role.permissions, module, 'delete'),
                 approve:
                     modules[module].approve &&
-                    (role.permissions.some((p) => p.name === `approve ${module}`) ||
-                        role.permissions.some((p) => p.name === `${module}.approve`)),
+                    hasPermission(role.permissions, module, 'approve'),
                 suspend:
                     modules[module].suspend &&
-                    (role.permissions.some((p) => p.name === `suspend ${module}`) ||
-                        role.permissions.some((p) => p.name === `${module}.suspend`)),
+                    hasPermission(role.permissions, module, 'suspend'),
             };
         });
 
@@ -200,13 +291,14 @@ export function SetPermissionsDialog({
                         showToast('Permissions updated.', 'success');
                     }
                     setOpen(false);
+                    router.reload({ only: ['roles'] });
                 } else {
-                    showToast(errorMessageFromResponse(), 'error');
+                    showToast(await errorMessageFromResponse(res), 'error');
                 }
             })
             .catch(() => {
                 setProcessing(false);
-                showToast(errorMessageFromResponse(), 'error');
+                showToast('Failed to update permissions.', 'error');
             });
     };
 
@@ -320,15 +412,15 @@ export function SetPermissionsDialog({
                                         placeholder="Filter modules..."
                                         className="w-[260px] rounded-md border px-3 py-1.5 text-sm"
                                     />
-                                    <Button variant="ghost" size="sm" onClick={() => setQuery('')} disabled={processing}>
+                                    <Button type="button" variant="ghost" size="sm" onClick={() => setQuery('')} disabled={processing}>
                                         Clear
                                     </Button>
                                 </div>
                                 <div className="flex items-center gap-2">
-                                    <Button variant="outline" size="sm" onClick={grantAll} disabled={processing}>
+                                    <Button type="button" variant="outline" size="sm" onClick={grantAll} disabled={processing}>
                                         Grant All
                                     </Button>
-                                    <Button variant="ghost" size="sm" onClick={clearAll} disabled={processing}>
+                                    <Button type="button" variant="ghost" size="sm" onClick={clearAll} disabled={processing}>
                                         Clear All
                                     </Button>
                                 </div>

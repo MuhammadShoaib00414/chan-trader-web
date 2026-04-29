@@ -17,27 +17,51 @@ class ProductImageController extends Controller
     public function store(Request $request, Product $product)
     {
         $validated = $request->validate([
-            'path' => ['nullable', 'string', 'max:255'],
-            'file' => ['nullable', 'image', 'max:5120'],
-            'alt' => ['nullable', 'string', 'max:150'],
+            'files'   => ['nullable', 'array', 'max:10'],
+            'files.*' => ['image', 'max:5120'],
+            'file'    => ['nullable', 'image', 'max:5120'],
+            'paths'   => ['nullable', 'array', 'max:10'],
+            'paths.*' => ['string', 'max:255'],
+            'path'    => ['nullable', 'string', 'max:255'],
+            'alt'        => ['nullable', 'string', 'max:150'],
             'sort_order' => ['nullable', 'integer'],
             'is_primary' => ['boolean'],
         ]);
-        if ($request->hasFile('file')) {
-            $path = $request->file('file')->storePublicly("products/{$product->id}", ['disk' => 'public']);
-            $validated['path'] = "/storage/{$path}";
-        }
-        if (empty($validated['path'])) {
-            abort(422, 'Either path or file is required.');
-        }
-        $image = $product->images()->create([
-            'path' => $validated['path'],
-            'alt' => $validated['alt'] ?? null,
-            'sort_order' => $validated['sort_order'] ?? 0,
-            'is_primary' => (bool) ($validated['is_primary'] ?? false),
-        ]);
 
-        return response()->json(['success' => true, 'data' => $image], 201);
+        // Normalise single file/path into arrays
+        $files = $request->file('files') ?? ($request->hasFile('file') ? [$request->file('file')] : []);
+        $paths = $validated['paths'] ?? (isset($validated['path']) ? [$validated['path']] : []);
+
+        $images = [];
+
+        foreach ($files as $index => $file) {
+            $path = $file->storePublicly("products/{$product->id}", ['disk' => 'public']);
+            $images[] = $product->images()->create([
+                'path'       => "/storage/{$path}",
+                'alt'        => $validated['alt'] ?? null,
+                'sort_order' => ($validated['sort_order'] ?? 0) + $index,
+                'is_primary' => $index === 0 && !ProductImage::where('product_id', $product->id)->exists()
+                    ? true
+                    : (bool) ($validated['is_primary'] ?? false),
+            ]);
+        }
+
+        foreach ($paths as $index => $path) {
+            $images[] = $product->images()->create([
+                'path'       => $path,
+                'alt'        => $validated['alt'] ?? null,
+                'sort_order' => ($validated['sort_order'] ?? 0) + $index,
+                'is_primary' => $index === 0 && !ProductImage::where('product_id', $product->id)->exists()
+                    ? true
+                    : (bool) ($validated['is_primary'] ?? false),
+            ]);
+        }
+
+        if (empty($images)) {
+            abort(422, 'Either files or paths are required.');
+        }
+
+        return response()->json(['success' => true, 'data' => $images], 201);
     }
 
     public function destroy(Product $product, ProductImage $image)

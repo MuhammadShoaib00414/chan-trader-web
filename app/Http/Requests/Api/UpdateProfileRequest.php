@@ -47,16 +47,51 @@ class UpdateProfileRequest extends FormRequest
                 return;
             }
 
-            $hasField = collect(['first_name', 'last_name', 'email', 'phone_number'])
-                ->contains(fn (string $key) => $this->filled($key));
+            $hasField = collect(['first_name', 'last_name', 'email', 'phone_number', 'avatar', 'cover_image'])
+                ->contains(fn (string $key) => $this->filled($key) || $this->hasFile($key));
 
             if (! $hasField) {
                 $validator->errors()->add(
                     'profile',
-                    'Provide at least one of: first_name, last_name, email, phone_number.'
+                    'Provide at least one of: first_name, last_name, email, phone_number, avatar, cover_image.'
                 );
             }
         });
+    }
+
+    /**
+     * Body parameters for API documentation.
+     * 
+     * @return array<string, array>
+     */
+    public function bodyParameters(): array
+    {
+        return [
+            'first_name' => [
+                'description' => "User's first name",
+                'example' => 'John',
+            ],
+            'last_name' => [
+                'description' => "User's last name",
+                'example' => 'Doe',
+            ],
+            'email' => [
+                'description' => "User's email address",
+                'example' => 'john@example.com',
+            ],
+            'phone_number' => [
+                'description' => 'Pakistani mobile format (03XX XXXXXXX)',
+                'example' => '03001234567',
+            ],
+            'avatar' => [
+                'description' => "User's profile picture (JPEG, PNG, JPG, GIF, max 2MB)",
+                'example' => null,
+            ],
+            'cover_image' => [
+                'description' => "User's profile cover/banner image (JPEG, PNG, JPG, GIF, max 5MB)",
+                'example' => null,
+            ],
+        ];
     }
 
     /**
@@ -87,6 +122,18 @@ class UpdateProfileRequest extends FormRequest
                 'regex:/^03\d{9}$/',
                 $phoneUnique,
             ],
+            'avatar' => [
+                'sometimes',
+                'file',
+                'mimes:jpeg,png,jpg,gif',
+                'max:2048', // 2MB
+            ],
+            'cover_image' => [
+                'sometimes',
+                'file',
+                'mimes:jpeg,png,jpg,gif',
+                'max:5120', // 5MB
+            ],
         ];
     }
 
@@ -96,6 +143,10 @@ class UpdateProfileRequest extends FormRequest
             'email.unique' => 'The email address is already registered.',
             'phone_number.unique' => 'The phone number is already registered.',
             'phone_number.regex' => 'Phone number must be Pakistani mobile format like 03001234567. You may also enter +923001234567 or 00923001234567.',
+            'avatar.mimes' => 'Avatar must be a valid image file (JPEG, PNG, JPG, or GIF).',
+            'avatar.max' => 'Avatar file size must be less than 2MB.',
+            'cover_image.mimes' => 'Cover image must be a valid image file (JPEG, PNG, JPG, or GIF).',
+            'cover_image.max' => 'Cover image file size must be less than 5MB.',
         ];
     }
 }

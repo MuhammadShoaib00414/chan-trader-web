@@ -24,8 +24,14 @@ class PromotionController extends AppBaseController
 
         $items = Promotion::query()
             ->where('is_active', true)
+            ->where(function ($query) use ($request) {
+                $deviceType = $request->get('device_type', 'web');
+                $query->where('device_type', $deviceType)
+                      ->orWhereNull('device_type');
+            })
             ->with(['product:id,name,slug,sku,price'])
-            ->latest()
+            ->orderBy('order_number')
+            ->orderBy('created_at', 'desc')
             ->paginate($perPage)
             ->withQueryString();
 

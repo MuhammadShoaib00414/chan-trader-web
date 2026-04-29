@@ -24,6 +24,9 @@ class Subcategory extends Model
     ];
 
     protected $casts = [
+        'id' => 'integer',
+        'category_id' => 'integer',
+        'sort_order' => 'integer',
         'is_active' => 'boolean',
     ];
 

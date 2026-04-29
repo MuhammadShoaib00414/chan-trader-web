@@ -14,7 +14,7 @@ import { dashboard } from '@/routes';
 import { type NavItem } from '@/types';
 import { Link, usePage } from '@inertiajs/react';
 import { SharedData } from '@/types';
-import { Folder, LayoutGrid, Shield, Users, Package, ShoppingCart, Truck, CreditCard, Boxes, Store, Tag, Layers } from 'lucide-react';
+import { Folder, LayoutGrid, Shield, Users, Package, ShoppingCart, Truck, CreditCard, Boxes, Store, Tag, Layers, ReceiptText, WalletCards, Building2 } from 'lucide-react';
 import AppLogo from './app-logo';
 
 const mainNavItems: NavItem[] = [
@@ -64,6 +64,26 @@ const mainNavItems: NavItem[] = [
         icon: Package,
     },
     {
+        title: 'Shop Dashboard',
+        href: '/admin/shop/dashboard',
+        icon: WalletCards,
+    },
+    {
+        title: 'Customers',
+        href: '/admin/shop/customers',
+        icon: Users,
+    },
+    {
+        title: 'Sales',
+        href: '/admin/shop/sales',
+        icon: ReceiptText,
+    },
+    {
+        title: 'Stock Management',
+        href: '/admin/shop/stock',
+        icon: Package,
+    },
+    {
         title: 'Promotions',
         href: '/admin/promotions',
         icon: Tag,
@@ -82,6 +102,11 @@ const mainNavItems: NavItem[] = [
         title: 'Payments',
         href: '/admin/payments',
         icon: CreditCard,
+    },
+    {
+        title: 'Suppliers',
+        href: '/admin/suppliers',
+        icon: Building2,
     },
 ];
 
@@ -105,6 +130,7 @@ export function AppSidebar() {
     const perms: string[] = authExt.permissions ?? [];
     const isSuperAdmin = roles?.includes('super-admin');
     const requiredPerms: Record<string, string[]> = {
+        '/dashboard': ['view dashboard'],
         '/users': ['view users'],
         '/roles': ['view roles'],
         '/admin/vendors': ['view vendors'],
@@ -113,10 +139,15 @@ export function AppSidebar() {
         '/admin/subcategories': ['subcategories.manage', 'view subcategories'],
         '/admin/brands': ['brands.manage', 'view brands'],
         '/admin/products': ['products.view', 'view products'],
+        '/admin/shop/dashboard': ['view shop dashboard'],
+        '/admin/shop/customers': ['view customers'],
+        '/admin/shop/sales': ['view sales'],
+        '/admin/shop/stock': ['view stock'],
         '/admin/promotions': ['promotions.manage', 'promotions.view', 'view promotions', 'create promotions', 'edit promotions', 'delete promotions'],
         '/admin/orders': ['orders.view', 'view orders'],
         '/admin/shipments': ['shipments.view', 'view shipments'],
         '/admin/payments': ['payments.view', 'view payments'],
+        '/admin/suppliers': ['view suppliers'],
     };
     const filteredItems = mainNavItems.filter((item) => {
         const href = typeof item.href === 'string' ? item.href : item.href.url;

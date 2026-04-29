@@ -3,9 +3,12 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\InventoryMovement;
 use App\Models\Product;
 use App\Models\Store;
+use App\Models\Subcategory;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
 class ProductController extends Controller
@@ -17,6 +20,7 @@ class ProductController extends Controller
         $this->middleware('permission:products.update')->only(['update']);
         $this->middleware('permission:products.delete')->only(['destroy']);
         $this->middleware('permission:products.publish')->only(['publish', 'unpublish']);
+        $this->middleware('permission:products.view')->only(['subcategories']);
     }
 
     /**
@@ -84,12 +88,56 @@ class ProductController extends Controller
         ]]);
     }
 
+    public function inventory(Request $request)
+    {
+        $this->authorize('viewAny', Product::class);
+
+        $query = Product::query()->with('store:id,name');
+
+        if ($request->filled('store_id')) {
+            $query->where('store_id', (int) $request->get('store_id'));
+        }
+
+        if ($request->filled('low_stock')) {
+            $query->whereColumn('stock', '<=', 'low_stock_threshold');
+        }
+
+        $products = $query->select('id', 'store_id', 'name', 'sku', 'stock', 'low_stock_threshold')->paginate(50);
+
+        return response()->json([
+            'success' => true,
+            'data' => $products->items(),
+            'pagination' => [
+                'total' => $products->total(),
+                'per_page' => $products->perPage(),
+                'current_page' => $products->currentPage(),
+                'last_page' => $products->lastPage(),
+            ]
+        ]);
+    }
+
+    public function downloadInventory(Request $request)
+    {
+        $this->authorize('viewAny', Product::class);
+
+        // Placeholder for CSV/Excel generation
+        return response()->json([
+            'success' => true,
+            'message' => 'Inventory details ready for download',
+            'data' => [
+                'url' => url('/api/admin/inventory/export')
+            ]
+        ]);
+    }
+
     public function store(Request $request)
     {
+        $selectedCategoryId = $request->integer('category_id');
+
         $validated = $request->validate([
             'store_id' => ['required', 'exists:stores,id'],
             'category_id' => ['required', 'exists:categories,id'],
-            'subcategory_id' => ['nullable', 'exists:subcategories,id'],
+            'subcategory_id' => $this->subcategoryRules($selectedCategoryId),
             'brand_id' => ['nullable', 'exists:brands,id'],
             'name' => ['required', 'string', 'max:180'],
             'condition' => ['nullable', 'string', 'in:New,Used,Imported'],
@@ -99,11 +147,13 @@ class ProductController extends Controller
             'description' => ['nullable', 'string'],
             'feature_image' => ['nullable', 'image', 'max:5120'],
             'price' => ['required', 'numeric'],
+            'purchase_price' => ['nullable', 'numeric', 'min:0'],
             'stock' => ['nullable', 'integer', 'min:0'],
             'low_stock_threshold' => ['nullable', 'integer', 'min:0'],
             'compare_at' => ['nullable', 'numeric'],
             'unit' => ['nullable', 'string', 'max:32'],
             'warranty_months' => ['nullable', 'integer'],
+            'warranty_text' => ['nullable', 'string', 'max:255'],
             'meta_title' => ['nullable', 'string', 'max:180'],
             'meta_description' => ['nullable', 'string', 'max:160'],
             'is_featured' => ['nullable', 'boolean'],
@@ -124,7 +174,21 @@ class ProductController extends Controller
             $validated['feature_image'] = "/storage/{$path}";
         }
 
-        $product = Product::create($validated);
+        $product = DB::transaction(function () use ($validated) {
+            $product = Product::create($validated);
+
+            if (($validated['stock'] ?? 0) > 0) {
+                InventoryMovement::create([
+                    'product_id' => $product->id,
+                    'qty' => (int) $validated['stock'],
+                    'type' => 'in',
+                    'reason' => 'Opening stock',
+                    'created_at' => now(),
+                ]);
+            }
+
+            return $product;
+        });
 
         return response()->json(['success' => true, 'message' => 'Product created.', 'data' => $product], 201);
     }
@@ -134,12 +198,33 @@ class ProductController extends Controller
         return response()->json(['success' => true, 'data' => $product]);
     }
 
+    public function subcategories(Request $request)
+    {
+        $validated = $request->validate([
+            'category_id' => ['required', 'exists:categories,id'],
+        ]);
+
+        $items = Subcategory::query()
+            ->where('category_id', (int) $validated['category_id'])
+            ->orderBy('name')
+            ->get(['id', 'name', 'category_id']);
+
+        return response()->json([
+            'success' => true,
+            'data' => $items,
+        ]);
+    }
+
     public function update(Request $request, Product $product)
     {
+        $effectiveCategoryId = $request->has('category_id')
+            ? $request->integer('category_id')
+            : (int) $product->category_id;
+
         $validated = $request->validate([
             'store_id' => ['sometimes', 'exists:stores,id'],
             'category_id' => ['sometimes', 'exists:categories,id'],
-            'subcategory_id' => ['nullable', 'exists:subcategories,id'],
+            'subcategory_id' => $this->subcategoryRules($effectiveCategoryId),
             'brand_id' => ['nullable', 'exists:brands,id'],
             'name' => ['sometimes', 'string', 'max:180'],
             'condition' => ['nullable', 'string', 'in:New,Used,Imported'],
@@ -150,19 +235,69 @@ class ProductController extends Controller
             'feature_image' => ['nullable', 'string', 'max:255'],
             'top_image' => ['nullable', 'string', 'max:255'],
             'price' => ['sometimes', 'numeric'],
+            'purchase_price' => ['nullable', 'numeric', 'min:0'],
             'stock' => ['nullable', 'integer', 'min:0'],
             'low_stock_threshold' => ['nullable', 'integer', 'min:0'],
             'compare_at' => ['nullable', 'numeric'],
             'unit' => ['nullable', 'string', 'max:32'],
             'warranty_months' => ['nullable', 'integer'],
+            'warranty_text' => ['nullable', 'string', 'max:255'],
             'meta_title' => ['nullable', 'string', 'max:180'],
             'meta_description' => ['nullable', 'string', 'max:160'],
             'is_featured' => ['nullable', 'boolean'],
             'is_top_selling' => ['nullable', 'boolean'],
         ]);
-        $product->update($validated);
+
+        if (
+            array_key_exists('category_id', $validated) &&
+            ! array_key_exists('subcategory_id', $validated) &&
+            $product->subcategory_id
+        ) {
+            $hasMatchingSubcategory = Subcategory::query()
+                ->whereKey($product->subcategory_id)
+                ->where('category_id', (int) $validated['category_id'])
+                ->exists();
+
+            if (! $hasMatchingSubcategory) {
+                $validated['subcategory_id'] = null;
+            }
+        }
+
+        DB::transaction(function () use ($product, $validated) {
+            $originalStock = (int) $product->stock;
+            $product->update($validated);
+
+            if (array_key_exists('stock', $validated)) {
+                $newStock = (int) $validated['stock'];
+                $difference = $newStock - $originalStock;
+
+                if ($difference !== 0) {
+                    InventoryMovement::create([
+                        'product_id' => $product->id,
+                        'qty' => abs($difference),
+                        'type' => 'adjust',
+                        'reason' => $difference > 0 ? 'Manual stock increase' : 'Manual stock decrease',
+                        'created_at' => now(),
+                    ]);
+                }
+            }
+        });
 
         return response()->json(['success' => true, 'message' => 'Product updated.', 'data' => $product]);
+    }
+
+    /**
+     * @return array<int, mixed>
+     */
+    private function subcategoryRules(?int $categoryId): array
+    {
+        $rule = Rule::exists('subcategories', 'id');
+
+        if ($categoryId) {
+            $rule = $rule->where(fn ($query) => $query->where('category_id', $categoryId));
+        }
+
+        return ['nullable', $rule];
     }
 
     public function uploadFeatureImage(Request $request, Product $product)

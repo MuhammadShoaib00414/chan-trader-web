@@ -10,7 +10,7 @@ use Illuminate\Http\JsonResponse;
 class ProfileController extends AppBaseController
 {
     /**
-     * Update the authenticated user's profile (first name, last name, email, phone only).
+     * Update the authenticated user's profile (first name, last name, email, phone, avatar, cover image).
      *
      * @group Auth
      *
@@ -18,6 +18,8 @@ class ProfileController extends AppBaseController
      * @bodyParam last_name string optional User's last name. Example: Doe
      * @bodyParam email string optional User's email address. Example: john@example.com
      * @bodyParam phone_number string optional Pakistani mobile format. Example: 03001234567
+     * @bodyParam avatar file optional User's profile picture (jpeg, png, jpg, gif, max 2MB).
+     * @bodyParam cover_image file optional User's profile cover/banner image (jpeg, png, jpg, gif, max 5MB).
      *
      * @authenticated
      */
@@ -41,10 +43,58 @@ class ProfileController extends AppBaseController
             // $user->pending_email = null;
         }
 
+        // Handle avatar upload
+        if ($request->hasFile('avatar')) {
+            $this->handleImageUpload($request, $user, 'avatar', 2048); // 2MB limit
+        }
+
+        // Handle cover image upload
+        if ($request->hasFile('cover_image')) {
+            $this->handleImageUpload($request, $user, 'cover_image', 5120); // 5MB limit
+        }
+
         $user->save();
 
         return $this->successResponse([
             'user' => new UserResource($user->fresh()->load('roles.permissions')),
         ], 'Profile updated successfully');
+    }
+
+    /**
+     * Handle image file upload for profile images.
+     *
+     * @param UpdateProfileRequest $request
+     * @param $user
+     * @param string $fieldName Field name (avatar or cover_image)
+     * @param int $maxSizeKb Maximum file size in KB
+     * @return void
+     */
+    private function handleImageUpload(UpdateProfileRequest $request, $user, string $fieldName, int $maxSizeKb): void
+    {
+        $image = $request->file($fieldName);
+
+        // Validate file type and size
+        if (!$image->isValid() || !in_array($image->getMimeType(), ['image/jpeg', 'image/png', 'image/jpg', 'image/gif'])) {
+            return; // Validation handled by request
+        }
+
+        if ($image->getSize() > $maxSizeKb * 1024) {
+            return; // Validation handled by request
+        }
+
+        // Generate unique filename
+        $directory = $fieldName === 'avatar' ? 'avatars' : 'covers';
+        $filename = $fieldName . '_' . $user->id . '_' . time() . '.' . $image->getClientOriginalExtension();
+
+        // Store the file
+        $path = $image->storeAs($directory, $filename, 'public');
+
+        // Delete old file if exists
+        $oldPath = $user->{$fieldName};
+        if ($oldPath && \Storage::disk('public')->exists($oldPath)) {
+            \Storage::disk('public')->delete($oldPath);
+        }
+
+        $user->{$fieldName} = $path;
     }
 }

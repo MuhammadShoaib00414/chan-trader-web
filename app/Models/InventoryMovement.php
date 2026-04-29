@@ -9,7 +9,6 @@ class InventoryMovement extends Model
     public $timestamps = false;
 
     protected $fillable = [
-        'product_variant_id',
         'product_id',
         'qty',
         'type',
@@ -18,4 +17,9 @@ class InventoryMovement extends Model
         'reference_type',
         'created_at',
     ];
+
+    public function product()
+    {
+        return $this->belongsTo(Product::class);
+    }
 }
