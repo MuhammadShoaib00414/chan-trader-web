@@ -164,8 +164,9 @@ class ProductsSeeder extends Seeder
                     'short_description' => $p['name'] . ' with premium quality.',
                     'description' => json_encode($p['features']),
                     'feature_image' => $p['image'],
-                    'price' => $p['sale_price'],
-                    'compare_at' => $p['price'],
+                    'price' => $p['price'],
+                    'discount_percent' => round((($p['price'] - $p['sale_price']) / $p['price']) * 100, 2),
+                    'compare_at' => null,
                     'is_published' => true,
                     'is_featured' => $p['is_featured'],
                     'is_top_selling' => $p['is_top_selling'],
@@ -175,4 +176,3 @@ class ProductsSeeder extends Seeder
         }
     }
 }
-

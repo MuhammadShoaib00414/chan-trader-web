@@ -126,9 +126,7 @@ const footerNavItems: NavItem[] = [
 export function AppSidebar() {
     const page = usePage<SharedData>();
     const authExt = page.props.auth as unknown as { roles?: string[]; permissions?: string[] };
-    const roles: string[] = authExt.roles ?? [];
     const perms: string[] = authExt.permissions ?? [];
-    const isSuperAdmin = roles?.includes('super-admin');
     const requiredPerms: Record<string, string[]> = {
         '/dashboard': ['view dashboard'],
         '/users': ['view users'],
@@ -153,7 +151,7 @@ export function AppSidebar() {
         const href = typeof item.href === 'string' ? item.href : item.href.url;
         const rp = requiredPerms[href];
         if (!rp) return true;
-        return isSuperAdmin || rp.some((p) => perms?.includes(p));
+        return rp.some((p) => perms?.includes(p));
     });
     return (
         <Sidebar collapsible="icon" variant="inset">

@@ -437,22 +437,18 @@ Route::middleware(['auth', 'verified'])->group(function () {
             $products = $query->orderBy($sortBy, $sortDir)->paginate(20)->withQueryString();
 
             $items = $products->through(function ($p) {
-                $discountPercent = null;
-                if ($p->compare_at && $p->compare_at > 0 && $p->compare_at > $p->price) {
-                    $discountPercent = (int) round((($p->compare_at - $p->price) / $p->compare_at) * 100);
-                }
-
                 return [
                     'id' => $p->id,
                     'name' => $p->name,
                     'slug' => $p->slug,
                     'sku' => $p->sku,
                     'price' => $p->price,
+                    'discounted_price' => $p->discounted_price,
                     'purchase_price' => $p->purchase_price,
                     'stock' => $p->stock,
                     'low_stock_threshold' => $p->low_stock_threshold,
-                    'compare_at' => $p->compare_at,
-                    'discount_percent' => $discountPercent,
+                    'compare_at' => null,
+                    'discount_percent' => $p->discount_percent,
                     'thumb' => $p->feature_image ?: optional($p->images->first())->path,
                     'has_primary_image' => $p->images->isNotEmpty(),
                     'store' => $p->store ? ['id' => $p->store->id, 'name' => $p->store->name] : null,

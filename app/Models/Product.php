@@ -15,6 +15,9 @@ class Product extends Model
         'subcategory_id',
         'brand_id',
         'name',
+        'article',
+        'deal_name',
+        'limited_discount_text',
         'condition',
         'slug',
         'sku',
@@ -23,6 +26,7 @@ class Product extends Model
         'feature_image',
         'top_image',
         'price',
+        'discount_percent',
         'purchase_price',
         'stock',
         'low_stock_threshold',
@@ -42,6 +46,7 @@ class Product extends Model
 
     protected $casts = [
         'price' => 'float',
+        'discount_percent' => 'float',
         'purchase_price' => 'float',
         'compare_at' => 'float',
         'stock' => 'integer',
@@ -67,11 +72,41 @@ class Product extends Model
 
     public function getDiscountedPriceAttribute(): float
     {
+        $discountPercent = (float) ($this->attributes['discount_percent'] ?? 0);
+
+        if ($discountPercent > 0) {
+            return round((float) $this->price * (1 - ($discountPercent / 100)), 2);
+        }
+
+        $compareAt = (float) ($this->compare_at ?? 0);
+        if ($compareAt > 0 && $compareAt > (float) $this->price) {
+            return (float) $this->price;
+        }
+
         return (float) $this->price;
     }
 
-    public function getDiscountPercentAttribute(): ?int
+    public function getOriginalPriceAttribute(): float
     {
+        $discountPercent = (float) ($this->attributes['discount_percent'] ?? 0);
+        if ($discountPercent > 0) {
+            return (float) $this->price;
+        }
+
+        $compareAt = (float) ($this->compare_at ?? 0);
+        $price = (float) $this->price;
+
+        return $compareAt > $price ? $compareAt : $price;
+    }
+
+    public function getDiscountPercentAttribute($value): int|float|null
+    {
+        if ($value !== null && (float) $value > 0) {
+            $percent = round((float) $value, 2);
+
+            return fmod($percent, 1.0) === 0.0 ? (int) $percent : $percent;
+        }
+
         $compareAt = (float) ($this->compare_at ?? 0);
         $price = (float) $this->price;
 
@@ -79,7 +114,9 @@ class Product extends Model
             return null;
         }
 
-        return (int) round((($compareAt - $price) / $compareAt) * 100);
+        $percent = round((($compareAt - $price) / $compareAt) * 100, 2);
+
+        return fmod($percent, 1.0) === 0.0 ? (int) $percent : $percent;
     }
 
     public function getStockStatusAttribute(): string

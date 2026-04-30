@@ -26,9 +26,13 @@ export default function ProductShow() {
     type ProductDetails = {
         id: number;
         name: string;
+        article?: string | null;
+        deal_name?: string | null;
+        limited_discount_text?: string | null;
         slug: string;
         sku: string;
         price: number;
+        discount_percent?: number | null;
         purchase_price?: number | null;
         stock: number;
         low_stock_threshold: number;
@@ -106,14 +110,23 @@ export default function ProductShow() {
     };
 
     const initialDiscount = useMemo(() => {
+        if (product.discount_percent && product.discount_percent > 0) {
+            return String(product.discount_percent);
+        }
+
         const c = product.compare_at ?? null;
         const p = product.price ?? 0;
         if (c && c > p && c > 0) {
             return String(Math.round(((c - p) / c) * 100));
         }
         return '';
-    }, [product.compare_at, product.price]);
+    }, [product.compare_at, product.discount_percent, product.price]);
     const [pName, setPName] = useState(product.name);
+    const [pArticle, setPArticle] = useState(product.article ?? '');
+    const [pDealName, setPDealName] = useState(product.deal_name ?? '');
+    const [pLimitedDiscountText, setPLimitedDiscountText] = useState(
+        product.limited_discount_text ?? '',
+    );
     const [pSlug, setPSlug] = useState(product.slug);
     const [pSku, setPSku] = useState(product.sku ?? '');
     const [pPrice, setPPrice] = useState(String(product.price ?? ''));
@@ -163,6 +176,9 @@ export default function ProductShow() {
             .replace(/-+/g, '-');
     type UpdatePayload = {
         name?: string;
+        article?: string | null;
+        deal_name?: string | null;
+        limited_discount_text?: string | null;
         slug?: string;
         sku?: string | null;
         feature_image?: string | null;
@@ -174,6 +190,7 @@ export default function ProductShow() {
         purchase_price?: number;
         stock?: number;
         low_stock_threshold?: number;
+        discount_percent?: number | null;
         compare_at?: number | null;
         meta_title?: string | null;
         meta_description?: string | null;
@@ -269,6 +286,9 @@ export default function ProductShow() {
         e.preventDefault();
         const payload: UpdatePayload = {};
         if (pName) payload.name = pName;
+        payload.article = pArticle || null;
+        payload.deal_name = pDealName || null;
+        payload.limited_discount_text = pLimitedDiscountText || null;
         if (pSlug) payload.slug = pSlug;
         if (pSku) payload.sku = pSku;
         if (pThumb || pThumb === '') payload.feature_image = pThumb || null;
@@ -290,13 +310,13 @@ export default function ProductShow() {
             if (pDiscount) {
                 const d = Number(pDiscount);
                 if (!Number.isNaN(d) && d > 0 && d < 100 && priceVal > 0) {
-                    const compareAt =
-                        Math.round((priceVal / (1 - d / 100)) * 100) / 100;
-                    payload.compare_at = compareAt;
+                    payload.discount_percent = d;
                 } else {
+                    payload.discount_percent = null;
                     payload.compare_at = null;
                 }
             } else {
+                payload.discount_percent = null;
                 payload.compare_at = null;
             }
         }
@@ -445,7 +465,45 @@ export default function ProductShow() {
                             </div>
                             <div>
                                 <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
-                                    Price
+                                    Article
+                                </label>
+                                <Input
+                                    value={pArticle}
+                                    onChange={(e) =>
+                                        setPArticle(e.target.value)
+                                    }
+                                    placeholder="e.g. Article 12"
+                                />
+                            </div>
+                            <div>
+                                <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
+                                    Deal Name
+                                </label>
+                                <Input
+                                    value={pDealName}
+                                    onChange={(e) =>
+                                        setPDealName(e.target.value)
+                                    }
+                                    placeholder="e.g. Eid Offer"
+                                />
+                            </div>
+                            <div>
+                                <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
+                                    Limited Discount Text
+                                </label>
+                                <Input
+                                    value={pLimitedDiscountText}
+                                    onChange={(e) =>
+                                        setPLimitedDiscountText(
+                                            e.target.value,
+                                        )
+                                    }
+                                    placeholder="e.g. 2 days"
+                                />
+                            </div>
+                            <div>
+                                <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
+                                    Original Price
                                 </label>
                                 <Input
                                     value={pPrice}
@@ -507,6 +565,9 @@ export default function ProductShow() {
                                     min="0"
                                     max="99"
                                 />
+                                <p className="mt-1 text-xs text-muted-foreground">
+                                    Final app price is calculated automatically from the original price and discount.
+                                </p>
                             </div>
                             <div className="md:col-span-2">
                                 <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
@@ -684,6 +745,11 @@ export default function ProductShow() {
                                     variant="outline"
                                     onClick={() => {
                                         setPName(product.name);
+                                        setPArticle(product.article ?? '');
+                                        setPDealName(product.deal_name ?? '');
+                                        setPLimitedDiscountText(
+                                            product.limited_discount_text ?? '',
+                                        );
                                         setPSlug(product.slug);
                                         setPSku(product.sku ?? '');
                                         setPPrice(String(product.price ?? ''));

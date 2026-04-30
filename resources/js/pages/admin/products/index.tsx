@@ -26,9 +26,13 @@ export default function ProductsIndex() {
     type ProductItem = {
         id: number;
         name: string;
+        article?: string | null;
+        deal_name?: string | null;
+        limited_discount_text?: string | null;
         slug: string;
         sku: string;
         price: number;
+        discounted_price?: number | null;
         purchase_price?: number | null;
         stock?: number;
         low_stock_threshold?: number;
@@ -91,13 +95,16 @@ export default function ProductsIndex() {
     const [subcategoryId, setSubcategoryId] = useState<number>(0);
     const [brandId, setBrandId] = useState<number>(brands?.[0]?.id ?? 0);
     const [name, setName] = useState('');
+    const [article, setArticle] = useState('');
+    const [dealName, setDealName] = useState('');
+    const [limitedDiscountText, setLimitedDiscountText] = useState('');
     const [slug, setSlug] = useState('');
     const [sku, setSku] = useState('');
     const [price, setPrice] = useState('');
     const [purchasePrice, setPurchasePrice] = useState('');
     const [stock, setStock] = useState('');
     const [lowStockThreshold, setLowStockThreshold] = useState('10');
-    const [compareAt, setCompareAt] = useState('');
+    const [discountPercent, setDiscountPercent] = useState('');
     const [description, setDescription] = useState('');
     const [warrantyText, setWarrantyText] = useState('');
     const [featureImage, setFeatureImage] = useState<File | null>(null);
@@ -300,6 +307,10 @@ export default function ProductsIndex() {
         if (subcategoryId) fd.append('subcategory_id', String(subcategoryId));
         if (brandId) fd.append('brand_id', String(brandId));
         fd.append('name', name);
+        if (article) fd.append('article', article);
+        if (dealName) fd.append('deal_name', dealName);
+        if (limitedDiscountText)
+            fd.append('limited_discount_text', limitedDiscountText);
         fd.append('slug', slug);
         fd.append('sku', sku);
         fd.append('price', String(price));
@@ -307,7 +318,8 @@ export default function ProductsIndex() {
         if (stock) fd.append('stock', String(stock));
         if (lowStockThreshold)
             fd.append('low_stock_threshold', String(lowStockThreshold));
-        if (compareAt) fd.append('compare_at', String(compareAt));
+        if (discountPercent)
+            fd.append('discount_percent', String(discountPercent));
         if (description) fd.append('description', description);
         if (warrantyText) fd.append('warranty_text', warrantyText);
         if (featureImage) fd.append('feature_image', featureImage);
@@ -315,13 +327,16 @@ export default function ProductsIndex() {
         const res = await postForm('/api/admin/products', fd);
         if (res.ok) {
             setName('');
+            setArticle('');
+            setDealName('');
+            setLimitedDiscountText('');
             setSlug('');
             setSku('');
             setPrice('');
             setPurchasePrice('');
             setStock('');
             setLowStockThreshold('10');
-            setCompareAt('');
+            setDiscountPercent('');
             setSubcategoryId(0);
             setDescription('');
             setWarrantyText('');
@@ -526,7 +541,45 @@ export default function ProductsIndex() {
                                 </div>
                                 <div>
                                     <label className="mb-1.5 block text-sm font-medium">
-                                        Price *
+                                        Article
+                                    </label>
+                                    <Input
+                                        value={article}
+                                        onChange={(e) =>
+                                            setArticle(e.target.value)
+                                        }
+                                        placeholder="e.g. Article 12"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="mb-1.5 block text-sm font-medium">
+                                        Deal Name
+                                    </label>
+                                    <Input
+                                        value={dealName}
+                                        onChange={(e) =>
+                                            setDealName(e.target.value)
+                                        }
+                                        placeholder="e.g. Eid Offer"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="mb-1.5 block text-sm font-medium">
+                                        Limited Discount Text
+                                    </label>
+                                    <Input
+                                        value={limitedDiscountText}
+                                        onChange={(e) =>
+                                            setLimitedDiscountText(
+                                                e.target.value,
+                                            )
+                                        }
+                                        placeholder="e.g. 2 days"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="mb-1.5 block text-sm font-medium">
+                                        Original price *
                                     </label>
                                     <Input
                                         value={price}
@@ -585,19 +638,21 @@ export default function ProductsIndex() {
                                 </div>
                                 <div className="md:col-span-2">
                                     <label className="mb-1.5 block text-sm font-medium">
-                                        Compare at price (optional)
+                                        Discount (%) (optional)
                                     </label>
                                     <Input
-                                        value={compareAt}
+                                        value={discountPercent}
                                         onChange={(e) =>
-                                            setCompareAt(e.target.value)
+                                            setDiscountPercent(e.target.value)
                                         }
-                                        placeholder="12.00"
+                                        placeholder="10"
                                         type="number"
+                                        min="0"
+                                        max="99"
                                         step="0.01"
                                     />
                                     <p className="mt-1 text-xs text-muted-foreground">
-                                        Show original price for discounts
+                                        Final app price is calculated automatically from the original price and discount.
                                     </p>
                                 </div>
                                 <div className="md:col-span-2">
@@ -839,12 +894,12 @@ export default function ProductsIndex() {
                                         <TableCell>
                                             <div className="flex flex-col text-sm">
                                                 <span>Rs {p.price}</span>
-                                                {p.compare_at &&
-                                                    p.compare_at > p.price && (
-                                                        <span className="text-xs text-muted-foreground line-through">
-                                                            Rs {p.compare_at}
+                                                {p.discounted_price != null &&
+                                                    p.discounted_price < p.price && (
+                                                        <span className="text-xs text-muted-foreground">
+                                                            Final: Rs {p.discounted_price}
                                                         </span>
-                                                )}
+                                                    )}
                                             </div>
                                         </TableCell>
                                         <TableCell className="hidden lg:table-cell">
@@ -943,9 +998,10 @@ export default function ProductsIndex() {
                     <div className="grid gap-2 p-3 md:hidden">
                         {items?.map((p) => {
                             const price = `Rs ${p.price}`;
-                            const compare =
-                                p.compare_at && p.compare_at > p.price
-                                    ? `Rs ${p.compare_at}`
+                            const discounted =
+                                p.discounted_price != null &&
+                                p.discounted_price < p.price
+                                    ? `Rs ${p.discounted_price}`
                                     : '';
                             return (
                                 <div
@@ -958,9 +1014,9 @@ export default function ProductsIndex() {
                                     </div>
                                     <div className="mt-1 text-sm">
                                         <span>{price}</span>
-                                        {compare ? (
-                                            <span className="ml-2 text-xs text-muted-foreground line-through">
-                                                {compare}
+                                        {discounted ? (
+                                            <span className="ml-2 text-xs text-muted-foreground">
+                                                Final: {discounted}
                                             </span>
                                         ) : null}
                                     </div>

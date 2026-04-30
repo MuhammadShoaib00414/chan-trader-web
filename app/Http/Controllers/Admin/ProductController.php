@@ -140,6 +140,9 @@ class ProductController extends Controller
             'subcategory_id' => $this->subcategoryRules($selectedCategoryId),
             'brand_id' => ['nullable', 'exists:brands,id'],
             'name' => ['required', 'string', 'max:180'],
+            'article' => ['nullable', 'string', 'max:160'],
+            'deal_name' => ['nullable', 'string', 'max:120'],
+            'limited_discount_text' => ['nullable', 'string', 'max:60'],
             'condition' => ['nullable', 'string', 'in:New,Used,Imported'],
             'slug' => ['required', 'string', 'max:200', 'unique:products,slug'],
             'sku' => ['required', 'string', 'max:64', 'unique:products,sku'],
@@ -148,6 +151,8 @@ class ProductController extends Controller
             'feature_image' => ['nullable', 'image', 'max:5120'],
             'price' => ['required', 'numeric'],
             'purchase_price' => ['nullable', 'numeric', 'min:0'],
+            'discount_price' => ['nullable', 'numeric', 'min:0'],
+            'discount_percent' => ['nullable', 'numeric', 'gt:0', 'lt:100'],
             'stock' => ['nullable', 'integer', 'min:0'],
             'low_stock_threshold' => ['nullable', 'integer', 'min:0'],
             'compare_at' => ['nullable', 'numeric'],
@@ -173,6 +178,8 @@ class ProductController extends Controller
             $path = $request->file('feature_image')->storePublicly('products/feature', ['disk' => 'public']);
             $validated['feature_image'] = "/storage/{$path}";
         }
+
+        $validated = $this->normalizePricing($validated);
 
         $product = DB::transaction(function () use ($validated) {
             $product = Product::create($validated);
@@ -227,6 +234,9 @@ class ProductController extends Controller
             'subcategory_id' => $this->subcategoryRules($effectiveCategoryId),
             'brand_id' => ['nullable', 'exists:brands,id'],
             'name' => ['sometimes', 'string', 'max:180'],
+            'article' => ['nullable', 'string', 'max:160'],
+            'deal_name' => ['nullable', 'string', 'max:120'],
+            'limited_discount_text' => ['nullable', 'string', 'max:60'],
             'condition' => ['nullable', 'string', 'in:New,Used,Imported'],
             'slug' => ['sometimes', 'string', 'max:200', Rule::unique('products', 'slug')->ignore($product->id)],
             'sku' => ['sometimes', 'string', 'max:64', Rule::unique('products', 'sku')->ignore($product->id)],
@@ -236,6 +246,8 @@ class ProductController extends Controller
             'top_image' => ['nullable', 'string', 'max:255'],
             'price' => ['sometimes', 'numeric'],
             'purchase_price' => ['nullable', 'numeric', 'min:0'],
+            'discount_price' => ['nullable', 'numeric', 'min:0'],
+            'discount_percent' => ['nullable', 'numeric', 'gt:0', 'lt:100'],
             'stock' => ['nullable', 'integer', 'min:0'],
             'low_stock_threshold' => ['nullable', 'integer', 'min:0'],
             'compare_at' => ['nullable', 'numeric'],
@@ -262,6 +274,8 @@ class ProductController extends Controller
                 $validated['subcategory_id'] = null;
             }
         }
+
+        $validated = $this->normalizePricing($validated, $product);
 
         DB::transaction(function () use ($product, $validated) {
             $originalStock = (int) $product->stock;
@@ -298,6 +312,98 @@ class ProductController extends Controller
         }
 
         return ['nullable', $rule];
+    }
+
+    /**
+     * Normalize incoming pricing so APIs consistently expose:
+     * - `price` as the original selling price
+     * - `discount_percent` as the discount percentage
+     * - `discountedPrice` as a computed value on read
+     *
+     * Supports clients that send either:
+     * - original `price` + `discount_percent`
+     * - `price` + `discount_price`
+     * - `price` + lower `compare_at` (treat lower value as discount price)
+     * - `price` + higher `compare_at` (legacy client sending discounted price in `price`)
+     *
+     * @param  array<string, mixed>  $validated
+     * @return array<string, mixed>
+     */
+    private function normalizePricing(array $validated, ?Product $product = null): array
+    {
+        $hasPrice = array_key_exists('price', $validated);
+        $basePrice = $hasPrice ? (float) $validated['price'] : (float) ($product?->price ?? 0);
+
+        $hasCompareAt = array_key_exists('compare_at', $validated);
+        $hasDiscountPrice = array_key_exists('discount_price', $validated);
+        $hasDiscountPercent = array_key_exists('discount_percent', $validated);
+
+        if (! $hasCompareAt && ! $hasDiscountPrice && ! $hasDiscountPercent) {
+            unset($validated['discount_price']);
+            unset($validated['discount_percent']);
+
+            return $validated;
+        }
+
+        $compareAt = $hasCompareAt && $validated['compare_at'] !== null
+            ? (float) $validated['compare_at']
+            : null;
+        $discountPrice = $hasDiscountPrice && $validated['discount_price'] !== null
+            ? (float) $validated['discount_price']
+            : null;
+        $discountPercent = $hasDiscountPercent && $validated['discount_percent'] !== null
+            ? (float) $validated['discount_percent']
+            : null;
+
+        if ($discountPercent !== null) {
+            if ($basePrice > 0 && $discountPercent > 0 && $discountPercent < 100) {
+                $validated['price'] = round($basePrice, 2);
+                $validated['discount_percent'] = round($discountPercent, 2);
+            } else {
+                $validated['price'] = $basePrice;
+                $validated['discount_percent'] = null;
+                $validated['compare_at'] = null;
+            }
+
+            unset($validated['discount_price']);
+            $validated['compare_at'] = null;
+
+            return $validated;
+        }
+
+        if ($discountPrice !== null) {
+            if ($basePrice > 0 && $discountPrice > 0 && $discountPrice < $basePrice) {
+                $validated['price'] = round($basePrice, 2);
+                $validated['discount_percent'] = round((($basePrice - $discountPrice) / $basePrice) * 100, 2);
+            } else {
+                $validated['price'] = $basePrice;
+                $validated['discount_percent'] = null;
+                $validated['compare_at'] = null;
+            }
+
+            unset($validated['discount_price']);
+            $validated['compare_at'] = null;
+
+            return $validated;
+        }
+
+        if ($compareAt !== null && $basePrice > 0 && $compareAt > 0 && $compareAt < $basePrice) {
+            $validated['price'] = round($basePrice, 2);
+            $validated['discount_percent'] = round((($basePrice - $compareAt) / $basePrice) * 100, 2);
+            $validated['compare_at'] = null;
+        } elseif ($compareAt !== null && $compareAt > $basePrice && $compareAt > 0) {
+            $validated['price'] = round($compareAt, 2);
+            $validated['discount_percent'] = round((($compareAt - $basePrice) / $compareAt) * 100, 2);
+            $validated['compare_at'] = null;
+        } elseif ($compareAt !== null) {
+            $validated['discount_percent'] = null;
+            $validated['compare_at'] = null;
+        }
+
+        unset($validated['discount_price']);
+        $validated['compare_at'] = null;
+
+        return $validated;
     }
 
     public function uploadFeatureImage(Request $request, Product $product)

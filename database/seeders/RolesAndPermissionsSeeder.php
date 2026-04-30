@@ -17,6 +17,26 @@ class RolesAndPermissionsSeeder extends Seeder
         // Reset cached roles and permissions
         app()[PermissionRegistrar::class]->forgetCachedPermissions();
 
+        $shopPermissions = [
+            'view shop dashboard',
+            'view customers',
+            'create customers',
+            'edit customers',
+            'delete customers',
+            'view sales',
+            'create sales',
+            'edit sales',
+            'delete sales',
+            'view stock',
+            'create stock',
+            'edit stock',
+            'delete stock',
+            'view suppliers',
+            'create suppliers',
+            'edit suppliers',
+            'delete suppliers',
+        ];
+
         // Create permissions (named per module, e.g. products.*, brands.*, categories.*)
         $permissions = [
             // User management
@@ -39,23 +59,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'view dashboard',
 
             // Shop management modules
-            'view shop dashboard',
-            'view customers',
-            'create customers',
-            'edit customers',
-            'delete customers',
-            'view sales',
-            'create sales',
-            'edit sales',
-            'delete sales',
-            'view stock',
-            'create stock',
-            'edit stock',
-            'delete stock',
-            'view suppliers',
-            'create suppliers',
-            'edit suppliers',
-            'delete suppliers',
+            ...$shopPermissions,
 
             // Catalog & store modules
             'stores.view',
@@ -97,15 +101,11 @@ class RolesAndPermissionsSeeder extends Seeder
         $uiPermissions = [
             // Dashboard
             'view dashboard',
-            'view shop dashboard',
             // Vendors
             'view vendors', 'create vendors', 'edit vendors', 'delete vendors',
             // Shop management
-            'view customers', 'create customers', 'edit customers', 'delete customers',
-            'view sales', 'create sales', 'edit sales', 'delete sales',
-            'view stock', 'create stock', 'edit stock', 'delete stock',
+            ...$shopPermissions,
             // Suppliers
-            'view suppliers', 'create suppliers', 'edit suppliers', 'delete suppliers',
             // Users
             'view users', 'create users', 'edit users', 'delete users',
             // Roles
@@ -144,29 +144,16 @@ class RolesAndPermissionsSeeder extends Seeder
 
         // Super Admin - has all permissions
         $superAdmin = Role::firstOrCreate(['name' => 'super-admin', 'guard_name' => 'web']);
-        $superAdmin->syncPermissions(Permission::all());
+        $superAdmin->syncPermissions(
+            Permission::query()
+                ->whereNotIn('name', $shopPermissions)
+                ->get()
+        );
 
         // Admin - has most permissions except critical ones
         $admin = Role::firstOrCreate(['name' => 'admin', 'guard_name' => 'web']);
         $admin->syncPermissions([
             'view dashboard',
-            'view shop dashboard',
-            'view customers',
-            'create customers',
-            'edit customers',
-            'delete customers',
-            'view sales',
-            'create sales',
-            'edit sales',
-            'delete sales',
-            'view stock',
-            'create stock',
-            'edit stock',
-            'delete stock',
-            'view suppliers',
-            'create suppliers',
-            'edit suppliers',
-            'delete suppliers',
             'view users',
             'create users',
             'edit users',
@@ -228,25 +215,7 @@ class RolesAndPermissionsSeeder extends Seeder
 
         // Shop user - access limited to the physical shop workflow
         $shopUser = Role::firstOrCreate(['name' => 'shop-user', 'guard_name' => 'web']);
-        $shopUser->syncPermissions([
-            'view shop dashboard',
-            'view customers',
-            'create customers',
-            'edit customers',
-            'delete customers',
-            'view sales',
-            'create sales',
-            'edit sales',
-            'delete sales',
-            'view stock',
-            'create stock',
-            'edit stock',
-            'delete stock',
-            'view suppliers',
-            'create suppliers',
-            'edit suppliers',
-            'delete suppliers',
-        ]);
+        $shopUser->syncPermissions($shopPermissions);
 
         // User - basic permissions
         $user = Role::firstOrCreate(['name' => 'user', 'guard_name' => 'web']);

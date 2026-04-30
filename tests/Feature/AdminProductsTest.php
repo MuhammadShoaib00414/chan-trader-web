@@ -45,6 +45,9 @@ it('allows admin to create a product', function () {
         'category_id' => $category->id,
         'brand_id' => $brand->id,
         'name' => 'Test Product',
+        'article' => 'Article 12',
+        'deal_name' => 'Eid Offer',
+        'limited_discount_text' => '2 days',
         'slug' => 'test-product',
         'sku' => 'SKU-TEST-0001',
         'price' => 10.50,
@@ -59,6 +62,9 @@ it('allows admin to create a product', function () {
     expect(Product::find($id))->not->toBeNull();
     expect(Product::find($id)?->store_id)->toBe($store->id);
     expect(Product::find($id)?->feature_image)->toContain('/storage/products/feature/');
+    expect(Product::find($id)?->article)->toBe('Article 12');
+    expect(Product::find($id)?->deal_name)->toBe('Eid Offer');
+    expect(Product::find($id)?->limited_discount_text)->toBe('2 days');
 });
 
 it('rejects creating a product with a subcategory from another category', function () {
@@ -106,7 +112,7 @@ it('rejects creating a product with a subcategory from another category', functi
         'price' => 10.50,
     ]);
 
-    $res->assertSessionHasErrors(['subcategory_id']);
+    $res->assertStatus(422)->assertJsonValidationErrors(['subcategory_id']);
     expect(Product::where('slug', 'invalid-product')->exists())->toBeFalse();
 });
 
@@ -162,4 +168,86 @@ it('clears a mismatched subcategory when the category changes', function () {
     $res->assertOk();
     expect($product->fresh()?->category_id)->toBe($newCategory->id);
     expect($product->fresh()?->subcategory_id)->toBeNull();
+});
+
+it('normalizes a lower compare_at value into a discount price when creating a product', function () {
+    $this->seed(RolesAndPermissionsSeeder::class);
+
+    $admin = User::factory()->create();
+    $admin->assignRole(Role::findByName('admin'));
+    $this->actingAs($admin);
+
+    $store = Store::create([
+        'owner_id' => $admin->id,
+        'name' => 'Discount Store',
+        'slug' => 'discount-store',
+        'status' => 'active',
+    ]);
+
+    $category = Category::create([
+        'name' => 'Discount Category',
+        'slug' => 'discount-category',
+        'is_active' => true,
+        'sort_order' => 1,
+    ]);
+
+    $res = $this->post('/api/admin/products', [
+        'store_id' => $store->id,
+        'category_id' => $category->id,
+        'name' => 'Discount Product',
+        'slug' => 'discount-product',
+        'sku' => 'SKU-DISCOUNT-0001',
+        'price' => 100,
+        'compare_at' => 80,
+    ]);
+
+    $res->assertCreated();
+
+    $product = Product::where('slug', 'discount-product')->firstOrFail();
+
+    expect($product->price)->toBe(100.0);
+    expect($product->compare_at)->toBeNull();
+    expect($product->discounted_price)->toBe(80.0);
+    expect($product->discount_percent)->toBe(20);
+});
+
+it('normalizes an original price with discount percent into the final discounted price', function () {
+    $this->seed(RolesAndPermissionsSeeder::class);
+
+    $admin = User::factory()->create();
+    $admin->assignRole(Role::findByName('admin'));
+    $this->actingAs($admin);
+
+    $store = Store::create([
+        'owner_id' => $admin->id,
+        'name' => 'Percent Discount Store',
+        'slug' => 'percent-discount-store',
+        'status' => 'active',
+    ]);
+
+    $category = Category::create([
+        'name' => 'Percent Discount Category',
+        'slug' => 'percent-discount-category',
+        'is_active' => true,
+        'sort_order' => 1,
+    ]);
+
+    $res = $this->post('/api/admin/products', [
+        'store_id' => $store->id,
+        'category_id' => $category->id,
+        'name' => 'Ten Percent Product',
+        'slug' => 'ten-percent-product',
+        'sku' => 'SKU-DISCOUNT-0010',
+        'price' => 100,
+        'discount_percent' => 10,
+    ]);
+
+    $res->assertCreated();
+
+    $product = Product::where('slug', 'ten-percent-product')->firstOrFail();
+
+    expect($product->price)->toBe(100.0);
+    expect($product->compare_at)->toBeNull();
+    expect($product->discounted_price)->toBe(90.0);
+    expect($product->discount_percent)->toBe(10);
 });
