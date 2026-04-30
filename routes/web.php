@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Article;
 use App\Models\Brand;
 use App\Models\Category;
 use App\Models\Order;
@@ -218,6 +219,17 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::delete('subcategories/{subcategory}', [\App\Http\Controllers\Admin\SubcategoryController::class, 'destroy'])
                 ->middleware('permission:subcategories.manage');
 
+            Route::get('articles', [\App\Http\Controllers\Admin\ArticleController::class, 'index'])
+                ->middleware('permission:articles.manage');
+            Route::post('articles', [\App\Http\Controllers\Admin\ArticleController::class, 'store'])
+                ->middleware('permission:articles.manage');
+            Route::get('articles/{article}', [\App\Http\Controllers\Admin\ArticleController::class, 'show'])
+                ->middleware('permission:articles.manage');
+            Route::patch('articles/{article}', [\App\Http\Controllers\Admin\ArticleController::class, 'update'])
+                ->middleware('permission:articles.manage');
+            Route::delete('articles/{article}', [\App\Http\Controllers\Admin\ArticleController::class, 'destroy'])
+                ->middleware('permission:articles.manage');
+
             Route::get('brands', [\App\Http\Controllers\Admin\BrandController::class, 'index'])
                 ->middleware('permission:brands.manage');
             Route::post('brands', [\App\Http\Controllers\Admin\BrandController::class, 'store'])
@@ -378,6 +390,48 @@ Route::middleware(['auth', 'verified'])->group(function () {
                 'categories' => Category::orderBy('name')->get(['id', 'name']),
             ]);
         })->middleware('permission:subcategories.manage');
+
+        Route::get('articles', function (Request $request) {
+            $query = Article::query()->with(['subcategory:id,category_id,name', 'subcategory.category:id,name']);
+            if ($request->filled('q')) {
+                $q = $request->string('q')->toString();
+                $query->where('name', 'like', "%{$q}%");
+            }
+            if ($request->filled('subcategory_id')) {
+                $query->where('subcategory_id', (int) $request->get('subcategory_id'));
+            }
+            if ($request->filled('category_id')) {
+                $query->whereHas('subcategory', function ($subcategoryQuery) use ($request): void {
+                    $subcategoryQuery->where('category_id', (int) $request->get('category_id'));
+                });
+            }
+            $sortBy = in_array($request->get('sort_by'), ['id', 'name', 'slug', 'sort_order', 'is_active', 'created_at']) ? $request->get('sort_by') : 'sort_order';
+            $sortDir = in_array($request->get('sort_dir'), ['asc', 'desc']) ? $request->get('sort_dir') : 'asc';
+            $query->orderBy($sortBy, $sortDir);
+            if ($sortBy !== 'id') {
+                $query->orderBy('id', 'asc');
+            }
+            $items = $query->paginate(20)->withQueryString();
+
+            return Inertia::render('admin/articles/index', [
+                'items' => $items->items(),
+                'pagination' => [
+                    'total' => $items->total(),
+                    'per_page' => $items->perPage(),
+                    'current_page' => $items->currentPage(),
+                    'last_page' => $items->lastPage(),
+                ],
+                'filters' => [
+                    'q' => $request->get('q'),
+                    'category_id' => $request->get('category_id'),
+                    'subcategory_id' => $request->get('subcategory_id'),
+                    'sort_by' => $sortBy,
+                    'sort_dir' => $sortDir,
+                ],
+                'categories' => Category::orderBy('name')->get(['id', 'name']),
+                'subcategories' => Subcategory::orderBy('name')->get(['id', 'name', 'category_id']),
+            ]);
+        })->middleware('permission:articles.manage');
 
         Route::get('brands', function (Request $request) {
             $query = Brand::query();

@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\Brand;
+use App\Models\Article;
 use App\Models\Category;
 use App\Models\Product;
 use App\Models\Store;
@@ -22,6 +23,7 @@ class DatabaseSeeder extends Seeder
         // Truncate tables to remove old data
         DB::statement('SET FOREIGN_KEY_CHECKS=0;');
         Product::truncate();
+        Article::truncate();
         Subcategory::truncate();
         Category::truncate();
         Brand::truncate();
@@ -115,6 +117,7 @@ class DatabaseSeeder extends Seeder
         $this->call([
             CategorySeeder::class,
             SubcategorySeeder::class,
+            ArticleSeeder::class,
             BrandSeeder::class,
             ProductsSeeder::class,
             VendorProductsSeeder::class,

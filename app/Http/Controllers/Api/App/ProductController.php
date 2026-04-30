@@ -271,7 +271,7 @@ class ProductController extends AppBaseController
             'limited_discount_text' => $product->limited_discount_text,
             'slug' => $product->slug,
             'sku' => $product->sku,
-            'condition' => $product->condition,
+            'condition' => $product->condition ?: 'New',
             'price' => $product->price,
             'discountedPrice' => $product->discounted_price,
             'discount_percent' => $product->discount_percent,

@@ -14,7 +14,7 @@ import { dashboard } from '@/routes';
 import { type NavItem } from '@/types';
 import { Link, usePage } from '@inertiajs/react';
 import { SharedData } from '@/types';
-import { Folder, LayoutGrid, Shield, Users, Package, ShoppingCart, Truck, CreditCard, Boxes, Store, Tag, Layers, ReceiptText, WalletCards, Building2 } from 'lucide-react';
+import { Folder, LayoutGrid, Shield, Users, Package, ShoppingCart, Truck, CreditCard, Boxes, Store, Tag, Layers, ReceiptText, WalletCards, Building2, FileText } from 'lucide-react';
 import AppLogo from './app-logo';
 
 const mainNavItems: NavItem[] = [
@@ -52,6 +52,11 @@ const mainNavItems: NavItem[] = [
         title: 'Subcategories',
         href: '/admin/subcategories',
         icon: Layers,
+    },
+    {
+        title: 'Articles',
+        href: '/admin/articles',
+        icon: FileText,
     },
     {
         title: 'Brands',
@@ -135,6 +140,7 @@ export function AppSidebar() {
         '/admin/stores': ['stores.view', 'view stores'],
         '/admin/categories': ['categories.manage', 'view categories'],
         '/admin/subcategories': ['subcategories.manage', 'view subcategories'],
+        '/admin/articles': ['articles.manage', 'view articles'],
         '/admin/brands': ['brands.manage', 'view brands'],
         '/admin/products': ['products.view', 'view products'],
         '/admin/shop/dashboard': ['view shop dashboard'],

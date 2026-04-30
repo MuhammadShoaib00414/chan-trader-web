@@ -95,7 +95,6 @@ export default function ProductsIndex() {
     const [subcategoryId, setSubcategoryId] = useState<number>(0);
     const [brandId, setBrandId] = useState<number>(brands?.[0]?.id ?? 0);
     const [name, setName] = useState('');
-    const [article, setArticle] = useState('');
     const [dealName, setDealName] = useState('');
     const [limitedDiscountText, setLimitedDiscountText] = useState('');
     const [slug, setSlug] = useState('');
@@ -307,7 +306,6 @@ export default function ProductsIndex() {
         if (subcategoryId) fd.append('subcategory_id', String(subcategoryId));
         if (brandId) fd.append('brand_id', String(brandId));
         fd.append('name', name);
-        if (article) fd.append('article', article);
         if (dealName) fd.append('deal_name', dealName);
         if (limitedDiscountText)
             fd.append('limited_discount_text', limitedDiscountText);
@@ -327,7 +325,6 @@ export default function ProductsIndex() {
         const res = await postForm('/api/admin/products', fd);
         if (res.ok) {
             setName('');
-            setArticle('');
             setDealName('');
             setLimitedDiscountText('');
             setSlug('');
@@ -538,18 +535,6 @@ export default function ProductsIndex() {
                                     <p className="mt-1 text-xs text-muted-foreground">
                                         Auto-generated from name
                                     </p>
-                                </div>
-                                <div>
-                                    <label className="mb-1.5 block text-sm font-medium">
-                                        Article
-                                    </label>
-                                    <Input
-                                        value={article}
-                                        onChange={(e) =>
-                                            setArticle(e.target.value)
-                                        }
-                                        placeholder="e.g. Article 12"
-                                    />
                                 </div>
                                 <div>
                                     <label className="mb-1.5 block text-sm font-medium">

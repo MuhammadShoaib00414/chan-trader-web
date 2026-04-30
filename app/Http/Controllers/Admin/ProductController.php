@@ -181,6 +181,10 @@ class ProductController extends Controller
 
         $validated = $this->normalizePricing($validated);
 
+        if (!array_key_exists('condition', $validated)) {
+            $validated['condition'] = 'New';
+        }
+
         $product = DB::transaction(function () use ($validated) {
             $product = Product::create($validated);
 

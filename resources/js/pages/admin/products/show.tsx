@@ -122,7 +122,6 @@ export default function ProductShow() {
         return '';
     }, [product.compare_at, product.discount_percent, product.price]);
     const [pName, setPName] = useState(product.name);
-    const [pArticle, setPArticle] = useState(product.article ?? '');
     const [pDealName, setPDealName] = useState(product.deal_name ?? '');
     const [pLimitedDiscountText, setPLimitedDiscountText] = useState(
         product.limited_discount_text ?? '',
@@ -176,7 +175,6 @@ export default function ProductShow() {
             .replace(/-+/g, '-');
     type UpdatePayload = {
         name?: string;
-        article?: string | null;
         deal_name?: string | null;
         limited_discount_text?: string | null;
         slug?: string;
@@ -286,7 +284,6 @@ export default function ProductShow() {
         e.preventDefault();
         const payload: UpdatePayload = {};
         if (pName) payload.name = pName;
-        payload.article = pArticle || null;
         payload.deal_name = pDealName || null;
         payload.limited_discount_text = pLimitedDiscountText || null;
         if (pSlug) payload.slug = pSlug;
@@ -461,18 +458,6 @@ export default function ProductShow() {
                                     value={pSku}
                                     onChange={(e) => setPSku(e.target.value)}
                                     placeholder="SKU-0001"
-                                />
-                            </div>
-                            <div>
-                                <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
-                                    Article
-                                </label>
-                                <Input
-                                    value={pArticle}
-                                    onChange={(e) =>
-                                        setPArticle(e.target.value)
-                                    }
-                                    placeholder="e.g. Article 12"
                                 />
                             </div>
                             <div>
@@ -745,7 +730,6 @@ export default function ProductShow() {
                                     variant="outline"
                                     onClick={() => {
                                         setPName(product.name);
-                                        setPArticle(product.article ?? '');
                                         setPDealName(product.deal_name ?? '');
                                         setPLimitedDiscountText(
                                             product.limited_discount_text ?? '',

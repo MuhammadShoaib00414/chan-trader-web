@@ -68,6 +68,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'stores.manage_staff',
             'categories.manage',
             'subcategories.manage',
+            'articles.manage',
             'brands.manage',
             'products.view',
             'products.create',
@@ -118,6 +119,8 @@ class RolesAndPermissionsSeeder extends Seeder
             'view categories', 'create categories', 'edit categories', 'delete categories',
             // Subcategories
             'view subcategories', 'create subcategories', 'edit subcategories', 'delete subcategories',
+            // Articles
+            'view articles', 'create articles', 'edit articles', 'delete articles',
             // Brands
             'view brands', 'create brands', 'edit brands', 'delete brands',
             // Products
@@ -164,6 +167,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'stores.suspend',
             'categories.manage',
             'subcategories.manage',
+            'articles.manage',
             'brands.manage',
             'products.view',
             'products.create',
@@ -192,6 +196,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'view dashboard',
             'categories.manage',
             'subcategories.manage',
+            'articles.manage',
             'brands.manage',
             'products.view',
             'products.create',
@@ -207,6 +212,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'view dashboard',
             'categories.manage',
             'subcategories.manage',
+            'articles.manage',
             'brands.manage',
             'products.view',
             'products.create',
