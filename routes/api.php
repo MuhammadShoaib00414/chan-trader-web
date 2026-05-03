@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\VendorController as AdminVendorController;
 use App\Http\Controllers\Api\App\BrandController as AppBrandController;
+use App\Http\Controllers\Api\App\ArticleController as AppArticleController;
 use App\Http\Controllers\Api\App\CategoryController as AppCategoryController;
 use App\Http\Controllers\Api\App\ProductController as AppProductController;
 use App\Http\Controllers\Api\App\PromotionController as AppPromotionController;
@@ -65,6 +66,7 @@ Route::name('api.')->group(function () {
         Route::get('/home', [AppProductController::class, 'home']);
         Route::get('/categories', [AppCategoryController::class, 'index']);
         Route::get('/subcategories', [AppSubcategoryController::class, 'index']);
+        Route::get('/articles', [AppArticleController::class, 'index']);
         Route::get('/brands', [AppBrandController::class, 'index']);
         Route::get('/stores', [AppStoreController::class, 'index']);
         Route::get('/stores/{store}', [AppStoreController::class, 'show']);

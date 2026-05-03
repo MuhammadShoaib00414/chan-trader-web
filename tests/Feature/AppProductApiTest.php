@@ -1,9 +1,11 @@
 <?php
 
+use App\Models\Article;
 use App\Models\Brand;
 use App\Models\Category;
 use App\Models\Product;
 use App\Models\Store;
+use App\Models\Subcategory;
 use App\Models\User;
 
 it('returns original and discounted prices correctly in products and home responses', function () {
@@ -163,4 +165,80 @@ it('returns correct original and discounted prices in app and product detail api
     expect($milestoneDetailResponse->json('data.compare_at'))->toBeNull();
     expect((float) $milestoneDetailResponse->json('data.discountedPrice'))->toBe(90.0);
     expect($milestoneDetailResponse->json('data.discount_percent'))->toBe(10);
+});
+
+it('returns active articles for the app with category and subcategory filters', function () {
+    $category = Category::create([
+        'name' => 'Power Components',
+        'slug' => 'power-components',
+        'is_active' => true,
+        'sort_order' => 1,
+    ]);
+
+    $otherCategory = Category::create([
+        'name' => 'Control Parts',
+        'slug' => 'control-parts',
+        'is_active' => true,
+        'sort_order' => 2,
+    ]);
+
+    $subcategory = Subcategory::create([
+        'category_id' => $category->id,
+        'name' => 'MOSFET',
+        'slug' => 'mosfet',
+        'is_active' => true,
+        'sort_order' => 1,
+    ]);
+
+    $otherSubcategory = Subcategory::create([
+        'category_id' => $otherCategory->id,
+        'name' => 'Sensors',
+        'slug' => 'sensors',
+        'is_active' => true,
+        'sort_order' => 1,
+    ]);
+
+    Article::create([
+        'subcategory_id' => $subcategory->id,
+        'name' => 'Article 101',
+        'slug' => 'article-101',
+        'sort_order' => 1,
+        'is_active' => true,
+    ]);
+
+    Article::create([
+        'subcategory_id' => $subcategory->id,
+        'name' => 'Article 102',
+        'slug' => 'article-102',
+        'sort_order' => 2,
+        'is_active' => false,
+    ]);
+
+    Article::create([
+        'subcategory_id' => $otherSubcategory->id,
+        'name' => 'Sensor Article',
+        'slug' => 'sensor-article',
+        'sort_order' => 1,
+        'is_active' => true,
+    ]);
+
+    $response = $this->get("/api/app/articles?category_id={$category->id}&subcategory_id={$subcategory->id}&q=101");
+
+    $response->assertOk();
+    expect($response->json('success'))->toBeTrue();
+    expect($response->json('message'))->toBe('Articles retrieved');
+    expect($response->json('data.items'))->toHaveCount(1);
+    expect($response->json('data.items.0'))->toHaveKeys([
+        'id',
+        'subcategory_id',
+        'name',
+        'slug',
+        'sort_order',
+        'is_active',
+        'subcategory',
+        'category',
+    ]);
+    expect($response->json('data.items.0.name'))->toBe('Article 101');
+    expect($response->json('data.items.0.subcategory.name'))->toBe('MOSFET');
+    expect($response->json('data.items.0.category.name'))->toBe('Power Components');
 });

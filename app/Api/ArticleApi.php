@@ -3,6 +3,7 @@
 namespace App\Api;
 
 use App\Models\Article;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Arr;
 
@@ -40,6 +41,41 @@ class ArticleApi
         }
 
         return $query->paginate(20)->withQueryString();
+    }
+
+    /**
+     * @return Collection<int, Article>
+     */
+    public function listForApp(?int $categoryId = null, ?int $subcategoryId = null, ?string $queryText = null): Collection
+    {
+        $query = Article::query()
+            ->where('is_active', true)
+            ->with(['subcategory:id,category_id,name,slug', 'subcategory.category:id,name,slug'])
+            ->orderByRaw('coalesce(sort_order, 999999) asc')
+            ->orderBy('name');
+
+        if ($subcategoryId) {
+            $query->where('subcategory_id', $subcategoryId);
+        }
+
+        if ($categoryId) {
+            $query->whereHas('subcategory', function ($subcategoryQuery) use ($categoryId): void {
+                $subcategoryQuery->where('category_id', $categoryId);
+            });
+        }
+
+        if ($queryText !== null && $queryText !== '') {
+            $query->where('name', 'like', "%{$queryText}%");
+        }
+
+        return $query->get([
+            'id',
+            'subcategory_id',
+            'name',
+            'slug',
+            'sort_order',
+            'is_active',
+        ]);
     }
 
     /**
