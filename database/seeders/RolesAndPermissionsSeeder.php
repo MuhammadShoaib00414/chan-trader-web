@@ -163,6 +163,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'view roles',
             'view permissions',
             'stores.view',
+            'stores.manage_staff',
             'stores.approve',
             'stores.suspend',
             'categories.manage',

@@ -3,13 +3,16 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Article;
 use App\Models\InventoryMovement;
 use App\Models\Product;
 use App\Models\Store;
 use App\Models\Subcategory;
+use App\Support\ResizedImageStore;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class ProductController extends Controller
 {
@@ -20,7 +23,7 @@ class ProductController extends Controller
         $this->middleware('permission:products.update')->only(['update']);
         $this->middleware('permission:products.delete')->only(['destroy']);
         $this->middleware('permission:products.publish')->only(['publish', 'unpublish']);
-        $this->middleware('permission:products.view')->only(['subcategories']);
+        $this->middleware('permission:products.view')->only(['subcategories', 'articles']);
     }
 
     /**
@@ -148,7 +151,7 @@ class ProductController extends Controller
             'sku' => ['required', 'string', 'max:64', 'unique:products,sku'],
             'short_description' => ['nullable', 'string', 'max:300'],
             'description' => ['nullable', 'string'],
-            'feature_image' => ['nullable', 'image', 'max:5120'],
+            'feature_image' => ['nullable', 'file', 'mimes:jpg,jpeg,png,webp,gif', 'max:5120'],
             'price' => ['required', 'numeric'],
             'purchase_price' => ['nullable', 'numeric', 'min:0'],
             'discount_price' => ['nullable', 'numeric', 'min:0'],
@@ -174,9 +177,11 @@ class ProductController extends Controller
             $validated['store_id'] = $storeId;
         }
 
+        $validated = $this->normalizeArticleSelection($validated);
+
         if ($request->hasFile('feature_image')) {
-            $path = $request->file('feature_image')->storePublicly('products/feature', ['disk' => 'public']);
-            $validated['feature_image'] = "/storage/{$path}";
+            $path = ResizedImageStore::store($request->file('feature_image'), 'products/feature');
+            $validated['feature_image'] = ResizedImageStore::publicUrl($path);
         }
 
         $validated = $this->normalizePricing($validated);
@@ -219,6 +224,25 @@ class ProductController extends Controller
             ->where('category_id', (int) $validated['category_id'])
             ->orderBy('name')
             ->get(['id', 'name', 'category_id']);
+
+        return response()->json([
+            'success' => true,
+            'data' => $items,
+        ]);
+    }
+
+    public function articles(Request $request)
+    {
+        $validated = $request->validate([
+            'subcategory_id' => ['required', 'exists:subcategories,id'],
+        ]);
+
+        $items = Article::query()
+            ->where('subcategory_id', (int) $validated['subcategory_id'])
+            ->where('is_active', true)
+            ->orderByRaw('coalesce(sort_order, 999999) asc')
+            ->orderBy('name')
+            ->get(['id', 'subcategory_id', 'name', 'slug', 'sort_order']);
 
         return response()->json([
             'success' => true,
@@ -279,6 +303,7 @@ class ProductController extends Controller
             }
         }
 
+        $validated = $this->normalizeArticleSelection($validated, $product);
         $validated = $this->normalizePricing($validated, $product);
 
         DB::transaction(function () use ($product, $validated) {
@@ -302,6 +327,44 @@ class ProductController extends Controller
         });
 
         return response()->json(['success' => true, 'message' => 'Product updated.', 'data' => $product]);
+    }
+
+    /**
+     * @param  array<string, mixed>  $validated
+     * @return array<string, mixed>
+     */
+    private function normalizeArticleSelection(array $validated, ?Product $product = null): array
+    {
+        if (array_key_exists('article', $validated)) {
+            $validated['article'] = is_string($validated['article'])
+                ? trim($validated['article'])
+                : $validated['article'];
+
+            if ($validated['article'] === '') {
+                $validated['article'] = null;
+            }
+        }
+
+        $effectiveSubcategoryId = array_key_exists('subcategory_id', $validated)
+            ? (int) ($validated['subcategory_id'] ?? 0)
+            : (int) ($product?->subcategory_id ?? 0);
+
+        if (
+            $effectiveSubcategoryId > 0 &&
+            array_key_exists('article', $validated) &&
+            $validated['article'] !== null &&
+            ! Article::query()
+                ->where('subcategory_id', $effectiveSubcategoryId)
+                ->where('is_active', true)
+                ->where('name', $validated['article'])
+                ->exists()
+        ) {
+            throw ValidationException::withMessages([
+                'article' => 'Selected article is not available for the chosen subcategory.',
+            ]);
+        }
+
+        return $validated;
     }
 
     /**
@@ -413,10 +476,11 @@ class ProductController extends Controller
     public function uploadFeatureImage(Request $request, Product $product)
     {
         $request->validate([
-            'file' => ['required', 'image', 'max:5120'],
+            'file' => ['required', 'file', 'mimes:jpg,jpeg,png,webp,gif', 'max:5120'],
         ]);
-        $path = $request->file('file')->storePublicly("products/{$product->id}", ['disk' => 'public']);
-        $product->update(['feature_image' => "/storage/{$path}"]);
+        ResizedImageStore::deletePublicPath($product->feature_image);
+        $path = ResizedImageStore::store($request->file('file'), "products/{$product->id}/feature");
+        $product->update(['feature_image' => ResizedImageStore::publicUrl($path)]);
 
         return response()->json(['success' => true, 'data' => ['feature_image' => $product->feature_image]]);
     }
@@ -424,10 +488,11 @@ class ProductController extends Controller
     public function uploadTopImage(Request $request, Product $product)
     {
         $request->validate([
-            'file' => ['required', 'image', 'max:5120'],
+            'file' => ['required', 'file', 'mimes:jpg,jpeg,png,webp,gif', 'max:5120'],
         ]);
-        $path = $request->file('file')->storePublicly("products/{$product->id}", ['disk' => 'public']);
-        $product->update(['top_image' => "/storage/{$path}"]);
+        ResizedImageStore::deletePublicPath($product->top_image);
+        $path = ResizedImageStore::store($request->file('file'), "products/{$product->id}/top");
+        $product->update(['top_image' => ResizedImageStore::publicUrl($path)]);
 
         return response()->json(['success' => true, 'data' => ['top_image' => $product->top_image]]);
     }

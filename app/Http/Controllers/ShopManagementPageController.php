@@ -173,12 +173,14 @@ class ShopManagementPageController extends Controller
     {
         $stockItems = StockItem::query()
             ->latest()
-            ->get(['id', 'item_name', 'purchase_price', 'selling_price', 'created_at', 'updated_at'])
+            ->get(['id', 'item_name', 'batch_lot_number', 'purchase_price', 'selling_price', 'quantity', 'created_at', 'updated_at'])
             ->map(fn (StockItem $item) => [
                 'id' => $item->id,
                 'item_name' => $item->item_name,
+                'batch_lot_number' => $item->batch_lot_number,
                 'purchase_price' => $item->purchase_price,
                 'selling_price' => $item->selling_price,
+                'quantity' => $item->quantity,
                 'profit_margin' => round((float) $item->selling_price - (float) $item->purchase_price, 2),
                 'created_at' => $item->created_at?->toISOString(),
                 'updated_at' => $item->updated_at?->toISOString(),
@@ -186,6 +188,7 @@ class ShopManagementPageController extends Controller
 
         $stats = [
             'total_items' => $stockItems->count(),
+            'total_quantity' => (int) $stockItems->sum('quantity'),
             'avg_purchase_price' => round((float) $stockItems->avg('purchase_price'), 2),
             'avg_selling_price' => round((float) $stockItems->avg('selling_price'), 2),
             'potential_margin' => round((float) $stockItems->sum('profit_margin'), 2),

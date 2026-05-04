@@ -20,6 +20,7 @@ import { ToastStack } from '@/components/ui/toast-stack';
 import AppLayout from '@/layouts/app-layout';
 import { delJson, postForm, postJson } from '@/lib/http';
 import { Head, router, usePage } from '@inertiajs/react';
+import { LoaderCircle } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 
 export default function ProductsIndex() {
@@ -46,6 +47,12 @@ export default function ProductsIndex() {
     };
     type CategoryRef = { id: number; name: string };
     type SubcategoryRef = { id: number; name: string; category_id: number };
+    type ArticleRef = {
+        id: number;
+        name: string;
+        slug: string;
+        subcategory_id: number;
+    };
     type StoreRef = { id: number; name: string };
     type BrandRef = { id: number; name: string };
     type Pagination = {
@@ -95,6 +102,7 @@ export default function ProductsIndex() {
     const [subcategoryId, setSubcategoryId] = useState<number>(0);
     const [brandId, setBrandId] = useState<number>(brands?.[0]?.id ?? 0);
     const [name, setName] = useState('');
+    const [article, setArticle] = useState('');
     const [dealName, setDealName] = useState('');
     const [limitedDiscountText, setLimitedDiscountText] = useState('');
     const [slug, setSlug] = useState('');
@@ -116,10 +124,19 @@ export default function ProductsIndex() {
         ),
     );
     const [subcategoriesLoading, setSubcategoriesLoading] = useState(false);
+    const [articleOptions, setArticleOptions] = useState<ArticleRef[]>([]);
+    const [articlesLoading, setArticlesLoading] = useState(false);
     const [toasts, setToasts] = useState<
         Array<{ id: number; title: string; variant: 'success' | 'error' }>
     >([]);
     const [addOpen, setAddOpen] = useState(false);
+    const [creatingProduct, setCreatingProduct] = useState(false);
+    const [deletingProductId, setDeletingProductId] = useState<number | null>(
+        null,
+    );
+    const [publishingProductId, setPublishingProductId] = useState<
+        number | null
+    >(null);
 
     const filteredSubcategories = useMemo(
         () =>
@@ -224,6 +241,80 @@ export default function ProductsIndex() {
         }
     }, [filteredSubcategories, subcategoryId]);
 
+    useEffect(() => {
+        if (!subcategoryId) {
+            setArticleOptions([]);
+            setArticle('');
+            return;
+        }
+
+        const controller = new AbortController();
+        let isActive = true;
+
+        const loadArticles = async () => {
+            setArticlesLoading(true);
+
+            try {
+                const res = await fetch(
+                    `/api/admin/products/articles?subcategory_id=${subcategoryId}`,
+                    {
+                        credentials: 'same-origin',
+                        headers: {
+                            Accept: 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest',
+                        },
+                        signal: controller.signal,
+                    },
+                );
+
+                if (!res.ok) {
+                    throw new Error(`Failed to load articles (${res.status})`);
+                }
+
+                const data = (await res.json()) as { data?: ArticleRef[] };
+
+                if (isActive) {
+                    setArticleOptions(
+                        Array.isArray(data?.data) ? data.data : [],
+                    );
+                }
+            } catch (error) {
+                if (controller.signal.aborted) {
+                    return;
+                }
+
+                if (isActive) {
+                    setArticleOptions([]);
+                    showToast(
+                        'Unable to load articles for the selected subcategory.',
+                        'error',
+                    );
+                }
+            } finally {
+                if (isActive && !controller.signal.aborted) {
+                    setArticlesLoading(false);
+                }
+            }
+        };
+
+        void loadArticles();
+
+        return () => {
+            isActive = false;
+            controller.abort();
+        };
+    }, [subcategoryId]);
+
+    useEffect(() => {
+        if (
+            article &&
+            articleOptions.length > 0 &&
+            !articleOptions.some((option) => option.name === article)
+        ) {
+            setArticle('');
+        }
+    }, [article, articleOptions]);
+
     const dismissToast = (id: number) =>
         setToasts((ts) => ts.filter((t) => t.id !== id));
     const showToast = (
@@ -297,6 +388,7 @@ export default function ProductsIndex() {
 
     const submit = async (e: React.FormEvent) => {
         e.preventDefault();
+        setCreatingProduct(true);
         const fd = new FormData();
         const effectiveStoreId = isVendor
             ? (vendorStore?.id ?? storeId)
@@ -306,6 +398,7 @@ export default function ProductsIndex() {
         if (subcategoryId) fd.append('subcategory_id', String(subcategoryId));
         if (brandId) fd.append('brand_id', String(brandId));
         fd.append('name', name);
+        if (article) fd.append('article', article);
         if (dealName) fd.append('deal_name', dealName);
         if (limitedDiscountText)
             fd.append('limited_discount_text', limitedDiscountText);
@@ -322,28 +415,33 @@ export default function ProductsIndex() {
         if (warrantyText) fd.append('warranty_text', warrantyText);
         if (featureImage) fd.append('feature_image', featureImage);
 
-        const res = await postForm('/api/admin/products', fd);
-        if (res.ok) {
-            setName('');
-            setDealName('');
-            setLimitedDiscountText('');
-            setSlug('');
-            setSku('');
-            setPrice('');
-            setPurchasePrice('');
-            setStock('');
-            setLowStockThreshold('10');
-            setDiscountPercent('');
-            setSubcategoryId(0);
-            setDescription('');
-            setWarrantyText('');
-            setFeatureImage(null);
-            showToast('Product created.', 'success');
-            setAddOpen(false);
-            router.reload({ only: ['items'] });
-            return;
+        try {
+            const res = await postForm('/api/admin/products', fd);
+            if (res.ok) {
+                setName('');
+                setArticle('');
+                setDealName('');
+                setLimitedDiscountText('');
+                setSlug('');
+                setSku('');
+                setPrice('');
+                setPurchasePrice('');
+                setStock('');
+                setLowStockThreshold('10');
+                setDiscountPercent('');
+                setSubcategoryId(0);
+                setDescription('');
+                setWarrantyText('');
+                setFeatureImage(null);
+                showToast('Product created.', 'success');
+                setAddOpen(false);
+                router.reload({ only: ['items'] });
+                return;
+            }
+            showToast(await errorMessageFromResponse(res), 'error');
+        } finally {
+            setCreatingProduct(false);
         }
-        showToast(await errorMessageFromResponse(res), 'error');
     };
 
     const deleteProduct = async (productId: number) => {
@@ -355,12 +453,18 @@ export default function ProductsIndex() {
             return;
         }
 
-        const res = await delJson(`/api/admin/products/${productId}`);
-        if (res.ok) {
-            showToast('Product deleted successfully.', 'success');
-            router.reload({ only: ['items'] });
-        } else {
-            showToast(await errorMessageFromResponse(res), 'error');
+        setDeletingProductId(productId);
+
+        try {
+            const res = await delJson(`/api/admin/products/${productId}`);
+            if (res.ok) {
+                showToast('Product deleted successfully.', 'success');
+                router.reload({ only: ['items'] });
+            } else {
+                showToast(await errorMessageFromResponse(res), 'error');
+            }
+        } finally {
+            setDeletingProductId(null);
         }
     };
 
@@ -374,12 +478,18 @@ export default function ProductsIndex() {
 
         const action = currentStatus ? 'unpublish' : 'publish';
 
-        const res = await postJson(endpoint, {});
-        if (res.ok) {
-            showToast(`Product ${action}ed successfully.`, 'success');
-            router.reload({ only: ['items'] });
-        } else {
-            showToast(await errorMessageFromResponse(res), 'error');
+        setPublishingProductId(productId);
+
+        try {
+            const res = await postJson(endpoint, {});
+            if (res.ok) {
+                showToast(`Product ${action}ed successfully.`, 'success');
+                router.reload({ only: ['items'] });
+            } else {
+                showToast(await errorMessageFromResponse(res), 'error');
+            }
+        } finally {
+            setPublishingProductId(null);
         }
     };
 
@@ -717,6 +827,7 @@ export default function ProductsIndex() {
                                             );
                                             setCategoryId(nextCategoryId);
                                             setSubcategoryId(0);
+                                            setArticle('');
                                         }}
                                     />
                                 </div>
@@ -733,9 +844,12 @@ export default function ProductsIndex() {
                                         className="w-full rounded-md border px-3 py-2"
                                         value={String(subcategoryId)}
                                         onChange={(e) =>
-                                            setSubcategoryId(
-                                                Number(e.target.value),
-                                            )
+                                            {
+                                                setSubcategoryId(
+                                                    Number(e.target.value),
+                                                );
+                                                setArticle('');
+                                            }
                                         }
                                         disabled={
                                             subcategoriesLoading ||
@@ -763,6 +877,51 @@ export default function ProductsIndex() {
                                     <p className="mt-1 text-xs text-muted-foreground">
                                         Subcategories are loaded from the API
                                         after category selection.
+                                    </p>
+                                </div>
+                                <div className="md:col-span-2">
+                                    <div className="mb-1.5 flex items-center justify-between gap-3">
+                                        <label className="block text-sm font-medium">
+                                            Article (optional)
+                                        </label>
+                                        <span className="text-[11px] text-muted-foreground">
+                                            {articlesLoading
+                                                ? 'Loading...'
+                                                : `${articleOptions.length} available`}
+                                        </span>
+                                    </div>
+                                    <select
+                                        className="w-full rounded-md border px-3 py-2"
+                                        value={article}
+                                        onChange={(e) =>
+                                            setArticle(e.target.value)
+                                        }
+                                        disabled={
+                                            !subcategoryId ||
+                                            articlesLoading ||
+                                            !articleOptions.length
+                                        }
+                                    >
+                                        <option value="">
+                                            {!subcategoryId
+                                                ? 'Select subcategory first'
+                                                : articlesLoading
+                                                  ? 'Loading articles...'
+                                                  : articleOptions.length
+                                                    ? 'Select article'
+                                                    : 'No articles available'}
+                                        </option>
+                                        {articleOptions.map((option) => (
+                                            <option
+                                                key={option.id}
+                                                value={option.name}
+                                            >
+                                                {option.name}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    <p className="mt-1 text-xs text-muted-foreground">
+                                        Articles are loaded according to the selected subcategory.
                                     </p>
                                 </div>
                                 <div className="md:col-span-2">
@@ -796,7 +955,7 @@ export default function ProductsIndex() {
                                     </label>
                                     <Input
                                         type="file"
-                                        accept=".png,.jpg,.jpeg,.webp"
+                                        accept=".png,.jpg,.jpeg,.webp,.gif"
                                         onChange={(e) =>
                                             setFeatureImage(
                                                 e.target.files?.[0] ?? null,
@@ -808,7 +967,17 @@ export default function ProductsIndex() {
                                     </p>
                                 </div>
                                 <DialogFooter className="md:col-span-2">
-                                    <Button type="submit">Save</Button>
+                                    <Button
+                                        type="submit"
+                                        disabled={creatingProduct}
+                                    >
+                                        {creatingProduct && (
+                                            <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
+                                        )}
+                                        {creatingProduct
+                                            ? 'Saving...'
+                                            : 'Save'}
+                                    </Button>
                                 </DialogFooter>
                             </form>
                         </DialogContent>
@@ -952,6 +1121,12 @@ export default function ProductsIndex() {
                                                             ? 'secondary'
                                                             : 'default'
                                                     }
+                                                    disabled={
+                                                        publishingProductId ===
+                                                            p.id ||
+                                                        deletingProductId ===
+                                                            p.id
+                                                    }
                                                     onClick={() =>
                                                         togglePublishedStatus(
                                                             p.id,
@@ -960,18 +1135,42 @@ export default function ProductsIndex() {
                                                         )
                                                     }
                                                 >
-                                                    {p.is_published
-                                                        ? 'Unpublish'
-                                                        : 'Publish'}
+                                                    {publishingProductId ===
+                                                    p.id ? (
+                                                        <>
+                                                            <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
+                                                            {p.is_published
+                                                                ? 'Unpublishing...'
+                                                                : 'Publishing...'}
+                                                        </>
+                                                    ) : p.is_published ? (
+                                                        'Unpublish'
+                                                    ) : (
+                                                        'Publish'
+                                                    )}
                                                 </Button>
                                                 <Button
                                                     size="sm"
                                                     variant="destructive"
+                                                    disabled={
+                                                        deletingProductId ===
+                                                            p.id ||
+                                                        publishingProductId ===
+                                                            p.id
+                                                    }
                                                     onClick={() =>
                                                         deleteProduct(p.id)
                                                     }
                                                 >
-                                                    Delete
+                                                    {deletingProductId ===
+                                                    p.id ? (
+                                                        <>
+                                                            <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
+                                                            Deleting...
+                                                        </>
+                                                    ) : (
+                                                        'Delete'
+                                                    )}
                                                 </Button>
                                             </div>
                                         </TableCell>
@@ -1061,6 +1260,11 @@ export default function ProductsIndex() {
                                                         ? 'secondary'
                                                         : 'default'
                                                 }
+                                                disabled={
+                                                    publishingProductId ===
+                                                        p.id ||
+                                                    deletingProductId === p.id
+                                                }
                                                 onClick={() =>
                                                     togglePublishedStatus(
                                                         p.id,
@@ -1068,20 +1272,40 @@ export default function ProductsIndex() {
                                                     )
                                                 }
                                             >
-                                                {p.is_published
-                                                    ? 'Unpublish'
-                                                    : 'Publish'}
+                                                {publishingProductId === p.id ? (
+                                                    <>
+                                                        <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
+                                                        {p.is_published
+                                                            ? 'Unpublishing...'
+                                                            : 'Publishing...'}
+                                                    </>
+                                                ) : p.is_published ? (
+                                                    'Unpublish'
+                                                ) : (
+                                                    'Publish'
+                                                )}
                                             </Button>
                                         </div>
                                         <div className="flex justify-end">
                                             <Button
                                                 size="sm"
                                                 variant="destructive"
+                                                disabled={
+                                                    deletingProductId === p.id ||
+                                                    publishingProductId === p.id
+                                                }
                                                 onClick={() =>
                                                     deleteProduct(p.id)
                                                 }
                                             >
-                                                Delete
+                                                {deletingProductId === p.id ? (
+                                                    <>
+                                                        <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
+                                                        Deleting...
+                                                    </>
+                                                ) : (
+                                                    'Delete'
+                                                )}
                                             </Button>
                                         </div>
                                     </div>

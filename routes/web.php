@@ -249,6 +249,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
                 ->middleware('permission:stores.view');
             Route::patch('stores/{store}', [\App\Http\Controllers\Admin\StoreController::class, 'update'])
                 ->middleware('permission:stores.manage_staff');
+            Route::delete('stores/{store}', [\App\Http\Controllers\Admin\StoreController::class, 'destroy'])
+                ->middleware('permission:stores.manage_staff');
             Route::post('stores/{store}/approve', [\App\Http\Controllers\Admin\StoreController::class, 'approve'])
                 ->middleware('permission:stores.approve');
             Route::post('stores/{store}/suspend', [\App\Http\Controllers\Admin\StoreController::class, 'suspend'])
@@ -257,6 +259,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::get('products', [\App\Http\Controllers\Admin\ProductController::class, 'index'])
                 ->middleware('permission:products.view');
             Route::get('products/subcategories', [\App\Http\Controllers\Admin\ProductController::class, 'subcategories'])
+                ->middleware('permission:products.view');
+            Route::get('products/articles', [\App\Http\Controllers\Admin\ProductController::class, 'articles'])
                 ->middleware('permission:products.view');
             Route::post('products', [\App\Http\Controllers\Admin\ProductController::class, 'store'])
                 ->middleware('permission:products.create');
@@ -320,10 +324,67 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('vendors', [\App\Http\Controllers\Admin\VendorController::class, 'index'])
             ->middleware('role:super-admin')
             ->name('admin.vendors.index');
-        Route::get('stores', function () {
-            $items = Store::orderBy('name')->get(['id', 'name', 'slug', 'status']);
+        Route::get('stores', function (Request $request) {
+            $query = Store::query()->with('owner:id,first_name,last_name,email');
 
-            return Inertia::render('admin/stores/index', ['items' => $items]);
+            if ($request->filled('q')) {
+                $q = $request->string('q')->toString();
+                $query->where(function ($subQuery) use ($q) {
+                    $subQuery->where('name', 'like', "%{$q}%")
+                        ->orWhere('slug', 'like', "%{$q}%")
+                        ->orWhere('email', 'like', "%{$q}%")
+                        ->orWhere('phone', 'like', "%{$q}%");
+                });
+            }
+
+            if ($request->filled('status')) {
+                $query->where('status', $request->string('status')->toString());
+            }
+
+            $stores = $query->latest()->paginate(20)->withQueryString();
+            $users = \App\Models\User::query()
+                ->orderBy('first_name')
+                ->orderBy('last_name')
+                ->get(['id', 'first_name', 'last_name', 'email'])
+                ->map(fn (\App\Models\User $user) => [
+                    'id' => $user->id,
+                    'name' => trim(($user->first_name ?? '').' '.($user->last_name ?? '')),
+                    'email' => $user->email,
+                ])
+                ->values();
+
+            return Inertia::render('admin/stores/index', [
+                'items' => $stores->getCollection()->map(fn (Store $store) => [
+                    'id' => $store->id,
+                    'owner_id' => $store->owner_id,
+                    'owner' => $store->owner ? [
+                        'id' => $store->owner->id,
+                        'name' => trim(($store->owner->first_name ?? '').' '.($store->owner->last_name ?? '')),
+                        'email' => $store->owner->email,
+                    ] : null,
+                    'name' => $store->name,
+                    'slug' => $store->slug,
+                    'email' => $store->email,
+                    'phone' => $store->phone,
+                    'business_whatsapp_url' => $store->business_whatsapp_url,
+                    'city' => $store->city,
+                    'address' => $store->address,
+                    'description' => $store->description,
+                    'status' => $store->status,
+                    'created_at' => $store->created_at?->toISOString(),
+                ])->values(),
+                'users' => $users,
+                'pagination' => [
+                    'total' => $stores->total(),
+                    'per_page' => $stores->perPage(),
+                    'current_page' => $stores->currentPage(),
+                    'last_page' => $stores->lastPage(),
+                ],
+                'filters' => [
+                    'q' => $request->get('q'),
+                    'status' => $request->get('status'),
+                ],
+            ]);
         })->middleware('permission:stores.view');
 
         Route::get('categories', function (Request $request) {

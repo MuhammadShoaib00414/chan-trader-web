@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\App;
 
 use App\Http\Controllers\AppBaseController;
+use App\Models\Article;
 use App\Models\Product;
 use App\Models\Store;
 use Illuminate\Http\Request;
@@ -15,6 +16,8 @@ class ProductController extends AppBaseController
      * @group APP APIs
      *
      * @queryParam q string Search by product name or SKU (partial match). Example: resistor
+     * @queryParam article string Filter by article name (partial match). Example: article 101
+     * @queryParam article_id integer Filter by article ID from the articles endpoint. Example: 12
      * @queryParam category_id integer Filter by category ID. Example: 7
      * @queryParam subcategory_id integer Filter by subcategory ID. Example: 15
      * @queryParam store_id integer Filter by store ID. Example: 12
@@ -61,6 +64,21 @@ class ProductController extends AppBaseController
                 $sub->where('name', 'like', "%{$q}%")
                     ->orWhere('sku', 'like', "%{$q}%");
             });
+        }
+        if ($request->filled('article')) {
+            $article = trim($request->string('article')->toString());
+            $query->where('article', 'like', "%{$article}%");
+        }
+        if ($request->filled('article_id')) {
+            $articleName = Article::query()
+                ->whereKey((int) $request->get('article_id'))
+                ->value('name');
+
+            if ($articleName) {
+                $query->where('article', $articleName);
+            } else {
+                $query->whereRaw('1 = 0');
+            }
         }
         if ($request->filled('category_id')) {
             $query->where('category_id', (int) $request->get('category_id'));
@@ -152,9 +170,14 @@ class ProductController extends AppBaseController
             return $this->errorResponse('Product not found or not available', 404);
         }
 
-        // Get related products (same category, excluding current product)
+        // Keep related items aligned to the product's own subcategory whenever one exists.
         $relatedProducts = $this->appProductQuery()
             ->where('category_id', $product->category_id)
+            ->when(
+                $product->subcategory_id,
+                fn ($query) => $query->where('subcategory_id', $product->subcategory_id),
+                fn ($query) => $query->whereNull('subcategory_id'),
+            )
             ->where('id', '!=', $product->id)
             ->latest()
             ->limit(8)

@@ -271,8 +271,10 @@ class ShopManagementController extends Controller
     {
         $validated = $request->validate([
             'item_name' => ['required', 'string', 'max:180'],
+            'batch_lot_number' => ['nullable', 'string', 'max:120'],
             'purchase_price' => ['required', 'numeric', 'min:0'],
             'selling_price' => ['required', 'numeric', 'min:0'],
+            'quantity' => ['required', 'integer', 'min:0'],
         ]);
 
         $stockItem = StockItem::create([
@@ -291,8 +293,10 @@ class ShopManagementController extends Controller
     {
         $validated = $request->validate([
             'item_name' => ['required', 'string', 'max:180'],
+            'batch_lot_number' => ['nullable', 'string', 'max:120'],
             'purchase_price' => ['required', 'numeric', 'min:0'],
             'selling_price' => ['required', 'numeric', 'min:0'],
+            'quantity' => ['required', 'integer', 'min:0'],
         ]);
 
         $stockItem->update($validated);

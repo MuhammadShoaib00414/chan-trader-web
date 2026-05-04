@@ -167,6 +167,88 @@ it('returns correct original and discounted prices in app and product detail api
     expect($milestoneDetailResponse->json('data.discount_percent'))->toBe(10);
 });
 
+it('returns related products from the same subcategory only', function () {
+    $user = User::factory()->create();
+    $this->actingAs($user, 'api');
+
+    $store = Store::create([
+        'owner_id' => $user->id,
+        'name' => 'Related Store',
+        'slug' => 'related-store',
+        'status' => 'active',
+        'rating_avg' => 4.8,
+    ]);
+
+    $category = Category::create([
+        'name' => 'Power Category',
+        'slug' => 'power-category',
+        'is_active' => true,
+        'sort_order' => 1,
+    ]);
+
+    $mosfet = Subcategory::create([
+        'category_id' => $category->id,
+        'name' => 'MOSFET',
+        'slug' => 'mosfet',
+        'is_active' => true,
+        'sort_order' => 1,
+    ]);
+
+    $igbt = Subcategory::create([
+        'category_id' => $category->id,
+        'name' => 'IGBT',
+        'slug' => 'igbt',
+        'is_active' => true,
+        'sort_order' => 2,
+    ]);
+
+    $product = Product::create([
+        'store_id' => $store->id,
+        'category_id' => $category->id,
+        'subcategory_id' => $mosfet->id,
+        'name' => 'Main MOSFET Product',
+        'slug' => 'main-mosfet-product',
+        'sku' => 'REL-001',
+        'price' => 100,
+        'stock' => 8,
+        'is_published' => true,
+    ]);
+
+    $sameSubcategory = Product::create([
+        'store_id' => $store->id,
+        'category_id' => $category->id,
+        'subcategory_id' => $mosfet->id,
+        'name' => 'Same Subcategory Product',
+        'slug' => 'same-subcategory-product',
+        'sku' => 'REL-002',
+        'price' => 110,
+        'stock' => 5,
+        'is_published' => true,
+    ]);
+
+    Product::create([
+        'store_id' => $store->id,
+        'category_id' => $category->id,
+        'subcategory_id' => $igbt->id,
+        'name' => 'Different Subcategory Product',
+        'slug' => 'different-subcategory-product',
+        'sku' => 'REL-003',
+        'price' => 120,
+        'stock' => 5,
+        'is_published' => true,
+    ]);
+
+    $appDetailResponse = $this->get("/api/app/products/{$product->id}");
+    $appDetailResponse->assertOk();
+    expect($appDetailResponse->json('data.related_products'))->toHaveCount(1);
+    expect($appDetailResponse->json('data.related_products.0.id'))->toBe($sameSubcategory->id);
+
+    $milestoneDetailResponse = $this->get("/api/milestone2/products/{$product->id}");
+    $milestoneDetailResponse->assertOk();
+    expect($milestoneDetailResponse->json('data.related_products'))->toHaveCount(1);
+    expect($milestoneDetailResponse->json('data.related_products.0.id'))->toBe($sameSubcategory->id);
+});
+
 it('returns active articles for the app with category and subcategory filters', function () {
     $category = Category::create([
         'name' => 'Power Components',
@@ -241,4 +323,74 @@ it('returns active articles for the app with category and subcategory filters', 
     expect($response->json('data.items.0.name'))->toBe('Article 101');
     expect($response->json('data.items.0.subcategory.name'))->toBe('MOSFET');
     expect($response->json('data.items.0.category.name'))->toBe('Power Components');
+});
+
+it('filters app products by article name and article id', function () {
+    $user = User::factory()->create();
+
+    $store = Store::create([
+        'owner_id' => $user->id,
+        'name' => 'Article Filter Store',
+        'slug' => 'article-filter-store',
+        'status' => 'active',
+    ]);
+
+    $category = Category::create([
+        'name' => 'Article Filter Category',
+        'slug' => 'article-filter-category',
+        'is_active' => true,
+        'sort_order' => 1,
+    ]);
+
+    $subcategory = Subcategory::create([
+        'category_id' => $category->id,
+        'name' => 'Modules',
+        'slug' => 'modules',
+        'is_active' => true,
+        'sort_order' => 1,
+    ]);
+
+    $article = Article::create([
+        'subcategory_id' => $subcategory->id,
+        'name' => 'Article 104',
+        'slug' => 'article-104',
+        'sort_order' => 1,
+        'is_active' => true,
+    ]);
+
+    Product::create([
+        'store_id' => $store->id,
+        'category_id' => $category->id,
+        'subcategory_id' => $subcategory->id,
+        'name' => 'Matching Product',
+        'article' => 'Article 104',
+        'slug' => 'matching-product',
+        'sku' => 'ART-FILTER-001',
+        'price' => 100,
+        'stock' => 6,
+        'is_published' => true,
+    ]);
+
+    Product::create([
+        'store_id' => $store->id,
+        'category_id' => $category->id,
+        'subcategory_id' => $subcategory->id,
+        'name' => 'Non Matching Product',
+        'article' => 'Article 999',
+        'slug' => 'non-matching-product',
+        'sku' => 'ART-FILTER-002',
+        'price' => 100,
+        'stock' => 6,
+        'is_published' => true,
+    ]);
+
+    $byNameResponse = $this->get('/api/app/products?article=104');
+    $byNameResponse->assertOk();
+    expect($byNameResponse->json('data.items'))->toHaveCount(1);
+    expect($byNameResponse->json('data.items.0.article'))->toBe('Article 104');
+
+    $byIdResponse = $this->get("/api/app/products?article_id={$article->id}");
+    $byIdResponse->assertOk();
+    expect($byIdResponse->json('data.items'))->toHaveCount(1);
+    expect($byIdResponse->json('data.items.0.article'))->toBe('Article 104');
 });
