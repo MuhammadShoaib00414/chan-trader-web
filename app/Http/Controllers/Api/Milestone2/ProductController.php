@@ -78,30 +78,30 @@ class ProductController extends AppBaseController
             return $this->errorResponse('Product not found or not available', 404);
         }
 
-        $relatedProducts = Product::where('is_published', true)
-            ->with('brand:id,name')
-            ->where('category_id', $product->category_id)
-            ->when(
-                $product->subcategory_id,
-                fn ($query) => $query->where('subcategory_id', $product->subcategory_id),
-                fn ($query) => $query->whereNull('subcategory_id'),
-            )
-            ->where('id', '!=', $product->id)
-            ->limit(10)
-            ->get([
-                'id',
-                'name',
-                'article',
-                'deal_name',
-                'limited_discount_text',
-                'slug',
-                'price',
-                'discount_percent',
-                'feature_image',
-                'rating_avg',
-                'rating_count',
-                'brand_id',
-            ]);
+        $relatedProducts = collect();
+
+        if ($product->subcategory_id !== null) {
+            $relatedProducts = Product::where('is_published', true)
+                ->with('brand:id,name')
+                ->where('category_id', $product->category_id)
+                ->where('subcategory_id', $product->subcategory_id)
+                ->where('id', '!=', $product->id)
+                ->limit(10)
+                ->get([
+                    'id',
+                    'name',
+                    'article',
+                    'deal_name',
+                    'limited_discount_text',
+                    'slug',
+                    'price',
+                    'discount_percent',
+                    'feature_image',
+                    'rating_avg',
+                    'rating_count',
+                    'brand_id',
+                ]);
+        }
 
         return $this->successResponse([
             'id' => $product->id,

@@ -249,6 +249,56 @@ it('returns related products from the same subcategory only', function () {
     expect($milestoneDetailResponse->json('data.related_products.0.id'))->toBe($sameSubcategory->id);
 });
 
+it('does not mix category-level products into related products when the product has no subcategory', function () {
+    $user = User::factory()->create();
+    $this->actingAs($user, 'api');
+
+    $store = Store::create([
+        'owner_id' => $user->id,
+        'name' => 'No Subcategory Store',
+        'slug' => 'no-subcategory-store',
+        'status' => 'active',
+        'rating_avg' => 4.2,
+    ]);
+
+    $category = Category::create([
+        'name' => 'General Category',
+        'slug' => 'general-category',
+        'is_active' => true,
+        'sort_order' => 1,
+    ]);
+
+    $product = Product::create([
+        'store_id' => $store->id,
+        'category_id' => $category->id,
+        'name' => 'Main General Product',
+        'slug' => 'main-general-product',
+        'sku' => 'REL-NULL-001',
+        'price' => 90,
+        'stock' => 4,
+        'is_published' => true,
+    ]);
+
+    Product::create([
+        'store_id' => $store->id,
+        'category_id' => $category->id,
+        'name' => 'Another General Product',
+        'slug' => 'another-general-product',
+        'sku' => 'REL-NULL-002',
+        'price' => 95,
+        'stock' => 3,
+        'is_published' => true,
+    ]);
+
+    $appDetailResponse = $this->get("/api/app/products/{$product->id}");
+    $appDetailResponse->assertOk();
+    expect($appDetailResponse->json('data.related_products'))->toBeArray()->toHaveCount(0);
+
+    $milestoneDetailResponse = $this->get("/api/milestone2/products/{$product->id}");
+    $milestoneDetailResponse->assertOk();
+    expect($milestoneDetailResponse->json('data.related_products'))->toBeArray()->toHaveCount(0);
+});
+
 it('returns active articles for the app with category and subcategory filters', function () {
     $category = Category::create([
         'name' => 'Power Components',

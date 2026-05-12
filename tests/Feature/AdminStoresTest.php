@@ -49,15 +49,24 @@ it('allows admin to create update and delete stores through the admin api', func
         'owner_id' => $secondOwner->id,
         'name' => 'Managed Store Updated',
         'slug' => 'managed-store-updated',
+        'email' => 'updated-store@example.com',
+        'phone' => '03111222333',
+        'business_whatsapp_url' => 'https://wa.me/923111222333',
         'status' => 'suspended',
         'city' => 'Lahore',
+        'address' => 'Updated Market',
     ]);
 
     $updateResponse->assertOk()->assertJsonPath('success', true);
 
     expect($store->fresh()?->owner_id)->toBe($secondOwner->id);
     expect($store->fresh()?->name)->toBe('Managed Store Updated');
+    expect($store->fresh()?->email)->toBe('updated-store@example.com');
+    expect($store->fresh()?->phone)->toBe('03111222333');
+    expect($store->fresh()?->business_whatsapp_url)->toBe('https://wa.me/923111222333');
     expect($store->fresh()?->status)->toBe('suspended');
+    expect($store->fresh()?->city)->toBe('Lahore');
+    expect($store->fresh()?->address)->toBe('Updated Market');
 
     $deleteResponse = $this->delete("/api/admin/stores/{$store->id}");
     $deleteResponse->assertOk()->assertJsonPath('success', true);

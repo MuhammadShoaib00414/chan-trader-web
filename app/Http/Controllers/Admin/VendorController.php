@@ -108,6 +108,7 @@ class VendorController extends Controller
             'owner_id' => $vendor->id,
             'name' => $validated['store_name'],
             'slug' => $slug,
+            'email' => $validated['email'],
             'phone' => $validated['phone_number'] ?? null,
             'business_whatsapp_url' => $validated['business_whatsapp_url'] ?? null,
             'city' => $validated['city_district'] ?? null,
@@ -168,10 +169,10 @@ class VendorController extends Controller
             'first_name' => ['sometimes', 'string', 'max:255'],
             'last_name' => ['sometimes', 'string', 'max:255'],
             'email' => ['sometimes', 'email', Rule::unique('users', 'email')->ignore($vendor->id)],
-            'phone_number' => ['nullable', 'string', 'max:30'],
-            'shop_name' => ['nullable', 'string', 'max:150'],
-            'city_district' => ['nullable', 'string', 'max:150'],
-            'address' => ['nullable', 'string', 'max:255'],
+            'phone_number' => ['sometimes', 'nullable', 'string', 'max:30'],
+            'shop_name' => ['sometimes', 'nullable', 'string', 'max:150'],
+            'city_district' => ['sometimes', 'nullable', 'string', 'max:150'],
+            'address' => ['sometimes', 'nullable', 'string', 'max:255'],
             'status' => ['sometimes', 'integer', 'in:0,1'],
             'store_name' => ['sometimes', 'string', 'max:150'],
             'business_whatsapp_url' => ['sometimes', 'nullable', 'string', 'max:500', 'url'],
@@ -189,6 +190,9 @@ class VendorController extends Controller
             $storeData = [];
             if (isset($validated['store_name'])) {
                 $storeData['name'] = $validated['store_name'];
+            }
+            if (array_key_exists('email', $validated)) {
+                $storeData['email'] = $validated['email'];
             }
             if (array_key_exists('business_whatsapp_url', $validated)) {
                 $storeData['business_whatsapp_url'] = $validated['business_whatsapp_url'];

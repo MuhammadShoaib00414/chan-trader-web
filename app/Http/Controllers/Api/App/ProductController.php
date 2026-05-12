@@ -170,20 +170,19 @@ class ProductController extends AppBaseController
             return $this->errorResponse('Product not found or not available', 404);
         }
 
-        // Keep related items aligned to the product's own subcategory whenever one exists.
-        $relatedProducts = $this->appProductQuery()
-            ->where('category_id', $product->category_id)
-            ->when(
-                $product->subcategory_id,
-                fn ($query) => $query->where('subcategory_id', $product->subcategory_id),
-                fn ($query) => $query->whereNull('subcategory_id'),
-            )
-            ->where('id', '!=', $product->id)
-            ->latest()
-            ->limit(8)
-            ->get()
-            ->map(fn ($relatedProduct) => $this->formatAppProduct($relatedProduct))
-            ->values();
+        $relatedProducts = collect();
+
+        if ($product->subcategory_id !== null) {
+            $relatedProducts = $this->appProductQuery()
+                ->where('category_id', $product->category_id)
+                ->where('subcategory_id', $product->subcategory_id)
+                ->where('id', '!=', $product->id)
+                ->latest()
+                ->limit(8)
+                ->get()
+                ->map(fn ($relatedProduct) => $this->formatAppProduct($relatedProduct))
+                ->values();
+        }
 
         $productData = $this->formatAppProduct($product);
         $productData['related_products'] = $relatedProducts;
