@@ -97,6 +97,7 @@ Route::name('api.')->group(function () {
             Route::post('/logout', [LoginController::class, 'logout']);
             Route::delete('/account', [UserController::class, 'deleteAccount']);
             Route::post('/fcm-token', [FcmTokenController::class, 'store']);
+            
             Route::delete('/fcm-token', [FcmTokenController::class, 'destroy']);
 
             Route::get('/notifications/actions', [NotificationController::class, 'actions']);
