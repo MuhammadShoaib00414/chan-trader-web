@@ -189,6 +189,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'promotions.manage',
             'promotions.view',
             'view settings',
+            'edit settings',
         ]);
 
         // Editor - can manage catalog content

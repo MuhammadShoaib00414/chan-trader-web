@@ -14,7 +14,7 @@ import { dashboard } from '@/routes';
 import { type NavItem } from '@/types';
 import { Link, usePage } from '@inertiajs/react';
 import { SharedData } from '@/types';
-import { Folder, LayoutGrid, Shield, Users, Package, ShoppingCart, Truck, CreditCard, Boxes, Store, Tag, Layers, ReceiptText, WalletCards, Building2, FileText } from 'lucide-react';
+import { Folder, LayoutGrid, Shield, Users, Package, ShoppingCart, Truck, CreditCard, Boxes, Store, Tag, Layers, ReceiptText, WalletCards, Building2, FileText, Settings, FileStack, Palette } from 'lucide-react';
 import AppLogo from './app-logo';
 
 const mainNavItems: NavItem[] = [
@@ -113,6 +113,21 @@ const mainNavItems: NavItem[] = [
         href: '/admin/suppliers',
         icon: Building2,
     },
+    {
+        title: 'Settings',
+        href: '/admin/settings',
+        icon: Settings,
+    },
+    {
+        title: 'Theme',
+        href: '/admin/settings/theme',
+        icon: Palette,
+    },
+    {
+        title: 'Content Pages',
+        href: '/admin/content-pages',
+        icon: FileStack,
+    },
 ];
 
 const footerNavItems: NavItem[] = [
@@ -152,6 +167,9 @@ export function AppSidebar() {
         '/admin/shipments': ['shipments.view', 'view shipments'],
         '/admin/payments': ['payments.view', 'view payments'],
         '/admin/suppliers': ['view suppliers'],
+        '/admin/settings': ['view settings'],
+        '/admin/settings/theme': ['view settings'],
+        '/admin/content-pages': ['pages.manage'],
     };
     const filteredItems = mainNavItems.filter((item) => {
         const href = typeof item.href === 'string' ? item.href : item.href.url;

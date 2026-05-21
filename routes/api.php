@@ -1,25 +1,25 @@
 <?php
 
 use App\Http\Controllers\Admin\VendorController as AdminVendorController;
-use App\Http\Controllers\Api\App\BrandController as AppBrandController;
 use App\Http\Controllers\Api\App\ArticleController as AppArticleController;
+use App\Http\Controllers\Api\App\BrandController as AppBrandController;
 use App\Http\Controllers\Api\App\CategoryController as AppCategoryController;
+use App\Http\Controllers\Api\App\ContentPageController as AppContentPageController;
 use App\Http\Controllers\Api\App\ProductController as AppProductController;
 use App\Http\Controllers\Api\App\PromotionController as AppPromotionController;
 use App\Http\Controllers\Api\App\StoreController as AppStoreController;
 use App\Http\Controllers\Api\App\SubcategoryController as AppSubcategoryController;
 use App\Http\Controllers\Api\App\SuggestionsController as AppSuggestionsController;
+use App\Http\Controllers\Api\App\ThemeController as AppThemeController;
 use App\Http\Controllers\Api\App\VoiceSearchController as AppVoiceSearchController;
+use App\Http\Controllers\Api\Auth\FcmTokenController;
 use App\Http\Controllers\Api\Auth\LoginController;
 use App\Http\Controllers\Api\Auth\OtpController;
 use App\Http\Controllers\Api\Auth\PasswordController;
 use App\Http\Controllers\Api\Auth\ProfileController;
 use App\Http\Controllers\Api\Auth\RegisterController;
 use App\Http\Controllers\Api\Auth\SocialLoginController;
-use App\Http\Controllers\Api\SupplierController;
-use App\Http\Controllers\Api\SupplierDashboardController;
-use App\Http\Controllers\Api\SupplierPaymentController;
-use App\Http\Controllers\Api\SupplierTransactionController;
+use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\UserController;
 use Illuminate\Support\Facades\Route;
 
@@ -75,6 +75,11 @@ Route::name('api.')->group(function () {
         Route::get('/products/category-counts', [AppProductController::class, 'categoryCounts']);
         Route::get('/promotions', [AppPromotionController::class, 'index']);
 
+        Route::get('/content-pages', [AppContentPageController::class, 'index']);
+        Route::get('/content-pages/{slug}', [AppContentPageController::class, 'show']);
+
+        Route::get('/theme', [AppThemeController::class, 'show']);
+
         // Voice Search
         Route::post('/voice-search', [AppVoiceSearchController::class, 'search']);
     });
@@ -91,6 +96,11 @@ Route::name('api.')->group(function () {
             Route::post('/update-profile', [ProfileController::class, 'update']);
             Route::post('/logout', [LoginController::class, 'logout']);
             Route::delete('/account', [UserController::class, 'deleteAccount']);
+            Route::post('/fcm-token', [FcmTokenController::class, 'store']);
+            Route::delete('/fcm-token', [FcmTokenController::class, 'destroy']);
+
+            Route::get('/notifications/actions', [NotificationController::class, 'actions']);
+            Route::post('/notifications/send', [NotificationController::class, 'send']);
         });
 
         // ********************* Search Suggestions *********************

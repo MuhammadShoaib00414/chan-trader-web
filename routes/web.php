@@ -47,7 +47,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         $now = Carbon::now();
 
         $recentUsers = [];
-        if (!$isVendor) {
+        if (! $isVendor) {
             $recentUsers = \App\Models\User::latest()
                 ->take(5)
                 ->get(['id', 'first_name', 'last_name', 'email', 'created_at'])
@@ -317,6 +317,27 @@ Route::middleware(['auth', 'verified'])->group(function () {
                 ->middleware('permission:promotions.manage');
             Route::delete('promotions/{promotion}', [\App\Http\Controllers\Admin\PromotionController::class, 'destroy'])
                 ->middleware('permission:promotions.manage');
+
+            Route::get('settings', [\App\Http\Controllers\Admin\SettingController::class, 'index'])
+                ->middleware('permission:view settings');
+            Route::get('settings/{group}', [\App\Http\Controllers\Admin\SettingController::class, 'show'])
+                ->middleware('permission:view settings');
+            Route::patch('settings', [\App\Http\Controllers\Admin\SettingController::class, 'update'])
+                ->middleware('permission:edit settings');
+
+            Route::get('settings/theme', [\App\Http\Controllers\Admin\ThemeSettingsController::class, 'show'])
+                ->middleware('permission:view settings');
+            Route::post('settings/theme/preview', [\App\Http\Controllers\Admin\ThemeSettingsController::class, 'preview'])
+                ->middleware('permission:view settings');
+            Route::patch('settings/theme', [\App\Http\Controllers\Admin\ThemeSettingsController::class, 'update'])
+                ->middleware('permission:edit settings');
+
+            Route::get('content-pages', [\App\Http\Controllers\Admin\ContentPageController::class, 'index'])
+                ->middleware('permission:pages.manage');
+            Route::get('content-pages/{slug}', [\App\Http\Controllers\Admin\ContentPageController::class, 'show'])
+                ->middleware('permission:pages.manage');
+            Route::patch('content-pages/{slug}', [\App\Http\Controllers\Admin\ContentPageController::class, 'update'])
+                ->middleware('permission:pages.manage');
         });
     });
 
@@ -662,7 +683,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
                     [
                         'customer' => $order->user ? [
                             'id' => $order->user->id,
-                            'name' => trim(($order->user->first_name ?? '') . ' ' . ($order->user->last_name ?? '')),
+                            'name' => trim(($order->user->first_name ?? '').' '.($order->user->last_name ?? '')),
                             'email' => $order->user->email,
                             'phone' => $order->user->phone_number,
                         ] : null,
@@ -764,6 +785,43 @@ Route::middleware(['auth', 'verified'])->group(function () {
                 'products' => $products,
             ]);
         })->middleware('permission:promotions.manage|promotions.view');
+
+        Route::get('settings', function () {
+            return Inertia::render('admin/settings/index', [
+                'settings' => \App\Models\Setting::allGrouped(),
+            ]);
+        })->middleware('permission:view settings')->name('admin.settings.index');
+
+        Route::get('settings/theme', function () {
+            $theme = app(\App\Services\Theme\AppThemeService::class);
+
+            return Inertia::render('admin/settings/theme', [
+                'colorDefinitions' => $theme->adminColorDefinitions(),
+                'options' => [
+                    'dark_mode_enabled' => (bool) $theme->rawTheme()['dark_mode_enabled'],
+                    'font_family' => (string) $theme->rawTheme()['font_family'],
+                    'gradient_enabled' => (bool) $theme->rawTheme()['gradient_enabled'],
+                ],
+                'mobilePreview' => $theme->forMobile(),
+            ]);
+        })->middleware('permission:view settings')->name('admin.settings.theme');
+
+        Route::get('content-pages', function () {
+            $pages = collect(\App\Enums\ContentPageSlug::all())->map(function (\App\Enums\ContentPageSlug $slug) {
+                $page = \App\Models\ContentPage::findBySlug($slug);
+
+                return [
+                    'slug' => $slug->value,
+                    'title' => $page?->title ?? $slug->defaultTitle(),
+                    'is_published' => $page?->is_published ?? false,
+                    'updated_at' => $page?->updated_at?->toISOString(),
+                ];
+            })->values();
+
+            return Inertia::render('admin/content-pages/index', [
+                'pages' => $pages,
+            ]);
+        })->middleware('permission:pages.manage')->name('admin.content-pages.index');
 
         Route::post('suppliers', [\App\Http\Controllers\Api\SupplierController::class, 'store'])
             ->middleware('permission:create suppliers');

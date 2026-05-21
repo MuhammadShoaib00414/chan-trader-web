@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Enums\NotificationAction;
 use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Models\OrderStatusHistory;
+use App\Services\Notifications\AppNotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
@@ -50,7 +52,7 @@ class OrderController extends Controller
                 'per_page' => $orders->perPage(),
                 'current_page' => $orders->currentPage(),
                 'last_page' => $orders->lastPage(),
-            ]
+            ],
         ]);
     }
 
@@ -58,7 +60,7 @@ class OrderController extends Controller
     {
         return response()->json([
             'success' => true,
-            'data' => $order->load(['user', 'shippingAddress', 'items.product', 'payments'])
+            'data' => $order->load(['user', 'shippingAddress', 'items.product', 'payments']),
         ]);
     }
 
@@ -82,9 +84,16 @@ class OrderController extends Controller
             'created_at' => now(),
         ]);
 
-        if ($request->boolean('notify_customer')) {
-            // Placeholder for notification logic (Email/SMS)
-            // Log::info("Notification sent to customer for order {$order->code} status change to {$validated['to_status']}");
+        if ($request->boolean('notify_customer') && $order->user) {
+            app(AppNotificationService::class)->notify(
+                $order->user,
+                NotificationAction::OrderStatusUpdated,
+                [
+                    'message' => "Your order {$order->code} is now {$validated['to_status']}.",
+                    'order_code' => $order->code,
+                    'status' => $validated['to_status'],
+                ],
+            );
         }
 
         return response()->json(['success' => true, 'data' => $order->load('user')]);
@@ -97,8 +106,8 @@ class OrderController extends Controller
             'success' => true,
             'message' => 'Invoice generated',
             'data' => [
-                'url' => url("/api/admin/orders/{$order->id}/invoice/pdf")
-            ]
+                'url' => url("/api/admin/orders/{$order->id}/invoice/pdf"),
+            ],
         ]);
     }
 
@@ -107,7 +116,7 @@ class OrderController extends Controller
         // Placeholder for resending confirmation Email/SMS
         return response()->json([
             'success' => true,
-            'message' => 'Order confirmation resent successfully'
+            'message' => 'Order confirmation resent successfully',
         ]);
     }
 
@@ -116,7 +125,7 @@ class OrderController extends Controller
         if ($order->status === 'shipped' || $order->status === 'delivered') {
             return response()->json([
                 'success' => false,
-                'message' => 'Cannot cancel an order that has already been shipped or delivered.'
+                'message' => 'Cannot cancel an order that has already been shipped or delivered.',
             ], 400);
         }
 
@@ -131,7 +140,7 @@ class OrderController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Order cancelled successfully'
+            'message' => 'Order cancelled successfully',
         ]);
     }
 
