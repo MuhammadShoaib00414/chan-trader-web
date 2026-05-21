@@ -24,8 +24,9 @@ class ProductController extends AppBaseController
      *     "name": "1kΩ Carbon Film Resistor",
      *     "slug": "1k-ohm-carbon-film-resistor",
      *     "sku": "RES-1K-CF",
-     *     "price": 10.5,
-     *     "compare_at": 15.0,
+     *     "price": 15.0,
+     *     "discountedPrice": 10.5,
+     *     "discount_percent": 30,
      *     "stock": 100,
      *     "stock_status": "Available",
      *     "condition": "new",
@@ -77,20 +78,43 @@ class ProductController extends AppBaseController
             return $this->errorResponse('Product not found or not available', 404);
         }
 
-        $relatedProducts = Product::where('is_published', true)
-            ->where('category_id', $product->category_id)
-            ->where('id', '!=', $product->id)
-            ->limit(10)
-            ->get(['id', 'name', 'slug', 'price', 'feature_image', 'rating_avg', 'rating_count']);
+        $relatedProducts = collect();
+
+        if ($product->subcategory_id !== null) {
+            $relatedProducts = Product::where('is_published', true)
+                ->with('brand:id,name')
+                ->where('category_id', $product->category_id)
+                ->where('subcategory_id', $product->subcategory_id)
+                ->where('id', '!=', $product->id)
+                ->limit(10)
+                ->get([
+                    'id',
+                    'name',
+                    'article',
+                    'deal_name',
+                    'limited_discount_text',
+                    'slug',
+                    'price',
+                    'discount_percent',
+                    'feature_image',
+                    'rating_avg',
+                    'rating_count',
+                    'brand_id',
+                ]);
+        }
 
         return $this->successResponse([
             'id' => $product->id,
             'name' => $product->name,
+            'article' => $product->article,
+            'deal_name' => $product->deal_name,
+            'limited_discount_text' => $product->limited_discount_text,
             'slug' => $product->slug,
             'sku' => $product->sku,
             'condition' => $product->condition,
             'price' => $product->price,
-            'compare_at' => $product->compare_at,
+            'discountedPrice' => $product->discounted_price,
+            'discount_percent' => $product->discount_percent,
             'stock' => $product->stock,
             'stock_status' => $product->stock_status,
             'short_description' => $product->short_description,
@@ -116,6 +140,7 @@ class ProductController extends AppBaseController
             'category' => $product->category ? ['id' => $product->category->id, 'name' => $product->category->name] : null,
             'subcategory' => $product->subcategory ? ['id' => $product->subcategory->id, 'name' => $product->subcategory->name] : null,
             'brand' => $product->brand ? ['id' => $product->brand->id, 'name' => $product->brand->name] : null,
+            'brand_name' => $product->brand?->name,
             'reviews' => $product->reviews->map(function ($review) {
                 return [
                     'id' => $review->id,
@@ -133,9 +158,15 @@ class ProductController extends AppBaseController
                 return [
                     'id' => $p->id,
                     'name' => $p->name,
+                    'article' => $p->article,
+                    'deal_name' => $p->deal_name,
+                    'limited_discount_text' => $p->limited_discount_text,
                     'slug' => $p->slug,
                     'price' => $p->price,
+                    'discountedPrice' => $p->discounted_price,
+                    'discount_percent' => $p->discount_percent,
                     'feature_image' => $p->feature_image,
+                    'brand_name' => $p->brand?->name,
                     'rating_avg' => $p->rating_avg,
                     'rating_count' => $p->rating_count,
                 ];

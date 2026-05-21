@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useMemo, useState } from 'react';
 import { ToastStack } from '@/components/ui/toast-stack';
-import { requestJson } from '@/lib/http';
+import { patchForm, postForm, requestJson } from '@/lib/http';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -28,6 +28,8 @@ type VendorItem = {
     slug: string;
     status: string;
     business_whatsapp_url?: string | null;
+    logo?: string | null;
+    banner?: string | null;
   } | null;
 };
 
@@ -50,6 +52,8 @@ export default function VendorsIndex({ vendors }: VendorsPageProps) {
   const [address, setAddress] = useState('');
   const [businessWhatsappUrl, setBusinessWhatsappUrl] = useState('');
   const [statusValue, setStatusValue] = useState<'1' | '0'>('1');
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [bannerFile, setBannerFile] = useState<File | null>(null);
 
   const [openReset, setOpenReset] = useState(false);
   const [resetVendorId, setResetVendorId] = useState<number | null>(null);
@@ -71,6 +75,10 @@ export default function VendorsIndex({ vendors }: VendorsPageProps) {
   const [editCity, setEditCity] = useState('');
   const [editAddress, setEditAddress] = useState('');
   const [editBusinessWhatsapp, setEditBusinessWhatsapp] = useState('');
+  const [editLogoFile, setEditLogoFile] = useState<File | null>(null);
+  const [editBannerFile, setEditBannerFile] = useState<File | null>(null);
+  const [removeLogo, setRemoveLogo] = useState(false);
+  const [removeBanner, setRemoveBanner] = useState(false);
 
   const [toasts, setToasts] = useState<Array<{ id: number; title: string; variant: 'success' | 'error' }>>([]);
   const dismissToast = (id: number) => setToasts((ts) => ts.filter((t) => t.id !== id));
@@ -156,26 +164,29 @@ export default function VendorsIndex({ vendors }: VendorsPageProps) {
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setProcessing(true);
-    const res = await requestJson('POST', '/api/admin/vendors', {
-      first_name: firstName,
-      last_name: lastName,
-      email,
-      password,
-      password_confirmation: passwordConfirmation,
-      store_name: storeName,
-      shop_name: shopName || storeName,
-      phone_number: mobileNumber || null,
-      business_whatsapp_url: businessWhatsappUrl.trim() || null,
-      city_district: locationCity || null,
-      address: address || null,
-      status: Number(statusValue),
-    });
+    const fd = new FormData();
+    fd.append('first_name', firstName);
+    fd.append('last_name', lastName);
+    fd.append('email', email);
+    fd.append('password', password);
+    fd.append('password_confirmation', passwordConfirmation);
+    fd.append('store_name', storeName);
+    fd.append('shop_name', shopName || storeName);
+    if (mobileNumber) fd.append('phone_number', mobileNumber);
+    if (businessWhatsappUrl.trim()) fd.append('business_whatsapp_url', businessWhatsappUrl.trim());
+    if (locationCity) fd.append('city_district', locationCity);
+    if (address) fd.append('address', address);
+    fd.append('status', statusValue);
+    if (logoFile) fd.append('logo', logoFile);
+    if (bannerFile) fd.append('banner', bannerFile);
+    const res = await postForm('/api/admin/vendors', fd);
     setProcessing(false);
     if (res.ok) {
       setOpen(false);
       setFirstName(''); setLastName(''); setEmail(''); setPassword(''); setPasswordConfirmation('');
       setStoreName(''); setShopName(''); setMobileNumber(''); setLocationCity(''); setAddress('');
       setBusinessWhatsappUrl('');
+      setLogoFile(null); setBannerFile(null);
       setStatusValue('1');
       showToast('Vendor created.', 'success');
       router.reload({ only: ['vendors'] });
@@ -263,23 +274,31 @@ export default function VendorsIndex({ vendors }: VendorsPageProps) {
     setEditCity(v.city_district ?? '');
     setEditAddress(v.address ?? '');
     setEditBusinessWhatsapp(v.store?.business_whatsapp_url ?? '');
+    setEditLogoFile(null);
+    setEditBannerFile(null);
+    setRemoveLogo(false);
+    setRemoveBanner(false);
     setEditOpen(true);
   };
 
   const submitEditVendor = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editVendor) return;
-    const res = await requestJson('PATCH', `/api/admin/vendors/${editVendor.id}`, {
-      first_name: editFirst,
-      last_name: editLast,
-      email: editEmail,
-      phone_number: editPhone || null,
-      status: editStatus,
-      shop_name: editShopName || null,
-      city_district: editCity || null,
-      address: editAddress || null,
-      business_whatsapp_url: editBusinessWhatsapp.trim() || null,
-    });
+    const fd = new FormData();
+    fd.append('first_name', editFirst);
+    fd.append('last_name', editLast);
+    fd.append('email', editEmail);
+    if (editPhone) fd.append('phone_number', editPhone);
+    fd.append('status', String(editStatus));
+    if (editShopName) fd.append('shop_name', editShopName);
+    if (editCity) fd.append('city_district', editCity);
+    if (editAddress) fd.append('address', editAddress);
+    if (editBusinessWhatsapp.trim()) fd.append('business_whatsapp_url', editBusinessWhatsapp.trim());
+    if (editLogoFile) fd.append('logo', editLogoFile);
+    if (editBannerFile) fd.append('banner', editBannerFile);
+    if (removeLogo) fd.append('remove_logo', '1');
+    if (removeBanner) fd.append('remove_banner', '1');
+    const res = await patchForm(`/api/admin/vendors/${editVendor.id}`, fd);
     if (res.ok) {
       setEditOpen(false);
       showToast('Vendor updated.', 'success');
@@ -342,6 +361,16 @@ export default function VendorsIndex({ vendors }: VendorsPageProps) {
                       <Input placeholder="Store name" value={storeName} onChange={(e) => setStoreName(e.target.value)} />
                     </div>
                     <Input placeholder="Address" value={address} onChange={(e) => setAddress(e.target.value)} />
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="mb-1 block text-sm">Store logo</label>
+                        <Input type="file" accept="image/*" onChange={(e) => setLogoFile(e.target.files?.[0] ?? null)} />
+                      </div>
+                      <div>
+                        <label className="mb-1 block text-sm">Store banner</label>
+                        <Input type="file" accept="image/*" onChange={(e) => setBannerFile(e.target.files?.[0] ?? null)} />
+                      </div>
+                    </div>
                     <div>
                       <label className="mb-1 block text-sm">Status</label>
                       <select
@@ -609,6 +638,16 @@ export default function VendorsIndex({ vendors }: VendorsPageProps) {
                   </div>
                 </div>
                 <Input placeholder="Address" value={editAddress} onChange={(e) => setEditAddress(e.target.value)} />
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="mb-1 block text-sm">New logo</label>
+                    <Input type="file" accept="image/*" onChange={(e) => setEditLogoFile(e.target.files?.[0] ?? null)} />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-sm">New banner</label>
+                    <Input type="file" accept="image/*" onChange={(e) => setEditBannerFile(e.target.files?.[0] ?? null)} />
+                  </div>
+                </div>
               </div>
               <div className="flex items-center justify-end gap-2">
                 <Button type="button" variant="outline" onClick={() => setEditOpen(false)}>Cancel</Button>

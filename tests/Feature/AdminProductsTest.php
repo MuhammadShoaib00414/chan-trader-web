@@ -1,20 +1,24 @@
 <?php
 
+use App\Models\Article;
 use App\Models\Brand;
 use App\Models\Category;
 use App\Models\Product;
+use App\Models\ProductImage;
 use App\Models\Store;
 use App\Models\Subcategory;
 use App\Models\User;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Spatie\Permission\Models\Role;
 
 uses(RefreshDatabase::class);
 
 it('allows admin to create a product', function () {
     $this->seed(RolesAndPermissionsSeeder::class);
+    Storage::fake('public');
 
     $admin = User::factory()->create();
     $admin->assignRole(Role::findByName('admin'));
@@ -40,11 +44,31 @@ it('allows admin to create a product', function () {
         'sort_order' => 1,
     ]);
 
+    $subcategory = Subcategory::create([
+        'category_id' => $category->id,
+        'name' => 'Power Parts',
+        'slug' => 'power-parts',
+        'is_active' => true,
+        'sort_order' => 1,
+    ]);
+
+    Article::create([
+        'subcategory_id' => $subcategory->id,
+        'name' => 'Article 12',
+        'slug' => 'article-12',
+        'sort_order' => 1,
+        'is_active' => true,
+    ]);
+
     $payload = [
         'store_id' => $store->id,
         'category_id' => $category->id,
+        'subcategory_id' => $subcategory->id,
         'brand_id' => $brand->id,
         'name' => 'Test Product',
+        'article' => 'Article 12',
+        'deal_name' => 'Eid Offer',
+        'limited_discount_text' => '2 days',
         'slug' => 'test-product',
         'sku' => 'SKU-TEST-0001',
         'price' => 10.50,
@@ -59,6 +83,19 @@ it('allows admin to create a product', function () {
     expect(Product::find($id))->not->toBeNull();
     expect(Product::find($id)?->store_id)->toBe($store->id);
     expect(Product::find($id)?->feature_image)->toContain('/storage/products/feature/');
+    expect(Product::find($id)?->article)->toBe('Article 12');
+    expect(Product::find($id)?->deal_name)->toBe('Eid Offer');
+    expect(Product::find($id)?->limited_discount_text)->toBe('2 days');
+
+    $storedFeatureImage = ltrim(
+        str_replace('/storage/', '', (string) Product::find($id)?->feature_image),
+        '/',
+    );
+    Storage::disk('public')->assertExists($storedFeatureImage);
+
+    $dimensions = getimagesizefromstring(Storage::disk('public')->get($storedFeatureImage));
+    expect($dimensions[0] ?? null)->toBe(400);
+    expect($dimensions[1] ?? null)->toBe(264);
 });
 
 it('rejects creating a product with a subcategory from another category', function () {
@@ -106,7 +143,7 @@ it('rejects creating a product with a subcategory from another category', functi
         'price' => 10.50,
     ]);
 
-    $res->assertSessionHasErrors(['subcategory_id']);
+    $res->assertStatus(422)->assertJsonValidationErrors(['subcategory_id']);
     expect(Product::where('slug', 'invalid-product')->exists())->toBeFalse();
 });
 
@@ -162,4 +199,196 @@ it('clears a mismatched subcategory when the category changes', function () {
     $res->assertOk();
     expect($product->fresh()?->category_id)->toBe($newCategory->id);
     expect($product->fresh()?->subcategory_id)->toBeNull();
+});
+
+it('rejects a product article that does not belong to the selected subcategory', function () {
+    $this->seed(RolesAndPermissionsSeeder::class);
+
+    $admin = User::factory()->create();
+    $admin->assignRole(Role::findByName('admin'));
+    $this->actingAs($admin);
+
+    $store = Store::create([
+        'owner_id' => $admin->id,
+        'name' => 'Article Store',
+        'slug' => 'article-store',
+        'status' => 'active',
+    ]);
+
+    $category = Category::create([
+        'name' => 'Article Category',
+        'slug' => 'article-category',
+        'is_active' => true,
+        'sort_order' => 1,
+    ]);
+
+    $subcategory = Subcategory::create([
+        'category_id' => $category->id,
+        'name' => 'MOSFET',
+        'slug' => 'mosfet',
+        'is_active' => true,
+        'sort_order' => 1,
+    ]);
+
+    Article::create([
+        'subcategory_id' => $subcategory->id,
+        'name' => 'Article 101',
+        'slug' => 'article-101',
+        'sort_order' => 1,
+        'is_active' => true,
+    ]);
+
+    $response = $this->post('/api/admin/products', [
+        'store_id' => $store->id,
+        'category_id' => $category->id,
+        'subcategory_id' => $subcategory->id,
+        'name' => 'Invalid Article Product',
+        'article' => 'Article 999',
+        'slug' => 'invalid-article-product',
+        'sku' => 'SKU-TEST-0099',
+        'price' => 25,
+    ]);
+
+    $response
+        ->assertStatus(422)
+        ->assertJsonValidationErrors(['article']);
+});
+
+it('deletes a gallery image and promotes the next one to primary', function () {
+    $this->seed(RolesAndPermissionsSeeder::class);
+    Storage::fake('public');
+
+    $admin = User::factory()->create();
+    $admin->assignRole(Role::findByName('admin'));
+    $this->actingAs($admin);
+
+    $store = Store::create([
+        'owner_id' => $admin->id,
+        'name' => 'Gallery Store',
+        'slug' => 'gallery-store',
+        'status' => 'active',
+    ]);
+
+    $category = Category::create([
+        'name' => 'Gallery Category',
+        'slug' => 'gallery-category',
+        'is_active' => true,
+        'sort_order' => 1,
+    ]);
+
+    $product = Product::create([
+        'store_id' => $store->id,
+        'category_id' => $category->id,
+        'name' => 'Gallery Product',
+        'slug' => 'gallery-product',
+        'sku' => 'SKU-GALLERY-0001',
+        'price' => 100,
+    ]);
+
+    Storage::disk('public')->put("products/{$product->id}/gallery/first.jpg", 'first-image');
+    Storage::disk('public')->put("products/{$product->id}/gallery/second.jpg", 'second-image');
+
+    $firstImage = ProductImage::create([
+        'product_id' => $product->id,
+        'path' => "/storage/products/{$product->id}/gallery/first.jpg",
+        'sort_order' => 1,
+        'is_primary' => true,
+    ]);
+
+    $secondImage = ProductImage::create([
+        'product_id' => $product->id,
+        'path' => "/storage/products/{$product->id}/gallery/second.jpg",
+        'sort_order' => 2,
+        'is_primary' => false,
+    ]);
+
+    $response = $this->delete("/api/admin/products/{$product->id}/images/{$firstImage->id}");
+
+    $response->assertOk()->assertJsonPath('success', true);
+    expect(ProductImage::find($firstImage->id))->toBeNull();
+    expect((bool) $secondImage->fresh()?->is_primary)->toBeTrue();
+    Storage::disk('public')->assertMissing("products/{$product->id}/gallery/first.jpg");
+    Storage::disk('public')->assertExists("products/{$product->id}/gallery/second.jpg");
+});
+
+it('normalizes a lower compare_at value into a discount price when creating a product', function () {
+    $this->seed(RolesAndPermissionsSeeder::class);
+
+    $admin = User::factory()->create();
+    $admin->assignRole(Role::findByName('admin'));
+    $this->actingAs($admin);
+
+    $store = Store::create([
+        'owner_id' => $admin->id,
+        'name' => 'Discount Store',
+        'slug' => 'discount-store',
+        'status' => 'active',
+    ]);
+
+    $category = Category::create([
+        'name' => 'Discount Category',
+        'slug' => 'discount-category',
+        'is_active' => true,
+        'sort_order' => 1,
+    ]);
+
+    $res = $this->post('/api/admin/products', [
+        'store_id' => $store->id,
+        'category_id' => $category->id,
+        'name' => 'Discount Product',
+        'slug' => 'discount-product',
+        'sku' => 'SKU-DISCOUNT-0001',
+        'price' => 100,
+        'compare_at' => 80,
+    ]);
+
+    $res->assertCreated();
+
+    $product = Product::where('slug', 'discount-product')->firstOrFail();
+
+    expect($product->price)->toBe(100.0);
+    expect($product->compare_at)->toBeNull();
+    expect($product->discounted_price)->toBe(80.0);
+    expect($product->discount_percent)->toBe(20);
+});
+
+it('normalizes an original price with discount percent into the final discounted price', function () {
+    $this->seed(RolesAndPermissionsSeeder::class);
+
+    $admin = User::factory()->create();
+    $admin->assignRole(Role::findByName('admin'));
+    $this->actingAs($admin);
+
+    $store = Store::create([
+        'owner_id' => $admin->id,
+        'name' => 'Percent Discount Store',
+        'slug' => 'percent-discount-store',
+        'status' => 'active',
+    ]);
+
+    $category = Category::create([
+        'name' => 'Percent Discount Category',
+        'slug' => 'percent-discount-category',
+        'is_active' => true,
+        'sort_order' => 1,
+    ]);
+
+    $res = $this->post('/api/admin/products', [
+        'store_id' => $store->id,
+        'category_id' => $category->id,
+        'name' => 'Ten Percent Product',
+        'slug' => 'ten-percent-product',
+        'sku' => 'SKU-DISCOUNT-0010',
+        'price' => 100,
+        'discount_percent' => 10,
+    ]);
+
+    $res->assertCreated();
+
+    $product = Product::where('slug', 'ten-percent-product')->firstOrFail();
+
+    expect($product->price)->toBe(100.0);
+    expect($product->compare_at)->toBeNull();
+    expect($product->discounted_price)->toBe(90.0);
+    expect($product->discount_percent)->toBe(10);
 });

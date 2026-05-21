@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\App;
 
 use App\Http\Controllers\AppBaseController;
+use App\Models\Article;
 use App\Models\Product;
 use App\Models\Store;
 use Illuminate\Http\Request;
@@ -15,6 +16,8 @@ class ProductController extends AppBaseController
      * @group APP APIs
      *
      * @queryParam q string Search by product name or SKU (partial match). Example: resistor
+     * @queryParam article string Filter by article name (partial match). Example: article 101
+     * @queryParam article_id integer Filter by article ID from the articles endpoint. Example: 12
      * @queryParam category_id integer Filter by category ID. Example: 7
      * @queryParam subcategory_id integer Filter by subcategory ID. Example: 15
      * @queryParam store_id integer Filter by store ID. Example: 12
@@ -61,6 +64,21 @@ class ProductController extends AppBaseController
                 $sub->where('name', 'like', "%{$q}%")
                     ->orWhere('sku', 'like', "%{$q}%");
             });
+        }
+        if ($request->filled('article')) {
+            $article = trim($request->string('article')->toString());
+            $query->where('article', 'like', "%{$article}%");
+        }
+        if ($request->filled('article_id')) {
+            $articleName = Article::query()
+                ->whereKey((int) $request->get('article_id'))
+                ->value('name');
+
+            if ($articleName) {
+                $query->where('article', $articleName);
+            } else {
+                $query->whereRaw('1 = 0');
+            }
         }
         if ($request->filled('category_id')) {
             $query->where('category_id', (int) $request->get('category_id'));
@@ -116,8 +134,9 @@ class ProductController extends AppBaseController
      *     "name": "1kΩ Carbon Film Resistor",
      *     "slug": "1k-ohm-carbon-film-resistor",
      *     "sku": "RES-1K-CF",
-     *     "price": 10.5,
-     *     "compare_at": 15.0,
+     *     "price": 15.0,
+     *     "discountedPrice": 10.5,
+     *     "discount_percent": 30,
      *     "stock": 100,
      *     "condition": "new",
      *     "short_description": "High quality carbon film resistor",
@@ -151,15 +170,19 @@ class ProductController extends AppBaseController
             return $this->errorResponse('Product not found or not available', 404);
         }
 
-        // Get related products (same category, excluding current product)
-        $relatedProducts = $this->appProductQuery()
-            ->where('category_id', $product->category_id)
-            ->where('id', '!=', $product->id)
-            ->latest()
-            ->limit(8)
-            ->get()
-            ->map(fn ($relatedProduct) => $this->formatAppProduct($relatedProduct))
-            ->values();
+        $relatedProducts = collect();
+
+        if ($product->subcategory_id !== null) {
+            $relatedProducts = $this->appProductQuery()
+                ->where('category_id', $product->category_id)
+                ->where('subcategory_id', $product->subcategory_id)
+                ->where('id', '!=', $product->id)
+                ->latest()
+                ->limit(8)
+                ->get()
+                ->map(fn ($relatedProduct) => $this->formatAppProduct($relatedProduct))
+                ->values();
+        }
 
         $productData = $this->formatAppProduct($product);
         $productData['related_products'] = $relatedProducts;
@@ -265,11 +288,13 @@ class ProductController extends AppBaseController
         return [
             'id' => $product->id,
             'name' => $product->name,
+            'article' => $product->article,
+            'deal_name' => $product->deal_name,
+            'limited_discount_text' => $product->limited_discount_text,
             'slug' => $product->slug,
             'sku' => $product->sku,
-            'condition' => $product->condition,
+            'condition' => $product->condition ?: 'New',
             'price' => $product->price,
-            'compare_at' => $product->compare_at,
             'discountedPrice' => $product->discounted_price,
             'discount_percent' => $product->discount_percent,
             'stock' => $product->stock,
@@ -320,6 +345,7 @@ class ProductController extends AppBaseController
                 'name' => $product->brand->name,
                 'slug' => $product->brand->slug,
             ] : null,
+            'brand_name' => $product->brand?->name,
             'store_name' => $product->store?->name,
             'reviews' => $product->reviews->map(fn ($review) => [
                 'id' => $review->id,

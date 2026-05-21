@@ -30,8 +30,8 @@ it('returns only available wishlist items and removes stale ones', function () {
         'name' => 'Published Wishlist Product',
         'slug' => 'published-wishlist-product',
         'sku' => 'WISHLIST-1',
-        'price' => 90,
-        'compare_at' => 120,
+        'price' => 100,
+        'discount_percent' => 10,
         'stock' => 3,
         'is_published' => true,
     ]);
@@ -68,8 +68,8 @@ it('returns only available wishlist items and removes stale ones', function () {
         'name',
         'slug',
         'price',
-        'compare_at',
         'discountedPrice',
+        'discount_percent',
         'feature_image',
         'store',
     ]);

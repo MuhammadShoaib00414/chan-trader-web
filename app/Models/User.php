@@ -47,6 +47,7 @@ class User extends Authenticatable implements MustVerifyEmail
         'shop_name',
         'city_district',
         'address',
+        'fcm_token',
     ];
 
     /**

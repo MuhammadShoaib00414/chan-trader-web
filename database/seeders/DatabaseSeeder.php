@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Models\Article;
 use App\Models\Brand;
 use App\Models\Category;
 use App\Models\Product;
@@ -22,6 +23,7 @@ class DatabaseSeeder extends Seeder
         // Truncate tables to remove old data
         DB::statement('SET FOREIGN_KEY_CHECKS=0;');
         Product::truncate();
+        Article::truncate();
         Subcategory::truncate();
         Category::truncate();
         Brand::truncate();
@@ -29,6 +31,7 @@ class DatabaseSeeder extends Seeder
 
         // Seed roles and permissions first
         $this->call(RolesAndPermissionsSeeder::class);
+        $this->call(ShopManagementUserSeeder::class);
 
         // Create Super Admin user (full access)
         $superAdmin = User::firstOrCreate(
@@ -114,10 +117,12 @@ class DatabaseSeeder extends Seeder
         $this->call([
             CategorySeeder::class,
             SubcategorySeeder::class,
+            ArticleSeeder::class,
             BrandSeeder::class,
             ProductsSeeder::class,
             VendorProductsSeeder::class,
             SupplierSeeder::class,
+            ContentPageSeeder::class,
         ]);
 
         $this->command->info('Inventory system seeded successfully!');

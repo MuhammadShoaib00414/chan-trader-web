@@ -157,6 +157,16 @@ class RoleController extends Controller
             'create categories' => ['categories.manage'],
             'edit categories' => ['categories.manage'],
             'delete categories' => ['categories.manage'],
+            // Subcategories
+            'view subcategories' => ['subcategories.manage'],
+            'create subcategories' => ['subcategories.manage'],
+            'edit subcategories' => ['subcategories.manage'],
+            'delete subcategories' => ['subcategories.manage'],
+            // Articles
+            'view articles' => ['articles.manage'],
+            'create articles' => ['articles.manage'],
+            'edit articles' => ['articles.manage'],
+            'delete articles' => ['articles.manage'],
             // Brands
             'view brands' => ['brands.manage'],
             'create brands' => ['brands.manage'],

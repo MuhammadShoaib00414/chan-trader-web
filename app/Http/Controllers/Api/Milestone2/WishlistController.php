@@ -66,8 +66,8 @@ class WishlistController extends AppBaseController
                     'name' => $product->name,
                     'slug' => $product->slug,
                     'price' => $product->price,
-                    'compare_at' => $product->compare_at,
                     'discountedPrice' => $product->discounted_price,
+                    'discount_percent' => $product->discount_percent,
                     'feature_image' => $product->feature_image,
                     'is_published' => $product->is_published,
                     'store' => $product->store ? [

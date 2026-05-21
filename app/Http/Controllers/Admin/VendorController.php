@@ -5,8 +5,10 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Store;
 use App\Models\User;
+use App\Support\ResizedImageStore;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
@@ -87,6 +89,8 @@ class VendorController extends Controller
             'address' => ['nullable', 'string', 'max:255'],
             'status' => ['nullable', 'integer', 'in:0,1'],
             'store_slug' => ['nullable', 'string', 'max:160', 'unique:stores,slug'],
+            'logo' => ['nullable', 'file', 'mimes:jpg,jpeg,png,webp,gif', 'max:5120'],
+            'banner' => ['nullable', 'file', 'mimes:jpg,jpeg,png,webp,gif', 'max:5120'],
         ]);
 
         $vendor = User::create([
@@ -108,12 +112,15 @@ class VendorController extends Controller
             'owner_id' => $vendor->id,
             'name' => $validated['store_name'],
             'slug' => $slug,
+            'email' => $validated['email'],
             'phone' => $validated['phone_number'] ?? null,
             'business_whatsapp_url' => $validated['business_whatsapp_url'] ?? null,
             'city' => $validated['city_district'] ?? null,
             'address' => $validated['address'] ?? null,
             'status' => 'active',
         ]);
+
+        $this->syncStoreImages($request, $store);
 
         return response()->json([
             'success' => true,
@@ -168,13 +175,17 @@ class VendorController extends Controller
             'first_name' => ['sometimes', 'string', 'max:255'],
             'last_name' => ['sometimes', 'string', 'max:255'],
             'email' => ['sometimes', 'email', Rule::unique('users', 'email')->ignore($vendor->id)],
-            'phone_number' => ['nullable', 'string', 'max:30'],
-            'shop_name' => ['nullable', 'string', 'max:150'],
-            'city_district' => ['nullable', 'string', 'max:150'],
-            'address' => ['nullable', 'string', 'max:255'],
+            'phone_number' => ['sometimes', 'nullable', 'string', 'max:30'],
+            'shop_name' => ['sometimes', 'nullable', 'string', 'max:150'],
+            'city_district' => ['sometimes', 'nullable', 'string', 'max:150'],
+            'address' => ['sometimes', 'nullable', 'string', 'max:255'],
             'status' => ['sometimes', 'integer', 'in:0,1'],
             'store_name' => ['sometimes', 'string', 'max:150'],
             'business_whatsapp_url' => ['sometimes', 'nullable', 'string', 'max:500', 'url'],
+            'logo' => ['sometimes', 'nullable', 'file', 'mimes:jpg,jpeg,png,webp,gif', 'max:5120'],
+            'banner' => ['sometimes', 'nullable', 'file', 'mimes:jpg,jpeg,png,webp,gif', 'max:5120'],
+            'remove_logo' => ['sometimes', 'boolean'],
+            'remove_banner' => ['sometimes', 'boolean'],
         ]);
 
         $userKeys = ['first_name', 'last_name', 'email', 'phone_number', 'shop_name', 'city_district', 'address', 'status'];
@@ -189,6 +200,9 @@ class VendorController extends Controller
             $storeData = [];
             if (isset($validated['store_name'])) {
                 $storeData['name'] = $validated['store_name'];
+            }
+            if (array_key_exists('email', $validated)) {
+                $storeData['email'] = $validated['email'];
             }
             if (array_key_exists('business_whatsapp_url', $validated)) {
                 $storeData['business_whatsapp_url'] = $validated['business_whatsapp_url'];
@@ -205,6 +219,8 @@ class VendorController extends Controller
             if ($storeData !== []) {
                 $store->update($storeData);
             }
+
+            $this->syncStoreImages($request, $store);
         }
 
         $vendor->refresh();
@@ -236,7 +252,7 @@ class VendorController extends Controller
     private function vendorListItemsForUser(User $v): array
     {
         $store = Store::where('owner_id', $v->id)->orderBy('id')->first([
-            'id', 'name', 'slug', 'status', 'business_whatsapp_url',
+            'id', 'name', 'slug', 'status', 'business_whatsapp_url', 'logo', 'banner',
         ]);
 
         return [
@@ -254,7 +270,56 @@ class VendorController extends Controller
                 'slug' => $store->slug,
                 'status' => $store->status,
                 'business_whatsapp_url' => $store->business_whatsapp_url,
+                'logo' => $store->logo,
+                'banner' => $store->banner,
             ] : null,
         ];
+    }
+
+    private function syncStoreImages(Request $request, Store $store): void
+    {
+        $updates = [];
+
+        if ($request->boolean('remove_logo') && $store->logo) {
+            ResizedImageStore::deletePublicPath($store->logo);
+            $updates['logo'] = null;
+        }
+
+        if ($request->boolean('remove_banner') && $store->banner) {
+            ResizedImageStore::deletePublicPath($store->banner);
+            $updates['banner'] = null;
+        }
+
+        if ($request->hasFile('logo')) {
+            if ($store->logo) {
+                ResizedImageStore::deletePublicPath($store->logo);
+            }
+            $updates['logo'] = $this->storeImage($request->file('logo'), $store, 'logo');
+        }
+
+        if ($request->hasFile('banner')) {
+            if ($store->banner) {
+                ResizedImageStore::deletePublicPath($store->banner);
+            }
+            $updates['banner'] = $this->storeImage($request->file('banner'), $store, 'banner');
+        }
+
+        if ($updates !== []) {
+            $store->update($updates);
+        }
+    }
+
+    private function storeImage(UploadedFile $file, Store $store, string $type): string
+    {
+        [$width, $height] = $type === 'logo' ? [400, 400] : [1200, 400];
+        $path = ResizedImageStore::store(
+            $file,
+            "stores/{$store->id}/{$type}",
+            'public',
+            $width,
+            $height,
+        );
+
+        return ResizedImageStore::publicUrl($path);
     }
 }

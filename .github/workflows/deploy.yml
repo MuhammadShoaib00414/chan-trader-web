@@ -1,0 +1,247 @@
+name: CI/CD → Deploy to Production
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      skip_tests:
+        description: 'Skip tests and deploy directly'
+        required: false
+        default: 'false'
+        type: boolean
+
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
+
+env:
+  PHP_VERSION: '8.3'
+  NODE_VERSION: '20'
+
+# ─────────────────────────────────────────────────────────────────────────────
+# JOB 1 — Tests
+# ─────────────────────────────────────────────────────────────────────────────
+jobs:
+  test:
+    name: PHP Tests
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.skip_tests != 'true' }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP ${{ env.PHP_VERSION }}
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ env.PHP_VERSION }}
+          extensions: pdo, pdo_sqlite, sqlite3, mbstring, xml, ctype, json, openssl
+          coverage: none
+          tools: composer:v2
+
+      - name: Cache Composer packages
+        uses: actions/cache@v4
+        with:
+          path: vendor
+          key: composer-${{ runner.os }}-${{ hashFiles('composer.lock') }}
+          restore-keys: composer-${{ runner.os }}-
+
+      - name: Install PHP dependencies
+        run: composer install --prefer-dist --no-interaction --no-progress --no-scripts
+
+      - name: Prepare test environment
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+          touch database/database.sqlite
+
+      - name: Run database migrations
+        run: php artisan migrate --force
+
+      - name: Generate Wayfinder routes (for route helpers)
+        run: php artisan wayfinder:generate --force || true
+
+      - name: Run PHPUnit test suite
+        run: php artisan test --parallel --stop-on-failure
+        env:
+          DB_CONNECTION: sqlite
+          DB_DATABASE: database/database.sqlite
+
+# ─────────────────────────────────────────────────────────────────────────────
+# JOB 2 — Build Frontend
+# ─────────────────────────────────────────────────────────────────────────────
+  build:
+    name: Build Frontend Assets
+    runs-on: ubuntu-latest
+    needs: test
+    # Run even if tests were skipped via workflow_dispatch
+    if: always() && (needs.test.result == 'success' || needs.test.result == 'skipped')
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP ${{ env.PHP_VERSION }} (for Wayfinder codegen)
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ env.PHP_VERSION }}
+          extensions: pdo, pdo_sqlite, sqlite3, mbstring, xml, ctype, json, openssl
+          coverage: none
+          tools: composer:v2
+
+      - name: Setup Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Cache Composer packages
+        uses: actions/cache@v4
+        with:
+          path: vendor
+          key: composer-${{ runner.os }}-${{ hashFiles('composer.lock') }}
+          restore-keys: composer-${{ runner.os }}-
+
+      - name: Install PHP dependencies
+        run: composer install --prefer-dist --no-interaction --no-progress --no-scripts
+
+      - name: Install npm dependencies
+        run: npm ci
+
+      - name: Prepare environment for Wayfinder
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+          touch database/database.sqlite
+          php artisan migrate --force
+
+      - name: Generate Wayfinder TypeScript routes
+        run: php artisan wayfinder:generate --force || true
+
+      - name: Build client + SSR bundles
+        run: npm run build:ssr
+        env:
+          NODE_ENV: production
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-build-${{ github.sha }}
+          path: |
+            public/build
+            bootstrap/ssr
+          retention-days: 3
+          if-no-files-found: error
+
+# ─────────────────────────────────────────────────────────────────────────────
+# JOB 3 — Deploy
+# ─────────────────────────────────────────────────────────────────────────────
+  deploy:
+    name: Deploy to Production (cPanel)
+    runs-on: ubuntu-latest
+    needs: build
+    if: success()
+    environment: production
+
+    steps:
+      - name: Download frontend build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-build-${{ github.sha }}
+
+      - name: Verify artifact contents
+        run: |
+          echo "=== public/build/ ==="
+          ls -lah public/build/ || echo "WARNING: public/build not found"
+          echo "=== bootstrap/ssr/ ==="
+          ls -lah bootstrap/ssr/ || echo "WARNING: bootstrap/ssr not found"
+
+      # ── Step 1: Pull latest code on the server ──────────────────────────
+      - name: Pull latest code on server
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT }}
+          script: |
+            set -e
+            echo "=== ChanTrader Production Deploy — $(date) ==="
+            cd "${{ secrets.DEPLOY_PATH }}"
+
+            echo "→ Pulling latest code from origin/main..."
+            git fetch origin main
+            git reset --hard origin/main
+            echo "✓ Code updated to: $(git log -1 --oneline)"
+
+      # ── Step 2: Upload pre-built client bundle ───────────────────────────
+      - name: Upload public/build to server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT }}
+          source: "public/build"
+          target: "${{ secrets.DEPLOY_PATH }}/public/"
+          strip_components: 1
+
+      # ── Step 3: Upload pre-built SSR bundle ─────────────────────────────
+      - name: Upload bootstrap/ssr to server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT }}
+          source: "bootstrap/ssr"
+          target: "${{ secrets.DEPLOY_PATH }}/bootstrap/"
+          strip_components: 1
+
+      # ── Step 4: Run post-deploy commands on server ───────────────────────
+      - name: Run post-deploy commands
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT }}
+          script: |
+            set -e
+            cd "${{ secrets.DEPLOY_PATH }}"
+
+            echo "→ Installing PHP dependencies (production)..."
+            # composer.phar lives inside the repo root on this server
+            php composer.phar install --no-dev --optimize-autoloader --no-interaction --no-progress
+
+            echo "→ Running database migrations..."
+            php artisan migrate --force
+
+            echo "→ Caching configuration, routes and views..."
+            php artisan config:cache
+            php artisan route:cache
+            php artisan view:cache
+            php artisan optimize
+
+            echo "→ Linking storage..."
+            php artisan storage:link --force || true
+
+            echo "→ Restarting queue workers..."
+            php artisan queue:restart || true
+
+            echo ""
+            echo "✅ Deployment complete!"
+            echo "   Commit : $(git log -1 --oneline)"
+            echo "   Time   : $(date)"
+
+      # ── Step 5: Post-deploy notification (optional) ──────────────────────
+      - name: Deployment summary
+        if: always()
+        run: |
+          echo "## Deployment Result" >> $GITHUB_STEP_SUMMARY
+          echo "| Field | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|---|---|" >> $GITHUB_STEP_SUMMARY
+          echo "| Status | ${{ job.status }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Commit | ${{ github.sha }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Branch | ${{ github.ref_name }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Triggered by | ${{ github.actor }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Time | $(date -u) |" >> $GITHUB_STEP_SUMMARY

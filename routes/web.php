@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Article;
 use App\Models\Brand;
 use App\Models\Category;
 use App\Models\Order;
@@ -46,7 +47,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         $now = Carbon::now();
 
         $recentUsers = [];
-        if (!$isVendor) {
+        if (! $isVendor) {
             $recentUsers = \App\Models\User::latest()
                 ->take(5)
                 ->get(['id', 'first_name', 'last_name', 'email', 'created_at'])
@@ -218,6 +219,17 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::delete('subcategories/{subcategory}', [\App\Http\Controllers\Admin\SubcategoryController::class, 'destroy'])
                 ->middleware('permission:subcategories.manage');
 
+            Route::get('articles', [\App\Http\Controllers\Admin\ArticleController::class, 'index'])
+                ->middleware('permission:articles.manage');
+            Route::post('articles', [\App\Http\Controllers\Admin\ArticleController::class, 'store'])
+                ->middleware('permission:articles.manage');
+            Route::get('articles/{article}', [\App\Http\Controllers\Admin\ArticleController::class, 'show'])
+                ->middleware('permission:articles.manage');
+            Route::patch('articles/{article}', [\App\Http\Controllers\Admin\ArticleController::class, 'update'])
+                ->middleware('permission:articles.manage');
+            Route::delete('articles/{article}', [\App\Http\Controllers\Admin\ArticleController::class, 'destroy'])
+                ->middleware('permission:articles.manage');
+
             Route::get('brands', [\App\Http\Controllers\Admin\BrandController::class, 'index'])
                 ->middleware('permission:brands.manage');
             Route::post('brands', [\App\Http\Controllers\Admin\BrandController::class, 'store'])
@@ -237,6 +249,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
                 ->middleware('permission:stores.view');
             Route::patch('stores/{store}', [\App\Http\Controllers\Admin\StoreController::class, 'update'])
                 ->middleware('permission:stores.manage_staff');
+            Route::delete('stores/{store}', [\App\Http\Controllers\Admin\StoreController::class, 'destroy'])
+                ->middleware('permission:stores.manage_staff');
             Route::post('stores/{store}/approve', [\App\Http\Controllers\Admin\StoreController::class, 'approve'])
                 ->middleware('permission:stores.approve');
             Route::post('stores/{store}/suspend', [\App\Http\Controllers\Admin\StoreController::class, 'suspend'])
@@ -245,6 +259,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::get('products', [\App\Http\Controllers\Admin\ProductController::class, 'index'])
                 ->middleware('permission:products.view');
             Route::get('products/subcategories', [\App\Http\Controllers\Admin\ProductController::class, 'subcategories'])
+                ->middleware('permission:products.view');
+            Route::get('products/articles', [\App\Http\Controllers\Admin\ProductController::class, 'articles'])
                 ->middleware('permission:products.view');
             Route::post('products', [\App\Http\Controllers\Admin\ProductController::class, 'store'])
                 ->middleware('permission:products.create');
@@ -301,6 +317,27 @@ Route::middleware(['auth', 'verified'])->group(function () {
                 ->middleware('permission:promotions.manage');
             Route::delete('promotions/{promotion}', [\App\Http\Controllers\Admin\PromotionController::class, 'destroy'])
                 ->middleware('permission:promotions.manage');
+
+            Route::get('settings', [\App\Http\Controllers\Admin\SettingController::class, 'index'])
+                ->middleware('permission:view settings');
+            Route::get('settings/{group}', [\App\Http\Controllers\Admin\SettingController::class, 'show'])
+                ->middleware('permission:view settings');
+            Route::patch('settings', [\App\Http\Controllers\Admin\SettingController::class, 'update'])
+                ->middleware('permission:edit settings');
+
+            Route::get('settings/theme', [\App\Http\Controllers\Admin\ThemeSettingsController::class, 'show'])
+                ->middleware('permission:view settings');
+            Route::post('settings/theme/preview', [\App\Http\Controllers\Admin\ThemeSettingsController::class, 'preview'])
+                ->middleware('permission:view settings');
+            Route::patch('settings/theme', [\App\Http\Controllers\Admin\ThemeSettingsController::class, 'update'])
+                ->middleware('permission:edit settings');
+
+            Route::get('content-pages', [\App\Http\Controllers\Admin\ContentPageController::class, 'index'])
+                ->middleware('permission:pages.manage');
+            Route::get('content-pages/{slug}', [\App\Http\Controllers\Admin\ContentPageController::class, 'show'])
+                ->middleware('permission:pages.manage');
+            Route::patch('content-pages/{slug}', [\App\Http\Controllers\Admin\ContentPageController::class, 'update'])
+                ->middleware('permission:pages.manage');
         });
     });
 
@@ -308,10 +345,67 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('vendors', [\App\Http\Controllers\Admin\VendorController::class, 'index'])
             ->middleware('role:super-admin')
             ->name('admin.vendors.index');
-        Route::get('stores', function () {
-            $items = Store::orderBy('name')->get(['id', 'name', 'slug', 'status']);
+        Route::get('stores', function (Request $request) {
+            $query = Store::query()->with('owner:id,first_name,last_name,email');
 
-            return Inertia::render('admin/stores/index', ['items' => $items]);
+            if ($request->filled('q')) {
+                $q = $request->string('q')->toString();
+                $query->where(function ($subQuery) use ($q) {
+                    $subQuery->where('name', 'like', "%{$q}%")
+                        ->orWhere('slug', 'like', "%{$q}%")
+                        ->orWhere('email', 'like', "%{$q}%")
+                        ->orWhere('phone', 'like', "%{$q}%");
+                });
+            }
+
+            if ($request->filled('status')) {
+                $query->where('status', $request->string('status')->toString());
+            }
+
+            $stores = $query->latest()->paginate(20)->withQueryString();
+            $users = \App\Models\User::query()
+                ->orderBy('first_name')
+                ->orderBy('last_name')
+                ->get(['id', 'first_name', 'last_name', 'email'])
+                ->map(fn (\App\Models\User $user) => [
+                    'id' => $user->id,
+                    'name' => trim(($user->first_name ?? '').' '.($user->last_name ?? '')),
+                    'email' => $user->email,
+                ])
+                ->values();
+
+            return Inertia::render('admin/stores/index', [
+                'items' => $stores->getCollection()->map(fn (Store $store) => [
+                    'id' => $store->id,
+                    'owner_id' => $store->owner_id,
+                    'owner' => $store->owner ? [
+                        'id' => $store->owner->id,
+                        'name' => trim(($store->owner->first_name ?? '').' '.($store->owner->last_name ?? '')),
+                        'email' => $store->owner->email,
+                    ] : null,
+                    'name' => $store->name,
+                    'slug' => $store->slug,
+                    'email' => $store->email,
+                    'phone' => $store->phone,
+                    'business_whatsapp_url' => $store->business_whatsapp_url,
+                    'city' => $store->city,
+                    'address' => $store->address,
+                    'description' => $store->description,
+                    'status' => $store->status,
+                    'created_at' => $store->created_at?->toISOString(),
+                ])->values(),
+                'users' => $users,
+                'pagination' => [
+                    'total' => $stores->total(),
+                    'per_page' => $stores->perPage(),
+                    'current_page' => $stores->currentPage(),
+                    'last_page' => $stores->lastPage(),
+                ],
+                'filters' => [
+                    'q' => $request->get('q'),
+                    'status' => $request->get('status'),
+                ],
+            ]);
         })->middleware('permission:stores.view');
 
         Route::get('categories', function (Request $request) {
@@ -379,6 +473,48 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ]);
         })->middleware('permission:subcategories.manage');
 
+        Route::get('articles', function (Request $request) {
+            $query = Article::query()->with(['subcategory:id,category_id,name', 'subcategory.category:id,name']);
+            if ($request->filled('q')) {
+                $q = $request->string('q')->toString();
+                $query->where('name', 'like', "%{$q}%");
+            }
+            if ($request->filled('subcategory_id')) {
+                $query->where('subcategory_id', (int) $request->get('subcategory_id'));
+            }
+            if ($request->filled('category_id')) {
+                $query->whereHas('subcategory', function ($subcategoryQuery) use ($request): void {
+                    $subcategoryQuery->where('category_id', (int) $request->get('category_id'));
+                });
+            }
+            $sortBy = in_array($request->get('sort_by'), ['id', 'name', 'slug', 'sort_order', 'is_active', 'created_at']) ? $request->get('sort_by') : 'sort_order';
+            $sortDir = in_array($request->get('sort_dir'), ['asc', 'desc']) ? $request->get('sort_dir') : 'asc';
+            $query->orderBy($sortBy, $sortDir);
+            if ($sortBy !== 'id') {
+                $query->orderBy('id', 'asc');
+            }
+            $items = $query->paginate(20)->withQueryString();
+
+            return Inertia::render('admin/articles/index', [
+                'items' => $items->items(),
+                'pagination' => [
+                    'total' => $items->total(),
+                    'per_page' => $items->perPage(),
+                    'current_page' => $items->currentPage(),
+                    'last_page' => $items->lastPage(),
+                ],
+                'filters' => [
+                    'q' => $request->get('q'),
+                    'category_id' => $request->get('category_id'),
+                    'subcategory_id' => $request->get('subcategory_id'),
+                    'sort_by' => $sortBy,
+                    'sort_dir' => $sortDir,
+                ],
+                'categories' => Category::orderBy('name')->get(['id', 'name']),
+                'subcategories' => Subcategory::orderBy('name')->get(['id', 'name', 'category_id']),
+            ]);
+        })->middleware('permission:articles.manage');
+
         Route::get('brands', function (Request $request) {
             $query = Brand::query();
             if ($request->filled('q')) {
@@ -437,22 +573,18 @@ Route::middleware(['auth', 'verified'])->group(function () {
             $products = $query->orderBy($sortBy, $sortDir)->paginate(20)->withQueryString();
 
             $items = $products->through(function ($p) {
-                $discountPercent = null;
-                if ($p->compare_at && $p->compare_at > 0 && $p->compare_at > $p->price) {
-                    $discountPercent = (int) round((($p->compare_at - $p->price) / $p->compare_at) * 100);
-                }
-
                 return [
                     'id' => $p->id,
                     'name' => $p->name,
                     'slug' => $p->slug,
                     'sku' => $p->sku,
                     'price' => $p->price,
+                    'discounted_price' => $p->discounted_price,
                     'purchase_price' => $p->purchase_price,
                     'stock' => $p->stock,
                     'low_stock_threshold' => $p->low_stock_threshold,
-                    'compare_at' => $p->compare_at,
-                    'discount_percent' => $discountPercent,
+                    'compare_at' => null,
+                    'discount_percent' => $p->discount_percent,
                     'thumb' => $p->feature_image ?: optional($p->images->first())->path,
                     'has_primary_image' => $p->images->isNotEmpty(),
                     'store' => $p->store ? ['id' => $p->store->id, 'name' => $p->store->name] : null,
@@ -551,7 +683,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
                     [
                         'customer' => $order->user ? [
                             'id' => $order->user->id,
-                            'name' => trim(($order->user->first_name ?? '') . ' ' . ($order->user->last_name ?? '')),
+                            'name' => trim(($order->user->first_name ?? '').' '.($order->user->last_name ?? '')),
                             'email' => $order->user->email,
                             'phone' => $order->user->phone_number,
                         ] : null,
@@ -653,6 +785,43 @@ Route::middleware(['auth', 'verified'])->group(function () {
                 'products' => $products,
             ]);
         })->middleware('permission:promotions.manage|promotions.view');
+
+        Route::get('settings', function () {
+            return Inertia::render('admin/settings/index', [
+                'settings' => \App\Models\Setting::allGrouped(),
+            ]);
+        })->middleware('permission:view settings')->name('admin.settings.index');
+
+        Route::get('settings/theme', function () {
+            $theme = app(\App\Services\Theme\AppThemeService::class);
+
+            return Inertia::render('admin/settings/theme', [
+                'colorDefinitions' => $theme->adminColorDefinitions(),
+                'options' => [
+                    'dark_mode_enabled' => (bool) $theme->rawTheme()['dark_mode_enabled'],
+                    'font_family' => (string) $theme->rawTheme()['font_family'],
+                    'gradient_enabled' => (bool) $theme->rawTheme()['gradient_enabled'],
+                ],
+                'mobilePreview' => $theme->forMobile(),
+            ]);
+        })->middleware('permission:view settings')->name('admin.settings.theme');
+
+        Route::get('content-pages', function () {
+            $pages = collect(\App\Enums\ContentPageSlug::all())->map(function (\App\Enums\ContentPageSlug $slug) {
+                $page = \App\Models\ContentPage::findBySlug($slug);
+
+                return [
+                    'slug' => $slug->value,
+                    'title' => $page?->title ?? $slug->defaultTitle(),
+                    'is_published' => $page?->is_published ?? false,
+                    'updated_at' => $page?->updated_at?->toISOString(),
+                ];
+            })->values();
+
+            return Inertia::render('admin/content-pages/index', [
+                'pages' => $pages,
+            ]);
+        })->middleware('permission:pages.manage')->name('admin.content-pages.index');
 
         Route::post('suppliers', [\App\Http\Controllers\Api\SupplierController::class, 'store'])
             ->middleware('permission:create suppliers');

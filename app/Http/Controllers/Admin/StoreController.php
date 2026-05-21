@@ -12,7 +12,7 @@ class StoreController extends Controller
     public function __construct()
     {
         $this->middleware('permission:stores.view')->only(['index', 'show']);
-        $this->middleware('permission:stores.manage_staff')->only(['store', 'update']);
+        $this->middleware('permission:stores.manage_staff')->only(['store', 'update', 'destroy']);
         $this->middleware('permission:stores.approve')->only(['approve']);
         $this->middleware('permission:stores.suspend')->only(['suspend']);
     }
@@ -49,6 +49,9 @@ class StoreController extends Controller
             'logo' => ['nullable', 'string', 'max:255'],
             'banner' => ['nullable', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
+            'address' => ['nullable', 'string', 'max:255'],
+            'city' => ['nullable', 'string', 'max:100'],
+            'status' => ['nullable', Rule::in(['pending', 'active', 'suspended'])],
         ]);
         $store = Store::create($validated);
 
@@ -63,19 +66,32 @@ class StoreController extends Controller
     public function update(Request $request, Store $store)
     {
         $validated = $request->validate([
+            'owner_id' => ['sometimes', 'exists:users,id'],
             'name' => ['sometimes', 'string', 'max:150'],
             'slug' => ['sometimes', 'string', 'max:160', Rule::unique('stores', 'slug')->ignore($store->id)],
-            'email' => ['nullable', 'email', 'max:150'],
-            'phone' => ['nullable', 'string', 'max:30'],
-            'business_whatsapp_url' => ['nullable', 'string', 'max:500', 'url'],
-            'logo' => ['nullable', 'string', 'max:255'],
-            'banner' => ['nullable', 'string', 'max:255'],
-            'description' => ['nullable', 'string'],
+            'email' => ['sometimes', 'nullable', 'email', 'max:150'],
+            'phone' => ['sometimes', 'nullable', 'string', 'max:30'],
+            'business_whatsapp_url' => ['sometimes', 'nullable', 'string', 'max:500', 'url'],
+            'logo' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'banner' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'description' => ['sometimes', 'nullable', 'string'],
+            'address' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'city' => ['sometimes', 'nullable', 'string', 'max:100'],
             'status' => ['sometimes', Rule::in(['pending', 'active', 'suspended'])],
         ]);
         $store->update($validated);
 
         return response()->json(['success' => true, 'data' => $store]);
+    }
+
+    public function destroy(Store $store)
+    {
+        $store->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Store deleted successfully.',
+        ]);
     }
 
     public function approve(Store $store)

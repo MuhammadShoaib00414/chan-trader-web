@@ -14,7 +14,7 @@ import { dashboard } from '@/routes';
 import { type NavItem } from '@/types';
 import { Link, usePage } from '@inertiajs/react';
 import { SharedData } from '@/types';
-import { Folder, LayoutGrid, Shield, Users, Package, ShoppingCart, Truck, CreditCard, Boxes, Store, Tag, Layers, ReceiptText, WalletCards, Building2 } from 'lucide-react';
+import { Folder, LayoutGrid, Shield, Users, Package, ShoppingCart, Truck, CreditCard, Boxes, Store, Tag, Layers, ReceiptText, WalletCards, Building2, FileText, Settings, FileStack, Palette } from 'lucide-react';
 import AppLogo from './app-logo';
 
 const mainNavItems: NavItem[] = [
@@ -52,6 +52,11 @@ const mainNavItems: NavItem[] = [
         title: 'Subcategories',
         href: '/admin/subcategories',
         icon: Layers,
+    },
+    {
+        title: 'Articles',
+        href: '/admin/articles',
+        icon: FileText,
     },
     {
         title: 'Brands',
@@ -108,6 +113,21 @@ const mainNavItems: NavItem[] = [
         href: '/admin/suppliers',
         icon: Building2,
     },
+    {
+        title: 'Settings',
+        href: '/admin/settings',
+        icon: Settings,
+    },
+    {
+        title: 'Theme',
+        href: '/admin/settings/theme',
+        icon: Palette,
+    },
+    {
+        title: 'Content Pages',
+        href: '/admin/content-pages',
+        icon: FileStack,
+    },
 ];
 
 const footerNavItems: NavItem[] = [
@@ -126,9 +146,7 @@ const footerNavItems: NavItem[] = [
 export function AppSidebar() {
     const page = usePage<SharedData>();
     const authExt = page.props.auth as unknown as { roles?: string[]; permissions?: string[] };
-    const roles: string[] = authExt.roles ?? [];
     const perms: string[] = authExt.permissions ?? [];
-    const isSuperAdmin = roles?.includes('super-admin');
     const requiredPerms: Record<string, string[]> = {
         '/dashboard': ['view dashboard'],
         '/users': ['view users'],
@@ -137,6 +155,7 @@ export function AppSidebar() {
         '/admin/stores': ['stores.view', 'view stores'],
         '/admin/categories': ['categories.manage', 'view categories'],
         '/admin/subcategories': ['subcategories.manage', 'view subcategories'],
+        '/admin/articles': ['articles.manage', 'view articles'],
         '/admin/brands': ['brands.manage', 'view brands'],
         '/admin/products': ['products.view', 'view products'],
         '/admin/shop/dashboard': ['view shop dashboard'],
@@ -148,12 +167,15 @@ export function AppSidebar() {
         '/admin/shipments': ['shipments.view', 'view shipments'],
         '/admin/payments': ['payments.view', 'view payments'],
         '/admin/suppliers': ['view suppliers'],
+        '/admin/settings': ['view settings'],
+        '/admin/settings/theme': ['view settings'],
+        '/admin/content-pages': ['pages.manage'],
     };
     const filteredItems = mainNavItems.filter((item) => {
         const href = typeof item.href === 'string' ? item.href : item.href.url;
         const rp = requiredPerms[href];
         if (!rp) return true;
-        return isSuperAdmin || rp.some((p) => perms?.includes(p));
+        return rp.some((p) => perms?.includes(p));
     });
     return (
         <Sidebar collapsible="icon" variant="inset">

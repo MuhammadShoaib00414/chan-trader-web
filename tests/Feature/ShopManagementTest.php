@@ -4,6 +4,7 @@ use App\Models\Category;
 use App\Models\Product;
 use App\Models\ShopCustomer;
 use App\Models\ShopSale;
+use App\Models\StockItem;
 use App\Models\Store;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -134,4 +135,40 @@ it('collects an additional payment and settles the remaining balance', function 
     ]);
 
     expect($product->fresh()?->stock)->toBe(20);
+});
+
+it('stores and updates stock batch and quantity details', function () {
+    $user = User::factory()->create();
+    $user->givePermissionTo('create stock', 'edit stock', 'delete stock');
+    $this->actingAs($user);
+
+    $createResponse = $this->postJson('/api/shop/stock', [
+        'item_name' => 'Premier Cement - 50kg',
+        'batch_lot_number' => 'LOT-2026-05',
+        'purchase_price' => 1120,
+        'selling_price' => 1180,
+        'quantity' => 24,
+    ]);
+
+    $createResponse->assertCreated()->assertJsonPath('success', true);
+
+    $stockItemId = (int) $createResponse->json('data.id');
+    $stockItem = StockItem::findOrFail($stockItemId);
+
+    expect($stockItem->batch_lot_number)->toBe('LOT-2026-05');
+    expect($stockItem->quantity)->toBe(24);
+
+    $updateResponse = $this->patchJson("/api/shop/stock/{$stockItem->id}", [
+        'item_name' => 'Premier Cement - 50kg',
+        'batch_lot_number' => 'LOT-2026-05-B',
+        'purchase_price' => 1130,
+        'selling_price' => 1190,
+        'quantity' => 18,
+    ]);
+
+    $updateResponse->assertOk()->assertJsonPath('success', true);
+
+    expect($stockItem->fresh()?->batch_lot_number)->toBe('LOT-2026-05-B');
+    expect($stockItem->fresh()?->quantity)->toBe(18);
+    expect($stockItem->fresh()?->selling_price)->toBe(1190.0);
 });

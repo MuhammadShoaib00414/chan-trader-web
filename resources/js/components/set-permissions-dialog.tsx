@@ -45,6 +45,12 @@ const permissionAliasMap: Record<string, Partial<Record<'read' | 'create' | 'upd
         update: ['subcategories.manage'],
         delete: ['subcategories.manage'],
     },
+    articles: {
+        read: ['articles.manage'],
+        create: ['articles.manage'],
+        update: ['articles.manage'],
+        delete: ['articles.manage'],
+    },
     brands: {
         read: ['brands.manage'],
         create: ['brands.manage'],

@@ -14,8 +14,10 @@ import { useState } from 'react';
 type StockItem = {
     id: number;
     item_name: string;
+    batch_lot_number?: string | null;
     purchase_price: number;
     selling_price: number;
+    quantity: number;
     profit_margin: number;
     created_at: string;
     updated_at: string;
@@ -25,6 +27,7 @@ type StockPageProps = {
     stockItems: StockItem[];
     stats: {
         total_items: number;
+        total_quantity: number;
         avg_purchase_price: number;
         avg_selling_price: number;
         potential_margin: number;
@@ -33,14 +36,18 @@ type StockPageProps = {
 
 type StockForm = {
     item_name: string;
+    batch_lot_number: string;
     purchase_price: string;
     selling_price: string;
+    quantity: string;
 };
 
 const emptyForm: StockForm = {
     item_name: '',
+    batch_lot_number: '',
     purchase_price: '',
     selling_price: '',
+    quantity: '0',
 };
 
 const formatCurrency = (amount: number) =>
@@ -89,8 +96,10 @@ export default function ShopStock({ stockItems, stats }: StockPageProps) {
 
         const res = await postJson('/api/shop/stock', {
             item_name: form.item_name,
+            batch_lot_number: form.batch_lot_number || null,
             purchase_price: Number(form.purchase_price || 0),
             selling_price: Number(form.selling_price || 0),
+            quantity: Number(form.quantity || 0),
         });
 
         setSubmitting(false);
@@ -109,8 +118,10 @@ export default function ShopStock({ stockItems, stats }: StockPageProps) {
         setEditingItem(item);
         setEditForm({
             item_name: item.item_name,
+            batch_lot_number: item.batch_lot_number ?? '',
             purchase_price: String(item.purchase_price),
             selling_price: String(item.selling_price),
+            quantity: String(item.quantity),
         });
     };
 
@@ -122,8 +133,10 @@ export default function ShopStock({ stockItems, stats }: StockPageProps) {
 
         const res = await patchJson(`/api/shop/stock/${editingItem.id}`, {
             item_name: editForm.item_name,
+            batch_lot_number: editForm.batch_lot_number || null,
             purchase_price: Number(editForm.purchase_price || 0),
             selling_price: Number(editForm.selling_price || 0),
+            quantity: Number(editForm.quantity || 0),
         });
 
         setSubmitting(false);
@@ -165,8 +178,8 @@ export default function ShopStock({ stockItems, stats }: StockPageProps) {
                                 Maintain article pricing in a fast stock register built for the same shop workflow.
                             </h1>
                             <p className="max-w-2xl text-sm text-white/80 md:text-base">
-                                Add item names with purchase and selling rates, review margin at a glance, and keep this list
-                                separate from the broader catalog module.
+                                Add item names with batch details, quantity, and pricing, review margin at a glance, and keep
+                                this list separate from the broader catalog module.
                             </p>
                         </div>
                         <div className="grid gap-3 rounded-2xl border border-white/10 bg-white/10 p-4 backdrop-blur">
@@ -181,15 +194,15 @@ export default function ShopStock({ stockItems, stats }: StockPageProps) {
                                     <div className="mt-1 font-bold">{formatCurrency(stats.avg_purchase_price)}</div>
                                 </div>
                                 <div className="rounded-2xl bg-white/10 p-3">
-                                    <div className="text-white/60">Avg. Selling</div>
-                                    <div className="mt-1 font-bold">{formatCurrency(stats.avg_selling_price)}</div>
+                                    <div className="text-white/60">Total Qty</div>
+                                    <div className="mt-1 font-bold">{stats.total_quantity}</div>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </section>
 
-                <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
                     <Card className="overflow-hidden border-0 shadow-lg">
                         <div className="h-1 bg-gradient-to-r from-amber-500 to-orange-500" />
                         <CardHeader className="pb-2">
@@ -201,13 +214,21 @@ export default function ShopStock({ stockItems, stats }: StockPageProps) {
                     <Card className="overflow-hidden border-0 shadow-lg">
                         <div className="h-1 bg-gradient-to-r from-zinc-900 to-zinc-700" />
                         <CardHeader className="pb-2">
+                            <CardDescription>Total Quantity</CardDescription>
+                            <CardTitle className="text-2xl font-black">{stats.total_quantity}</CardTitle>
+                        </CardHeader>
+                        <CardContent className="pt-0 text-sm text-muted-foreground">Combined stock units saved in this module.</CardContent>
+                    </Card>
+                    <Card className="overflow-hidden border-0 shadow-lg">
+                        <div className="h-1 bg-gradient-to-r from-sky-700 to-sky-500" />
+                        <CardHeader className="pb-2">
                             <CardDescription>Average Purchase</CardDescription>
                             <CardTitle className="text-2xl font-black">{formatCurrency(stats.avg_purchase_price)}</CardTitle>
                         </CardHeader>
                         <CardContent className="pt-0 text-sm text-muted-foreground">Mean buying rate across all articles.</CardContent>
                     </Card>
                     <Card className="overflow-hidden border-0 shadow-lg">
-                        <div className="h-1 bg-gradient-to-r from-sky-700 to-sky-500" />
+                        <div className="h-1 bg-gradient-to-r from-emerald-600 to-emerald-500" />
                         <CardHeader className="pb-2">
                             <CardDescription>Average Selling</CardDescription>
                             <CardTitle className="text-2xl font-black">{formatCurrency(stats.avg_selling_price)}</CardTitle>
@@ -247,6 +268,28 @@ export default function ShopStock({ stockItems, stats }: StockPageProps) {
                                         placeholder="e.g. Premier Cement - 50kg"
                                         required
                                     />
+                                </div>
+                                <div className="grid gap-4 md:grid-cols-2">
+                                    <div>
+                                        <label className="mb-1.5 block text-sm font-medium">Batch / Lot Number</label>
+                                        <Input
+                                            value={form.batch_lot_number}
+                                            onChange={(event) => syncField('batch_lot_number', event.target.value)}
+                                            placeholder="e.g. LOT-2026-05"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="mb-1.5 block text-sm font-medium">Quantity</label>
+                                        <Input
+                                            type="number"
+                                            min="0"
+                                            step="1"
+                                            value={form.quantity}
+                                            onChange={(event) => syncField('quantity', event.target.value)}
+                                            placeholder="0"
+                                            required
+                                        />
+                                    </div>
                                 </div>
                                 <div className="grid gap-4 md:grid-cols-2">
                                     <div>
@@ -301,7 +344,8 @@ export default function ShopStock({ stockItems, stats }: StockPageProps) {
                                             <div>
                                                 <div className="font-semibold">{item.item_name}</div>
                                                 <div className="text-xs text-muted-foreground">
-                                                    Purchase {formatCurrency(item.purchase_price)} • Selling {formatCurrency(item.selling_price)}
+                                                    {item.batch_lot_number ? `${item.batch_lot_number} • ` : ''}
+                                                    Qty {item.quantity} • Purchase {formatCurrency(item.purchase_price)} • Selling {formatCurrency(item.selling_price)}
                                                 </div>
                                             </div>
                                             <Badge variant={item.profit_margin >= 0 ? 'default' : 'destructive'}>
@@ -326,6 +370,8 @@ export default function ShopStock({ stockItems, stats }: StockPageProps) {
                                 <TableHeader>
                                     <TableRow>
                                         <TableHead>Item / Article</TableHead>
+                                        <TableHead>Batch / Lot</TableHead>
+                                        <TableHead>Quantity</TableHead>
                                         <TableHead>Purchase Price</TableHead>
                                         <TableHead>Selling Price</TableHead>
                                         <TableHead>Margin</TableHead>
@@ -337,6 +383,8 @@ export default function ShopStock({ stockItems, stats }: StockPageProps) {
                                     {stockItems.map((item) => (
                                         <TableRow key={item.id}>
                                             <TableCell className="font-medium">{item.item_name}</TableCell>
+                                            <TableCell>{item.batch_lot_number || '—'}</TableCell>
+                                            <TableCell>{item.quantity}</TableCell>
                                             <TableCell>{formatCurrency(item.purchase_price)}</TableCell>
                                             <TableCell>{formatCurrency(item.selling_price)}</TableCell>
                                             <TableCell className={item.profit_margin >= 0 ? 'font-semibold text-emerald-600' : 'font-semibold text-red-600'}>
@@ -369,6 +417,9 @@ export default function ShopStock({ stockItems, stats }: StockPageProps) {
                                             <div className="font-semibold">{item.item_name}</div>
                                             <div className="text-xs text-muted-foreground">
                                                 Updated {new Date(item.updated_at).toLocaleDateString()}
+                                            </div>
+                                            <div className="mt-1 text-xs text-muted-foreground">
+                                                {item.batch_lot_number || 'No batch'} • Qty {item.quantity}
                                             </div>
                                         </div>
                                         <Badge variant={item.profit_margin >= 0 ? 'default' : 'destructive'}>
@@ -413,6 +464,27 @@ export default function ShopStock({ stockItems, stats }: StockPageProps) {
                                 onChange={(event) => syncEditField('item_name', event.target.value)}
                                 required
                             />
+                        </div>
+                        <div className="grid gap-4 md:grid-cols-2">
+                            <div>
+                                <label className="mb-1.5 block text-sm font-medium">Batch / Lot Number</label>
+                                <Input
+                                    value={editForm.batch_lot_number}
+                                    onChange={(event) => syncEditField('batch_lot_number', event.target.value)}
+                                    placeholder="e.g. LOT-2026-05"
+                                />
+                            </div>
+                            <div>
+                                <label className="mb-1.5 block text-sm font-medium">Quantity</label>
+                                <Input
+                                    type="number"
+                                    min="0"
+                                    step="1"
+                                    value={editForm.quantity}
+                                    onChange={(event) => syncEditField('quantity', event.target.value)}
+                                    required
+                                />
+                            </div>
                         </div>
                         <div className="grid gap-4 md:grid-cols-2">
                             <div>
