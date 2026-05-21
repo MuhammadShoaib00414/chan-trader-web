@@ -49,6 +49,7 @@ jobs:
           php artisan key:generate
           touch database/database.sqlite
           php artisan migrate --force
+          php artisan passport:keys --force
 
       - name: Generate Wayfinder routes
         run: php artisan wayfinder:generate --force

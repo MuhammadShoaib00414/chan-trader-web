@@ -58,6 +58,9 @@ jobs:
       - name: Run database migrations
         run: php artisan migrate --force
 
+      - name: Generate Passport OAuth2 keys
+        run: php artisan passport:keys --force
+
       - name: Generate Wayfinder routes (for route helpers)
         run: php artisan wayfinder:generate --force || true
 
