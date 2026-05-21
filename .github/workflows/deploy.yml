@@ -61,6 +61,17 @@ jobs:
       - name: Generate Wayfinder routes (for route helpers)
         run: php artisan wayfinder:generate --force || true
 
+      - name: Create fake Vite manifest (feature tests render Blade views)
+        run: |
+          mkdir -p public/build
+          cat > public/build/manifest.json << 'EOF'
+          {
+            "resources/css/app.css":  {"file":"assets/app.css",  "src":"resources/css/app.css",  "isEntry":true},
+            "resources/js/app.tsx":   {"file":"assets/app.js",   "src":"resources/js/app.tsx",   "isEntry":true},
+            "resources/js/ssr.tsx":   {"file":"assets/ssr.js",   "src":"resources/js/ssr.tsx",   "isEntry":true}
+          }
+          EOF
+
       - name: Run PHPUnit test suite
         run: php artisan test --parallel --stop-on-failure
         env:
