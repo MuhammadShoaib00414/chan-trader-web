@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Enums\NotificationAction;
 use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Models\Payment;
+use App\Services\Notifications\AppNotificationService;
 use Illuminate\Http\Request;
 
 class PaymentController extends Controller
@@ -99,6 +101,18 @@ class PaymentController extends Controller
         ]);
         $order->update(['payment_status' => 'paid']);
 
+        if ($order->user) {
+            app(AppNotificationService::class)->notify(
+                $order->user,
+                NotificationAction::PaymentReceived,
+                [
+                    'order_code' => $order->code,
+                    'amount' => (string) $validated['amount'],
+                    'message' => "Payment of {$validated['amount']} received for order {$order->code}.",
+                ],
+            );
+        }
+
         return response()->json(['success' => true, 'data' => $payment], 201);
     }
 
@@ -116,6 +130,18 @@ class PaymentController extends Controller
             'paid_at' => now(),
         ]);
         $order->update(['payment_status' => 'refunded']);
+
+        if ($order->user) {
+            app(AppNotificationService::class)->notify(
+                $order->user,
+                NotificationAction::PaymentRefunded,
+                [
+                    'order_code' => $order->code,
+                    'amount' => (string) $validated['amount'],
+                    'message' => "Refund of {$validated['amount']} processed for order {$order->code}.",
+                ],
+            );
+        }
 
         return response()->json(['success' => true, 'data' => $payment]);
     }

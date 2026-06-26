@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Enums\NotificationAction;
 use App\Http\Controllers\Controller;
 use App\Models\Store;
 use App\Models\User;
+use App\Services\Notifications\AppNotificationService;
 use App\Support\ResizedImageStore;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -122,6 +124,18 @@ class VendorController extends Controller
 
         $this->syncStoreImages($request, $store);
 
+        // Notify vendor of account creation (email only; no push token yet)
+        app(AppNotificationService::class)->notify(
+            $vendor,
+            NotificationAction::VendorCreated,
+            [
+                'store_name' => $store->name,
+                'message' => "Your vendor account on " . config('app.name') . " has been created. Store: {$store->name}.",
+            ],
+            true,
+            false,
+        );
+
         return response()->json([
             'success' => true,
             'message' => 'Vendor created successfully',
@@ -140,6 +154,81 @@ class VendorController extends Controller
                 ],
             ],
         ], 201);
+    }
+
+    /**
+     * Show a single vendor.
+     *
+     * @group Admin — Vendors
+     *
+     * @authenticated
+     */
+    public function show(User $vendor): JsonResponse
+    {
+        abort_unless(auth()->user()?->hasRole('super-admin'), 403);
+        abort_unless($vendor->hasRole('vendor'), 404);
+
+        return response()->json([
+            'success' => true,
+            'data' => $this->vendorListItemsForUser($vendor),
+        ]);
+    }
+
+    /**
+     * Delete a vendor and their primary store.
+     *
+     * @group Admin — Vendors
+     *
+     * @authenticated
+     */
+    public function destroy(User $vendor): JsonResponse
+    {
+        abort_unless(auth()->user()?->hasRole('super-admin'), 403);
+        abort_unless($vendor->hasRole('vendor'), 404);
+
+        Store::where('owner_id', $vendor->id)->delete();
+        $vendor->delete();
+
+        return response()->json(['success' => true, 'message' => 'Vendor deleted successfully']);
+    }
+
+    /**
+     * Verify (approve) a vendor's store.
+     *
+     * @group Admin — Vendors
+     *
+     * @authenticated
+     */
+    public function verify(User $vendor): JsonResponse
+    {
+        abort_unless(auth()->user()?->hasRole('super-admin'), 403);
+        abort_unless($vendor->hasRole('vendor'), 404);
+
+        $store = Store::where('owner_id', $vendor->id)->orderBy('id')->first();
+
+        if (! $store) {
+            return response()->json(['success' => false, 'message' => 'Vendor has no store'], 404);
+        }
+
+        $store->update(['verified_at' => now(), 'status' => 'active']);
+
+        app(AppNotificationService::class)->notify(
+            $vendor,
+            NotificationAction::StoreApproved,
+            [
+                'store_name' => $store->name,
+                'message' => "Your store \"{$store->name}\" has been approved.",
+            ],
+        );
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Vendor store verified successfully',
+            'data' => [
+                'store_id' => $store->id,
+                'verified_at' => $store->verified_at,
+            ],
+        ]);
     }
 
     /**

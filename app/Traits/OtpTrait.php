@@ -24,9 +24,11 @@ trait OtpTrait
             'otp_expires_at' => Carbon::now()->addMinutes(config('app.otp_expire_time')),
         ]);
 
-        // Send OTP email
+        // Queue the OTP email so a slow/unreachable SMTP server never blocks or
+        // rolls back the surrounding request (e.g. registration). Delivery is
+        // handled by the queue worker, consistent with all other app emails.
         try {
-            Mail::to($user->email)->send(new SendOtpMail($otp, $type));
+            Mail::to($user->email)->queue(new SendOtpMail($otp, $type));
         } catch (\Throwable $e) {
             Log::error('Failed to send OTP email', [
                 'email' => $user->email,

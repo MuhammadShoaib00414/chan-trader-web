@@ -39,7 +39,7 @@ class SubcategoryApi
     /**
      * @return Collection<int, Subcategory>
      */
-    public function listForApp(?int $categoryId = null): Collection
+    public function listForApp(?int $categoryId = null, ?int $userId = null): Collection
     {
         $query = Subcategory::query()
             ->where('is_active', true)
@@ -50,7 +50,11 @@ class SubcategoryApi
             $query->where('category_id', $categoryId);
         }
 
-        return $query->get(['id', 'category_id', 'name', 'slug', 'image', 'sort_order', 'is_active']);
+        if ($userId) {
+            $query->where('user_id', $userId);
+        }
+
+        return $query->get(['id', 'user_id', 'category_id', 'name', 'slug', 'image', 'sort_order', 'is_active']);
     }
 
     /**

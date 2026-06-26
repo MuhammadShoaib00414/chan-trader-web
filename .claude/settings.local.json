@@ -3,7 +3,12 @@
     "allow": [
       "mcp__playwright__browser_snapshot",
       "mcp__playwright__browser_click",
-      "mcp__playwright__browser_take_screenshot"
+      "mcp__playwright__browser_take_screenshot",
+      "Bash(Get-ChildItem -Path \"C:\\\\laragon\\\\www\\\\TraderApp\" -Directory)",
+      "Bash(Select-Object Name)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://traderapp.test/api/app/home)",
+      "Bash(php artisan *)",
+      "mcp__playwright__browser_tabs"
     ]
   }
 }

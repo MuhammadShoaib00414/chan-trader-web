@@ -14,6 +14,7 @@ class CategoryController extends AppBaseController
      * @group APP APIs
      *
      * @queryParam q string Search by category name (partial match). Example: resistors
+     * @queryParam user_id integer Filter by owner user id. Example: 7
      *
      * @response 200 scenario="success" {
      *   "success": true,
@@ -40,7 +41,10 @@ class CategoryController extends AppBaseController
             $q = $request->string('q')->toString();
             $query->where('name', 'like', "%{$q}%");
         }
-        $items = $query->get(['id', 'name', 'slug', 'image', 'is_active']);
+        if ($request->filled('user_id')) {
+            $query->where('user_id', (int) $request->get('user_id'));
+        }
+        $items = $query->get(['id', 'user_id', 'name', 'slug', 'image', 'is_active']);
 
         return $this->successResponse(['items' => $items], 'Categories retrieved');
     }

@@ -46,7 +46,7 @@ class ArticleApi
     /**
      * @return Collection<int, Article>
      */
-    public function listForApp(?int $categoryId = null, ?int $subcategoryId = null, ?string $queryText = null): Collection
+    public function listForApp(?int $categoryId = null, ?int $subcategoryId = null, ?string $queryText = null, ?int $userId = null): Collection
     {
         $query = Article::query()
             ->where('is_active', true)
@@ -56,6 +56,10 @@ class ArticleApi
 
         if ($subcategoryId) {
             $query->where('subcategory_id', $subcategoryId);
+        }
+
+        if ($userId) {
+            $query->where('user_id', $userId);
         }
 
         if ($categoryId) {
@@ -70,6 +74,7 @@ class ArticleApi
 
         return $query->get([
             'id',
+            'user_id',
             'subcategory_id',
             'name',
             'slug',

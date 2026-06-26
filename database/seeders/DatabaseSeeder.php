@@ -123,6 +123,7 @@ class DatabaseSeeder extends Seeder
             VendorProductsSeeder::class,
             SupplierSeeder::class,
             ContentPageSeeder::class,
+            SliderSeeder::class,
         ]);
 
         $this->command->info('Inventory system seeded successfully!');

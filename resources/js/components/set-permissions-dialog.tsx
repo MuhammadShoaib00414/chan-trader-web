@@ -87,6 +87,12 @@ const permissionAliasMap: Record<string, Partial<Record<'read' | 'create' | 'upd
         update: ['promotions.manage'],
         delete: ['promotions.manage'],
     },
+    sliders: {
+        read: ['sliders.manage'],
+        create: ['sliders.manage'],
+        update: ['sliders.manage'],
+        delete: ['sliders.manage'],
+    },
 };
 
 function permissionCandidates(module: string, type: 'read' | 'create' | 'update' | 'delete' | 'approve' | 'suspend'): string[] {
@@ -297,7 +303,9 @@ export function SetPermissionsDialog({
                         showToast('Permissions updated.', 'success');
                     }
                     setOpen(false);
-                    router.reload({ only: ['roles'] });
+                    // Reload both the roles list and the shared auth props so the current
+                    // user's sidebar/menu reflects newly granted permissions immediately.
+                    router.reload({ only: ['roles', 'auth'] });
                 } else {
                     showToast(await errorMessageFromResponse(res), 'error');
                 }

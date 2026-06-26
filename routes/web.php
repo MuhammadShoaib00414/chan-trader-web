@@ -35,6 +35,11 @@ Route::get('/csrf-token', function (Request $request) {
     ]);
 })->name('csrf.token');
 
+// Firebase Cloud Messaging service worker (must be served from site root so its
+// scope covers the whole app). Generated with the public web config from env.
+Route::get('/firebase-messaging-sw.js', [\App\Http\Controllers\FirebaseSwController::class, 'serviceWorker'])
+    ->name('firebase.sw');
+
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', function () {
         $user = auth()->user();
@@ -318,6 +323,20 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::delete('promotions/{promotion}', [\App\Http\Controllers\Admin\PromotionController::class, 'destroy'])
                 ->middleware('permission:promotions.manage');
 
+            // Slider Management
+            Route::get('sliders', [\App\Http\Controllers\Admin\SliderController::class, 'index'])
+                ->middleware('permission:sliders.manage');
+            Route::post('sliders', [\App\Http\Controllers\Admin\SliderController::class, 'store'])
+                ->middleware('permission:sliders.manage');
+            Route::get('sliders/{slider}', [\App\Http\Controllers\Admin\SliderController::class, 'show'])
+                ->middleware('permission:sliders.manage');
+            Route::patch('sliders/{slider}', [\App\Http\Controllers\Admin\SliderController::class, 'update'])
+                ->middleware('permission:sliders.manage');
+            Route::delete('sliders/{slider}', [\App\Http\Controllers\Admin\SliderController::class, 'destroy'])
+                ->middleware('permission:sliders.manage');
+            Route::patch('sliders/{slider}/status', [\App\Http\Controllers\Admin\SliderController::class, 'toggleStatus'])
+                ->middleware('permission:sliders.manage');
+
             Route::get('settings', [\App\Http\Controllers\Admin\SettingController::class, 'index'])
                 ->middleware('permission:view settings');
             Route::get('settings/{group}', [\App\Http\Controllers\Admin\SettingController::class, 'show'])
@@ -338,6 +357,15 @@ Route::middleware(['auth', 'verified'])->group(function () {
                 ->middleware('permission:pages.manage');
             Route::patch('content-pages/{slug}', [\App\Http\Controllers\Admin\ContentPageController::class, 'update'])
                 ->middleware('permission:pages.manage');
+
+            // Web (session) FCM token registration for the admin dashboard
+            Route::post('fcm-token', [\App\Http\Controllers\Admin\FcmTokenController::class, 'store']);
+            Route::delete('fcm-token', [\App\Http\Controllers\Admin\FcmTokenController::class, 'destroy']);
+
+            // Admin in-app notifications (session-auth, for the dashboard bell)
+            Route::get('notifications', [\App\Http\Controllers\Admin\NotificationController::class, 'index']);
+            Route::post('notifications/read-all', [\App\Http\Controllers\Admin\NotificationController::class, 'markAllRead']);
+            Route::post('notifications/{id}/read', [\App\Http\Controllers\Admin\NotificationController::class, 'markRead']);
         });
     });
 
@@ -785,6 +813,35 @@ Route::middleware(['auth', 'verified'])->group(function () {
                 'products' => $products,
             ]);
         })->middleware('permission:promotions.manage|promotions.view');
+
+        Route::get('sliders', function (Request $request) {
+            $query = \App\Models\Slider::query();
+            if ($request->filled('q')) {
+                $q = $request->string('q')->toString();
+                $query->where(function ($sub) use ($q) {
+                    $sub->where('title', 'like', "%{$q}%")
+                        ->orWhere('subtitle', 'like', "%{$q}%");
+                });
+            }
+            if ($request->filled('status')) {
+                $query->where('is_active', $request->get('status') === 'active');
+            }
+            $items = $query->orderBy('display_order')->orderBy('id')->paginate(20)->withQueryString();
+
+            return Inertia::render('admin/sliders/index', [
+                'items' => $items->items(),
+                'pagination' => [
+                    'total' => $items->total(),
+                    'per_page' => $items->perPage(),
+                    'current_page' => $items->currentPage(),
+                    'last_page' => $items->lastPage(),
+                ],
+                'filters' => [
+                    'q' => $request->get('q'),
+                    'status' => $request->get('status'),
+                ],
+            ]);
+        })->middleware('permission:sliders.manage');
 
         Route::get('settings', function () {
             return Inertia::render('admin/settings/index', [

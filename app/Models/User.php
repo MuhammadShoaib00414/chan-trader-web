@@ -138,6 +138,11 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->hasMany(Order::class);
     }
 
+    public function appNotifications()
+    {
+        return $this->hasMany(AppNotification::class);
+    }
+
     /**
      * Get the user's full name.
      */

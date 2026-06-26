@@ -2,12 +2,14 @@
 
 namespace App\Http\Controllers\Api\Milestone2;
 
+use App\Enums\NotificationAction;
 use App\Http\Controllers\AppBaseController;
 use App\Models\Address;
 use App\Models\CartItem;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Payment;
+use App\Services\Notifications\AppNotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
@@ -223,7 +225,8 @@ class CheckoutController extends AppBaseController
             }
         }
 
-        return DB::transaction(function () use ($user, $cartItems, $request) {
+        // Create order in a transaction; notifications are sent after commit
+        $order = DB::transaction(function () use ($user, $cartItems, $request) {
             $subtotal = 0;
             foreach ($cartItems as $item) {
                 $subtotal += $item->product->price * $item->quantity;
@@ -260,11 +263,9 @@ class CheckoutController extends AppBaseController
                     'status' => 'pending',
                 ]);
 
-                // Update stock
                 $item->product->decrement('stock', $item->quantity);
             }
 
-            // Create Payment record for COD
             Payment::create([
                 'order_id' => $order->id,
                 'method' => 'cod',
@@ -272,47 +273,72 @@ class CheckoutController extends AppBaseController
                 'status' => 'initiated',
             ]);
 
-            // Clear Cart
             $user->cartItems()->where('is_saved_for_later', false)->delete();
 
-            // Load all necessary data for the response
-            $order->load(['items.product', 'shippingAddress', 'payments']);
-
-            return $this->successResponse([
-                'order_id' => $order->id,
-                'order_number' => $order->code,
-                'status' => $order->status,
-                'items' => $order->items->map(function ($item) {
-                    return [
-                        'id' => $item->id,
-                        'product_id' => $item->product_id,
-                        'product_name' => $item->name,
-                        'sku' => $item->sku,
-                        'quantity' => $item->quantity,
-                        'unit_price' => $item->unit_price,
-                        'subtotal' => $item->subtotal,
-                        'feature_image' => $item->product ? $item->product->feature_image : null,
-                    ];
-                }),
-                'price_breakdown' => [
-                    'subtotal' => $order->subtotal,
-                    'tax' => $order->tax_total,
-                    'delivery' => $order->shipping_cost,
-                    'total' => $order->grand_total,
-                    'currency' => $order->currency,
-                ],
-                'shipping_address' => $order->shippingAddress ? [
-                    'id' => $order->shippingAddress->id,
-                    'title' => $order->shippingAddress->title,
-                    'name' => $order->shippingAddress->name,
-                    'phone' => $order->shippingAddress->phone,
-                    'address_line_1' => $order->shippingAddress->address_line_1,
-                    'city' => $order->shippingAddress->city,
-                ] : null,
-                'payment_method' => 'Cash on Delivery (COD)',
-                'notes' => $order->notes,
-                'created_at' => $order->created_at,
-            ], 'Order placed successfully', 201);
+            return $order;
         });
+
+        // Load relationships for response + notifications
+        $order->load(['items.product', 'shippingAddress', 'payments']);
+
+        // Notifications (outside the transaction so DB records are committed first)
+        $notifications = app(AppNotificationService::class);
+        $orderPayload = [
+            'order_code' => $order->code,
+            'grand_total' => (string) $order->grand_total,
+            'currency' => $order->currency,
+            'message' => "Your order {$order->code} has been placed successfully.",
+        ];
+
+        $notifications->notify($user, NotificationAction::OrderPlaced, $orderPayload);
+
+        $notifications->notifyAdmins(NotificationAction::AdminNewOrder, [
+            'order_id' => $order->id,
+            'order_code' => $order->code,
+            'customer_name' => $user->name,
+            'grand_total' => (string) $order->grand_total,
+            'currency' => $order->currency,
+            'placed_at' => $order->created_at?->toDayDateTimeString(),
+            'message' => "New order {$order->code} placed by {$user->name}.",
+        ]);
+
+        $notifications->notifyVendorsForOrder($order, [
+            'order_code' => $order->code,
+            'message' => "New order {$order->code} received for your store.",
+        ]);
+
+        return $this->successResponse([
+            'order_id' => $order->id,
+            'order_number' => $order->code,
+            'status' => $order->status,
+            'items' => $order->items->map(fn ($item) => [
+                'id' => $item->id,
+                'product_id' => $item->product_id,
+                'product_name' => $item->name,
+                'sku' => $item->sku,
+                'quantity' => $item->quantity,
+                'unit_price' => $item->unit_price,
+                'subtotal' => $item->subtotal,
+                'feature_image' => $item->product?->feature_image,
+            ]),
+            'price_breakdown' => [
+                'subtotal' => $order->subtotal,
+                'tax' => $order->tax_total,
+                'delivery' => $order->shipping_cost,
+                'total' => $order->grand_total,
+                'currency' => $order->currency,
+            ],
+            'shipping_address' => $order->shippingAddress ? [
+                'id' => $order->shippingAddress->id,
+                'title' => $order->shippingAddress->title,
+                'name' => $order->shippingAddress->name,
+                'phone' => $order->shippingAddress->phone,
+                'address_line_1' => $order->shippingAddress->address_line_1,
+                'city' => $order->shippingAddress->city,
+            ] : null,
+            'payment_method' => 'Cash on Delivery (COD)',
+            'notes' => $order->notes,
+            'created_at' => $order->created_at,
+        ], 'Order placed successfully', 201);
     }
 }

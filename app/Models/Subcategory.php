@@ -16,6 +16,7 @@ class Subcategory extends Model
     use SoftDeletes;
 
     protected $fillable = [
+        'user_id',
         'category_id',
         'name',
         'slug',
@@ -26,10 +27,16 @@ class Subcategory extends Model
 
     protected $casts = [
         'id' => 'integer',
+        'user_id' => 'integer',
         'category_id' => 'integer',
         'sort_order' => 'integer',
         'is_active' => 'boolean',
     ];
+
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
+    }
 
     public function category(): BelongsTo
     {

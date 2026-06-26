@@ -38,6 +38,10 @@ class AppServiceProvider extends ServiceProvider
         // Refresh token expires in 7 days (7 * 24 hours = 10080 minutes)
         Passport::refreshTokensExpireIn(now()->addMinutes(10080));
 
+        // Super-admin bypasses every permission/policy check. Returning null (not false)
+        // for everyone else lets normal Gate/permission evaluation continue.
+        Gate::before(fn ($user, $ability) => $user->hasRole('super-admin') ? true : null);
+
         Gate::policy(Role::class, RolePolicy::class);
         Gate::policy(Permission::class, PermissionPolicy::class);
 

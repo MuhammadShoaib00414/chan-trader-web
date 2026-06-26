@@ -4,6 +4,7 @@ namespace App\Services\Notifications;
 
 use App\Enums\NotificationAction;
 use App\Mail\ActionNotificationMail;
+use App\Mail\AdminNewOrderMail;
 use App\Mail\SendOtpMail;
 use App\Mail\WelcomeEmail;
 use App\Models\Setting;
@@ -34,8 +35,19 @@ class EmailNotificationService
             NotificationAction::Welcome => $this->sendWelcome($user),
             NotificationAction::EmailVerificationOtp,
             NotificationAction::PasswordResetOtp => $this->sendOtp($user, $action, $payload),
+            NotificationAction::AdminNewOrder => $this->sendAdminNewOrder($user, $payload),
             default => $this->sendActionMail($user, $action, $payload),
         };
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     */
+    private function sendAdminNewOrder(User $user, array $payload): bool
+    {
+        Mail::to($user->email)->queue(new AdminNewOrderMail($user, $payload));
+
+        return true;
     }
 
     private function sendWelcome(User $user): bool

@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
+use Spatie\Permission\PermissionRegistrar;
 
 class RoleController extends Controller
 {
@@ -55,6 +56,8 @@ class RoleController extends Controller
             $role->givePermissionTo($final);
         }
 
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
+
         return response()->json([
             'success' => true,
             'message' => 'Role created successfully',
@@ -100,6 +103,8 @@ class RoleController extends Controller
             $final = Permission::whereIn('name', $expanded)->pluck('name')->all();
             $role->syncPermissions($final);
         }
+
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
 
         return response()->json([
             'success' => true,
@@ -192,6 +197,11 @@ class RoleController extends Controller
             'create payments' => ['payments.capture'],
             'edit payments' => ['payments.capture'],
             'delete payments' => ['payments.capture'],
+            // Sliders
+            'view sliders' => ['sliders.manage'],
+            'create sliders' => ['sliders.manage'],
+            'edit sliders' => ['sliders.manage'],
+            'delete sliders' => ['sliders.manage'],
             // Settings
             'view settings' => ['view settings'],
             'edit settings' => ['edit settings'],

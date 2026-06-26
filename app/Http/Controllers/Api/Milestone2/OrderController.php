@@ -2,10 +2,12 @@
 
 namespace App\Http\Controllers\Api\Milestone2;
 
+use App\Enums\NotificationAction;
 use App\Http\Controllers\AppBaseController;
 use App\Models\CartItem;
 use App\Models\Order;
 use App\Models\OrderItem;
+use App\Services\Notifications\AppNotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
@@ -223,14 +225,23 @@ class OrderController extends AppBaseController
 
         DB::transaction(function () use ($order) {
             $order->update(['status' => 'cancelled']);
-            
-            // Refund stock
+
             foreach ($order->items as $item) {
-                if ($item->product) {
-                    $item->product->increment('stock', $item->quantity);
-                }
+                $item->product?->increment('stock', $item->quantity);
             }
         });
+
+        $user = auth()->user();
+        $notifications = app(AppNotificationService::class);
+        $notifications->notify($user, NotificationAction::OrderCancelled, [
+            'order_code' => $order->code,
+            'message' => "Your order {$order->code} has been cancelled.",
+        ]);
+        $notifications->notifyAdmins(NotificationAction::AdminNewOrder, [
+            'order_code' => $order->code,
+            'customer_name' => $user->name,
+            'message' => "Order {$order->code} cancelled by customer {$user->name}.",
+        ]);
 
         return $this->successResponse(null, 'Order cancelled successfully');
     }
@@ -263,8 +274,21 @@ class OrderController extends AppBaseController
             return $this->errorResponse($validator->errors()->first());
         }
 
-        // Simplified return request: just update status or log it
-        $order->update(['status' => 'refunded']); // In real app, you'd have a separate 'return_requested' status
+        $order->update(['status' => 'refunded']);
+
+        $user = auth()->user();
+        $notifications = app(AppNotificationService::class);
+        $notifications->notify($user, NotificationAction::ReturnRequested, [
+            'order_code' => $order->code,
+            'reason' => $request->reason,
+            'message' => "Return request submitted for order {$order->code}.",
+        ]);
+        $notifications->notifyAdmins(NotificationAction::ReturnRequested, [
+            'order_code' => $order->code,
+            'customer_name' => $user->name,
+            'reason' => $request->reason,
+            'message' => "Return requested for order {$order->code} by {$user->name}.",
+        ]);
 
         return $this->successResponse(null, 'Return request submitted');
     }

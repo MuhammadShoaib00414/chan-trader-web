@@ -35,4 +35,21 @@ return [
         ],
     ],
 
+    /*
+     | Firebase Web (client) config — used by the browser SDK and the
+     | /firebase-messaging-sw.js service worker for web push / desktop
+     | notifications. These are the public Web App config values + VAPID key
+     | from the Firebase console (project chantrader). The same VITE_FIREBASE_*
+     | keys are exposed to the Vite-built frontend.
+     */
+    'firebase_web' => [
+        'api_key' => env('VITE_FIREBASE_API_KEY'),
+        'auth_domain' => env('VITE_FIREBASE_AUTH_DOMAIN'),
+        'project_id' => env('VITE_FIREBASE_PROJECT_ID'),
+        'storage_bucket' => env('VITE_FIREBASE_STORAGE_BUCKET'),
+        'messaging_sender_id' => env('VITE_FIREBASE_MESSAGING_SENDER_ID'),
+        'app_id' => env('VITE_FIREBASE_APP_ID'),
+        'vapid_key' => env('VITE_FIREBASE_VAPID_KEY'),
+    ],
+
 ];
