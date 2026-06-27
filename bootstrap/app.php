@@ -21,6 +21,14 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->encryptCookies(except: ['appearance', 'sidebar_state', 'XSRF-TOKEN']);
 
+        $middleware->validateCsrfTokens(except: [
+            'api/admin/categories*',
+            'api/admin/subcategories*',
+            'api/admin/articles*',
+            'api/admin/brands*',
+            'api/admin/products*',
+        ]);
+
         $middleware->web(append: [
             HandleAppearance::class,
             HandleInertiaRequests::class,

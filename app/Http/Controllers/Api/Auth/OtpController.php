@@ -2,21 +2,21 @@
 
 namespace App\Http\Controllers\Api\Auth;
 
+use App\Enums\NotificationAction;
 use App\Enums\OtpType;
 use App\Http\Controllers\AppBaseController;
 use App\Http\Requests\Api\SendOtpRequest;
 use App\Http\Requests\Api\VerifyEmailRequest;
 use App\Http\Requests\Api\VerifyPasswordResetOtpRequest;
 use App\Http\Resources\UserResource;
-use App\Mail\WelcomeEmail;
 use App\Models\User;
+use App\Services\Notifications\AppNotificationService;
 use App\Traits\IssueTokenTrait;
 use App\Traits\OtpTrait;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 
 class OtpController extends AppBaseController
@@ -205,9 +205,6 @@ class OtpController extends AppBaseController
         } else {
             // Mark email as verified for new registration
             $user->email_verified_at = now();
-
-            // Send welcome email
-            Mail::to($user->email)->send(new WelcomeEmail($user));
         }
 
         // Approve/activate the account
@@ -215,6 +212,11 @@ class OtpController extends AppBaseController
         $user->otp = null;
         $user->otp_expires_at = null;
         $user->save();
+
+        // Send welcome notification (email + push + DB) for new registrations
+        if (! $isVerifyingPendingEmail) {
+            app(AppNotificationService::class)->notify($user, NotificationAction::Welcome);
+        }
 
         return $this->successResponse(
             null,

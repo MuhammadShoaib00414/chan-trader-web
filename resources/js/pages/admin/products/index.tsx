@@ -23,6 +23,20 @@ import { Head, router, usePage } from '@inertiajs/react';
 import { LoaderCircle } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 
+const VISIBILITY_OPTIONS = [
+    { value: 'website_only', label: 'Website Only' },
+    { value: 'mobile_app_only', label: 'Mobile App Only' },
+    { value: 'website_and_mobile', label: 'Website & Mobile App' },
+    { value: 'hidden', label: 'Hidden (Do Not Show)' },
+] as const;
+
+function visibilityLabel(value?: string | null) {
+    return (
+        VISIBILITY_OPTIONS.find((option) => option.value === value)?.label ??
+        'Website & Mobile App'
+    );
+}
+
 export default function ProductsIndex() {
     type ProductItem = {
         id: number;
@@ -44,6 +58,7 @@ export default function ProductsIndex() {
         store?: { id: number; name: string } | null;
         category?: { id: number; name: string } | null;
         is_published?: boolean;
+        visibility?: string | null;
     };
     type CategoryRef = { id: number; name: string };
     type SubcategoryRef = { id: number; name: string; category_id: number };
@@ -115,6 +130,7 @@ export default function ProductsIndex() {
     const [description, setDescription] = useState('');
     const [warrantyText, setWarrantyText] = useState('');
     const [featureImage, setFeatureImage] = useState<File | null>(null);
+    const [visibility, setVisibility] = useState('website_and_mobile');
     const [subcategoryOptions, setSubcategoryOptions] = useState<
         SubcategoryRef[]
     >(() =>
@@ -414,6 +430,7 @@ export default function ProductsIndex() {
         if (description) fd.append('description', description);
         if (warrantyText) fd.append('warranty_text', warrantyText);
         if (featureImage) fd.append('feature_image', featureImage);
+        fd.append('visibility', visibility);
 
         try {
             const res = await postForm('/api/admin/products', fd);
@@ -944,6 +961,23 @@ export default function ProductsIndex() {
                                     </select>
                                 </div>
 
+                                <div className="md:col-span-2">
+                                    <label className="mb-1.5 block text-sm font-medium">
+                                        Product Visibility
+                                    </label>
+                                    <select
+                                        className="w-full rounded-md border px-3 py-2"
+                                        value={visibility}
+                                        onChange={(e) => setVisibility(e.target.value)}
+                                    >
+                                        {VISIBILITY_OPTIONS.map((option) => (
+                                            <option key={option.value} value={option.value}>
+                                                {option.label}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+
                                 <div className="border-t pt-4 md:col-span-2">
                                     <h3 className="mb-2 text-sm font-semibold text-muted-foreground">
                                         Media
@@ -985,8 +1019,8 @@ export default function ProductsIndex() {
                 </div>
 
                 <div className="rounded-lg border">
-                    <div className="hidden w-full overflow-x-auto md:block">
-                        <Table className="min-w-[900px]">
+                    <div className="w-full overflow-x-auto">
+                        <Table className="min-w-[1100px] w-full">
                             <TableHeader>
                                 <TableRow>
                                     <TableHead className="w-12">ID</TableHead>
@@ -1025,6 +1059,13 @@ export default function ProductsIndex() {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
+                                {items.length === 0 ? (
+                                    <TableRow>
+                                        <TableCell colSpan={14} className="py-8 text-center text-sm text-muted-foreground">
+                                            No products found.
+                                        </TableCell>
+                                    </TableRow>
+                                ) : null}
                                 {items?.map((p) => (
                                     <TableRow key={p.id}>
                                         <TableCell>{p.id}</TableCell>
@@ -1101,7 +1142,10 @@ export default function ProductsIndex() {
                                                 </span>
                                             )}
                                         </TableCell>
-                                        <TableCell className="text-right">
+                                        <TableCell className="hidden lg:table-cell text-xs whitespace-nowrap">
+                                            {visibilityLabel(p.visibility)}
+                                        </TableCell>
+                                        <TableCell className="text-right min-w-[220px]">
                                             <div className="flex justify-end gap-1">
                                                 <Button
                                                     size="sm"
@@ -1111,7 +1155,18 @@ export default function ProductsIndex() {
                                                     <a
                                                         href={`/admin/products/${p.id}`}
                                                     >
-                                                        Manage
+                                                        View
+                                                    </a>
+                                                </Button>
+                                                <Button
+                                                    size="sm"
+                                                    variant="outline"
+                                                    asChild
+                                                >
+                                                    <a
+                                                        href={`/admin/products/${p.id}?edit=1`}
+                                                    >
+                                                        Edit
                                                     </a>
                                                 </Button>
                                                 <Button
@@ -1250,7 +1305,7 @@ export default function ProductsIndex() {
                                                 <a
                                                     href={`/admin/products/${p.id}`}
                                                 >
-                                                    Manage
+                                                    View
                                                 </a>
                                             </Button>
                                             <Button

@@ -84,15 +84,31 @@ class OrderController extends Controller
             'created_at' => now(),
         ]);
 
-        if ($request->boolean('notify_customer') && $order->user) {
+        if ($order->user) {
+            $action = match ($validated['to_status']) {
+                'confirmed' => NotificationAction::OrderConfirmed,
+                'shipped' => NotificationAction::OrderShipped,
+                'delivered' => NotificationAction::OrderDelivered,
+                'cancelled' => NotificationAction::OrderCancelled,
+                'refunded' => NotificationAction::PaymentRefunded,
+                default => NotificationAction::OrderStatusUpdated,
+            };
+
+            $payload = [
+                'message' => "Your order {$order->code} is now {$validated['to_status']}.",
+                'order_code' => $order->code,
+                'status' => $validated['to_status'],
+            ];
+
+            $notifyCustomer = $request->boolean('notify_customer');
+
+            // Always persist in-app notification; send email+push only when requested
             app(AppNotificationService::class)->notify(
                 $order->user,
-                NotificationAction::OrderStatusUpdated,
-                [
-                    'message' => "Your order {$order->code} is now {$validated['to_status']}.",
-                    'order_code' => $order->code,
-                    'status' => $validated['to_status'],
-                ],
+                $action,
+                $payload,
+                $notifyCustomer,
+                $notifyCustomer,
             );
         }
 
@@ -101,7 +117,6 @@ class OrderController extends Controller
 
     public function printInvoice(Order $order)
     {
-        // Placeholder for PDF generation
         return response()->json([
             'success' => true,
             'message' => 'Invoice generated',
@@ -113,7 +128,17 @@ class OrderController extends Controller
 
     public function resendConfirmation(Order $order)
     {
-        // Placeholder for resending confirmation Email/SMS
+        if ($order->user) {
+            app(AppNotificationService::class)->notify(
+                $order->user,
+                NotificationAction::OrderConfirmed,
+                [
+                    'order_code' => $order->code,
+                    'message' => "Your order {$order->code} has been confirmed.",
+                ],
+            );
+        }
+
         return response()->json([
             'success' => true,
             'message' => 'Order confirmation resent successfully',
@@ -131,11 +156,19 @@ class OrderController extends Controller
 
         $order->update(['status' => 'cancelled']);
 
-        // Restore stock
         foreach ($order->items as $item) {
-            if ($item->product) {
-                $item->product->increment('stock', $item->quantity);
-            }
+            $item->product?->increment('stock', $item->quantity);
+        }
+
+        if ($order->user) {
+            app(AppNotificationService::class)->notify(
+                $order->user,
+                NotificationAction::OrderCancelled,
+                [
+                    'order_code' => $order->code,
+                    'message' => "Your order {$order->code} has been cancelled.",
+                ],
+            );
         }
 
         return response()->json([

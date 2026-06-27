@@ -37,6 +37,7 @@ class Product extends Model
         'meta_title',
         'meta_description',
         'is_published',
+        'visibility',
         'is_featured',
         'is_top_selling',
         'published_at',

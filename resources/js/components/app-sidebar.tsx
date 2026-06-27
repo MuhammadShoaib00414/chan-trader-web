@@ -14,7 +14,7 @@ import { dashboard } from '@/routes';
 import { type NavItem } from '@/types';
 import { Link, usePage } from '@inertiajs/react';
 import { SharedData } from '@/types';
-import { Folder, LayoutGrid, Shield, Users, Package, ShoppingCart, Truck, CreditCard, Boxes, Store, Tag, Layers, ReceiptText, WalletCards, Building2, FileText, Settings, FileStack, Palette } from 'lucide-react';
+import { Folder, LayoutGrid, Shield, Users, Package, ShoppingCart, Truck, CreditCard, Boxes, Store, Tag, Layers, ReceiptText, WalletCards, Building2, FileText, Settings, FileStack, Palette, GalleryHorizontal } from 'lucide-react';
 import AppLogo from './app-logo';
 
 const mainNavItems: NavItem[] = [
@@ -94,6 +94,11 @@ const mainNavItems: NavItem[] = [
         icon: Tag,
     },
     {
+        title: 'Slider Management',
+        href: '/admin/sliders',
+        icon: GalleryHorizontal,
+    },
+    {
         title: 'Orders',
         href: '/admin/orders',
         icon: ShoppingCart,
@@ -147,6 +152,7 @@ export function AppSidebar() {
     const page = usePage<SharedData>();
     const authExt = page.props.auth as unknown as { roles?: string[]; permissions?: string[] };
     const perms: string[] = authExt.permissions ?? [];
+    const isSuperAdmin = (authExt.roles ?? []).includes('super-admin');
     const requiredPerms: Record<string, string[]> = {
         '/dashboard': ['view dashboard'],
         '/users': ['view users'],
@@ -163,6 +169,7 @@ export function AppSidebar() {
         '/admin/shop/sales': ['view sales'],
         '/admin/shop/stock': ['view stock'],
         '/admin/promotions': ['promotions.manage', 'promotions.view', 'view promotions', 'create promotions', 'edit promotions', 'delete promotions'],
+        '/admin/sliders': ['sliders.manage'],
         '/admin/orders': ['orders.view', 'view orders'],
         '/admin/shipments': ['shipments.view', 'view shipments'],
         '/admin/payments': ['payments.view', 'view payments'],
@@ -172,6 +179,7 @@ export function AppSidebar() {
         '/admin/content-pages': ['pages.manage'],
     };
     const filteredItems = mainNavItems.filter((item) => {
+        if (isSuperAdmin) return true; // super-admin sees every module
         const href = typeof item.href === 'string' ? item.href : item.href.url;
         const rp = requiredPerms[href];
         if (!rp) return true;

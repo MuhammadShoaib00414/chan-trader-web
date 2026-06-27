@@ -1,0 +1,101 @@
+APP_NAME=Chan-Trader
+APP_ENV=local
+APP_KEY=base64:fj0lhqIDOxb/Rn5LM0eUml+SjxhwZCBH+rv0ephjobI=
+APP_DEBUG=false
+APP_URL=https://admin.chantrader.com
+
+APP_LOCALE=en
+APP_FALLBACK_LOCALE=en
+APP_FAKER_LOCALE=en_US
+
+APP_MAINTENANCE_DRIVER=file
+# APP_MAINTENANCE_STORE=database
+
+PHP_CLI_SERVER_WORKERS=4
+
+BCRYPT_ROUNDS=12
+
+LOG_CHANNEL=stack
+LOG_STACK=single
+LOG_DEPRECATIONS_CHANNEL=null
+LOG_LEVEL=debug
+
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=itia_chan_trader
+DB_USERNAME=itia_chan_trader
+DB_PASSWORD=itia_chan_trader
+# DB_CONNECTION=sqlite
+# DB_HOST=127.0.0.1
+# DB_PORT=3306
+# DB_DATABASE=traderApp
+# DB_USERNAME=root
+# DB_PASSWORD=
+
+
+VITE_FIREBASE_API_KEY=AIzaSyBOxRON9LtMq4RERBvIoNcxBpd13NQcTbw
+VITE_FIREBASE_AUTH_DOMAIN=chantrader.firebaseapp.com
+VITE_FIREBASE_PROJECT_ID=chantrader
+VITE_FIREBASE_STORAGE_BUCKET=chantrader.firebasestorage.app
+VITE_FIREBASE_MESSAGING_SENDER_ID=312049171386
+VITE_FIREBASE_APP_ID=1:312049171386:web:c6014fe6f547f32e5abb83
+VITE_FIREBASE_VAPID_KEY=BANq0aQbZ-5AupfLzHyxROWlFFEfvDlAk_5CsfgzC7ydw4Li_vKes3c1Y0TzxpPeQvGrNtYPbYlSLGWaS1wYYF4
+
+
+
+SESSION_DRIVER=database
+SESSION_LIFETIME=240
+SESSION_PATH=/
+SESSION_DOMAIN=admin.chantrader.com
+SESSION_SECURE_COOKIE=false
+SESSION_SAME_SITE=lax
+
+
+BROADCAST_CONNECTION=log
+FILESYSTEM_DISK=local
+QUEUE_CONNECTION=database
+
+CACHE_STORE=database
+# CACHE_PREFIX=
+
+MEMCACHED_HOST=127.0.0.1
+
+REDIS_CLIENT=phpredis
+REDIS_HOST=127.0.0.1
+REDIS_PASSWORD=null
+REDIS_PORT=6379
+
+FCM_ENABLED=true
+# FCM_PROJECT_ID=chantrader-96366
+FCM_PROJECT_ID=chantrader
+FCM_CREDENTIALS_PATH=storage/app/firebase-credentials.json
+
+
+SMTP_HOST=mail.chantrader.com
+SMTP_PORT=587
+# SMTP_USERNAME=mainaccount@chantrader.com
+# SMTP_PASSWORD=$Ys.xsjZWprdcv2_
+SMTP_USERNAME=mateen@chantrader.com
+SMTP_PASSWORD=H^n0p-Wq$Ol.2AfC
+SMTP_ENCRYPTION=tls
+MAIL_FROM_ADDRESS=_mainaccount@smartwebex.com
+MAIL_FROM_NAME="Chan-Trader"
+
+LOG_VIEWER_ENABLED=true
+LOG_VIEWER_MIDDLEWARE=web
+LOG_VIEWER_ROUTE_PREFIX=log-viewer
+
+AWS_ACCESS_KEY_ID=
+AWS_SECRET_ACCESS_KEY=
+AWS_DEFAULT_REGION=us-east-1
+AWS_BUCKET=
+AWS_USE_PATH_STYLE_ENDPOINT=false
+
+VITE_APP_NAME="${APP_NAME}"
+
+PASSPORT_PASSWORD_GRANT_CLIENT_ID=019da6b5-3b50-72f9-9c0d-7a78d47a7ed0
+PASSPORT_PASSWORD_GRANT_CLIENT_SECRET=oPJNCJIc5aQEPil79lAOOsYzOuJblJnxtao5OQZH
+
+  #Client ID ............................................................................................. 019d45d7-953d-7053-b938-7f2731e000f3
+  #Client Secret ..................................................................................... zJFrmnTZoj9zEkXENCuWIJzx7Z6Mr9NLfpu4huKX

@@ -35,6 +35,11 @@ Route::get('/csrf-token', function (Request $request) {
     ]);
 })->name('csrf.token');
 
+// Firebase Cloud Messaging service worker (must be served from site root so its
+// scope covers the whole app). Generated with the public web config from env.
+Route::get('/firebase-messaging-sw.js', [\App\Http\Controllers\FirebaseSwController::class, 'serviceWorker'])
+    ->name('firebase.sw');
+
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', function () {
         $user = auth()->user();
@@ -197,94 +202,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
                 ->middleware('role:super-admin');
             Route::patch('vendors/{vendor}', [\App\Http\Controllers\Admin\VendorController::class, 'update'])
                 ->middleware('role:super-admin');
-            Route::get('categories', [\App\Http\Controllers\Admin\CategoryController::class, 'index'])
-                ->middleware('permission:categories.manage');
-            Route::post('categories', [\App\Http\Controllers\Admin\CategoryController::class, 'store'])
-                ->middleware('permission:categories.manage');
-            Route::get('categories/{category}', [\App\Http\Controllers\Admin\CategoryController::class, 'show'])
-                ->middleware('permission:categories.manage');
-            Route::patch('categories/{category}', [\App\Http\Controllers\Admin\CategoryController::class, 'update'])
-                ->middleware('permission:categories.manage');
-            Route::delete('categories/{category}', [\App\Http\Controllers\Admin\CategoryController::class, 'destroy'])
-                ->middleware('permission:categories.manage');
-
-            Route::get('subcategories', [\App\Http\Controllers\Admin\SubcategoryController::class, 'index'])
-                ->middleware('permission:subcategories.manage');
-            Route::post('subcategories', [\App\Http\Controllers\Admin\SubcategoryController::class, 'store'])
-                ->middleware('permission:subcategories.manage');
-            Route::get('subcategories/{subcategory}', [\App\Http\Controllers\Admin\SubcategoryController::class, 'show'])
-                ->middleware('permission:subcategories.manage');
-            Route::patch('subcategories/{subcategory}', [\App\Http\Controllers\Admin\SubcategoryController::class, 'update'])
-                ->middleware('permission:subcategories.manage');
-            Route::delete('subcategories/{subcategory}', [\App\Http\Controllers\Admin\SubcategoryController::class, 'destroy'])
-                ->middleware('permission:subcategories.manage');
-
-            Route::get('articles', [\App\Http\Controllers\Admin\ArticleController::class, 'index'])
-                ->middleware('permission:articles.manage');
-            Route::post('articles', [\App\Http\Controllers\Admin\ArticleController::class, 'store'])
-                ->middleware('permission:articles.manage');
-            Route::get('articles/{article}', [\App\Http\Controllers\Admin\ArticleController::class, 'show'])
-                ->middleware('permission:articles.manage');
-            Route::patch('articles/{article}', [\App\Http\Controllers\Admin\ArticleController::class, 'update'])
-                ->middleware('permission:articles.manage');
-            Route::delete('articles/{article}', [\App\Http\Controllers\Admin\ArticleController::class, 'destroy'])
-                ->middleware('permission:articles.manage');
-
-            Route::get('brands', [\App\Http\Controllers\Admin\BrandController::class, 'index'])
-                ->middleware('permission:brands.manage');
-            Route::post('brands', [\App\Http\Controllers\Admin\BrandController::class, 'store'])
-                ->middleware('permission:brands.manage');
-            Route::get('brands/{brand}', [\App\Http\Controllers\Admin\BrandController::class, 'show'])
-                ->middleware('permission:brands.manage');
-            Route::patch('brands/{brand}', [\App\Http\Controllers\Admin\BrandController::class, 'update'])
-                ->middleware('permission:brands.manage');
-            Route::delete('brands/{brand}', [\App\Http\Controllers\Admin\BrandController::class, 'destroy'])
-                ->middleware('permission:brands.manage');
-
-            Route::get('stores', [\App\Http\Controllers\Admin\StoreController::class, 'index'])
-                ->middleware('permission:stores.view');
-            Route::post('stores', [\App\Http\Controllers\Admin\StoreController::class, 'store'])
-                ->middleware('permission:stores.manage_staff');
-            Route::get('stores/{store}', [\App\Http\Controllers\Admin\StoreController::class, 'show'])
-                ->middleware('permission:stores.view');
-            Route::patch('stores/{store}', [\App\Http\Controllers\Admin\StoreController::class, 'update'])
-                ->middleware('permission:stores.manage_staff');
-            Route::delete('stores/{store}', [\App\Http\Controllers\Admin\StoreController::class, 'destroy'])
-                ->middleware('permission:stores.manage_staff');
-            Route::post('stores/{store}/approve', [\App\Http\Controllers\Admin\StoreController::class, 'approve'])
-                ->middleware('permission:stores.approve');
-            Route::post('stores/{store}/suspend', [\App\Http\Controllers\Admin\StoreController::class, 'suspend'])
-                ->middleware('permission:stores.suspend');
-
-            Route::get('products', [\App\Http\Controllers\Admin\ProductController::class, 'index'])
-                ->middleware('permission:products.view');
-            Route::get('products/subcategories', [\App\Http\Controllers\Admin\ProductController::class, 'subcategories'])
-                ->middleware('permission:products.view');
-            Route::get('products/articles', [\App\Http\Controllers\Admin\ProductController::class, 'articles'])
-                ->middleware('permission:products.view');
-            Route::post('products', [\App\Http\Controllers\Admin\ProductController::class, 'store'])
-                ->middleware('permission:products.create');
-            Route::get('products/{product}', [\App\Http\Controllers\Admin\ProductController::class, 'show'])
-                ->middleware('permission:products.view');
-            Route::patch('products/{product}', [\App\Http\Controllers\Admin\ProductController::class, 'update'])
-                ->middleware('permission:products.update');
-            Route::delete('products/{product}', [\App\Http\Controllers\Admin\ProductController::class, 'destroy'])
-                ->middleware('permission:products.delete');
-            Route::post('products/{product}/publish', [\App\Http\Controllers\Admin\ProductController::class, 'publish'])
-                ->middleware('permission:products.publish');
-            Route::post('products/{product}/unpublish', [\App\Http\Controllers\Admin\ProductController::class, 'unpublish'])
-                ->middleware('permission:products.publish');
-
-            Route::post('products/{product}/images', [\App\Http\Controllers\Admin\ProductImageController::class, 'store'])
-                ->middleware('permission:products.update');
-            Route::delete('products/{product}/images/{image}', [\App\Http\Controllers\Admin\ProductImageController::class, 'destroy'])
-                ->middleware('permission:products.update');
-            Route::patch('products/{product}/images/{image}/primary', [\App\Http\Controllers\Admin\ProductImageController::class, 'primary'])
-                ->middleware('permission:products.update');
-            Route::post('products/{product}/feature-image', [\App\Http\Controllers\Admin\ProductController::class, 'uploadFeatureImage'])
-                ->middleware('permission:products.update');
-            Route::post('products/{product}/top-image', [\App\Http\Controllers\Admin\ProductController::class, 'uploadTopImage'])
-                ->middleware('permission:products.update');
+            // Catalog CRUD moved to routes/api.php (Passport + session via auth:web,api)
 
             Route::get('orders', [\App\Http\Controllers\Admin\OrderController::class, 'index'])
                 ->middleware('permission:orders.view');
@@ -318,6 +236,20 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::delete('promotions/{promotion}', [\App\Http\Controllers\Admin\PromotionController::class, 'destroy'])
                 ->middleware('permission:promotions.manage');
 
+            // Slider Management
+            Route::get('sliders', [\App\Http\Controllers\Admin\SliderController::class, 'index'])
+                ->middleware('permission:sliders.manage');
+            Route::post('sliders', [\App\Http\Controllers\Admin\SliderController::class, 'store'])
+                ->middleware('permission:sliders.manage');
+            Route::get('sliders/{slider}', [\App\Http\Controllers\Admin\SliderController::class, 'show'])
+                ->middleware('permission:sliders.manage');
+            Route::patch('sliders/{slider}', [\App\Http\Controllers\Admin\SliderController::class, 'update'])
+                ->middleware('permission:sliders.manage');
+            Route::delete('sliders/{slider}', [\App\Http\Controllers\Admin\SliderController::class, 'destroy'])
+                ->middleware('permission:sliders.manage');
+            Route::patch('sliders/{slider}/status', [\App\Http\Controllers\Admin\SliderController::class, 'toggleStatus'])
+                ->middleware('permission:sliders.manage');
+
             Route::get('settings', [\App\Http\Controllers\Admin\SettingController::class, 'index'])
                 ->middleware('permission:view settings');
             Route::get('settings/{group}', [\App\Http\Controllers\Admin\SettingController::class, 'show'])
@@ -338,6 +270,15 @@ Route::middleware(['auth', 'verified'])->group(function () {
                 ->middleware('permission:pages.manage');
             Route::patch('content-pages/{slug}', [\App\Http\Controllers\Admin\ContentPageController::class, 'update'])
                 ->middleware('permission:pages.manage');
+
+            // Web (session) FCM token registration for the admin dashboard
+            Route::post('fcm-token', [\App\Http\Controllers\Admin\FcmTokenController::class, 'store']);
+            Route::delete('fcm-token', [\App\Http\Controllers\Admin\FcmTokenController::class, 'destroy']);
+
+            // Admin in-app notifications (session-auth, for the dashboard bell)
+            Route::get('notifications', [\App\Http\Controllers\Admin\NotificationController::class, 'index']);
+            Route::post('notifications/read-all', [\App\Http\Controllers\Admin\NotificationController::class, 'markAllRead']);
+            Route::post('notifications/{id}/read', [\App\Http\Controllers\Admin\NotificationController::class, 'markRead']);
         });
     });
 
@@ -410,6 +351,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         Route::get('categories', function (Request $request) {
             $query = Category::query();
+            if ($request->user()?->hasRole('vendor')) {
+                $query->where('user_id', $request->user()->id);
+            }
             if ($request->filled('q')) {
                 $q = $request->string('q')->toString();
                 $query->where('name', 'like', "%{$q}%");
@@ -440,6 +384,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         Route::get('subcategories', function (Request $request) {
             $query = Subcategory::query()->with('category:id,name');
+            if ($request->user()?->hasRole('vendor')) {
+                $query->where('user_id', $request->user()->id);
+            }
             if ($request->filled('q')) {
                 $q = $request->string('q')->toString();
                 $query->where('name', 'like', "%{$q}%");
@@ -475,6 +422,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         Route::get('articles', function (Request $request) {
             $query = Article::query()->with(['subcategory:id,category_id,name', 'subcategory.category:id,name']);
+            if ($request->user()?->hasRole('vendor')) {
+                $query->where('user_id', $request->user()->id);
+            }
             if ($request->filled('q')) {
                 $q = $request->string('q')->toString();
                 $query->where('name', 'like', "%{$q}%");
@@ -517,6 +467,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         Route::get('brands', function (Request $request) {
             $query = Brand::query();
+            if ($request->user()?->hasRole('vendor')) {
+                $query->where('user_id', $request->user()->id);
+            }
             if ($request->filled('q')) {
                 $q = $request->string('q')->toString();
                 $query->where('name', 'like', "%{$q}%");
@@ -785,6 +738,35 @@ Route::middleware(['auth', 'verified'])->group(function () {
                 'products' => $products,
             ]);
         })->middleware('permission:promotions.manage|promotions.view');
+
+        Route::get('sliders', function (Request $request) {
+            $query = \App\Models\Slider::query();
+            if ($request->filled('q')) {
+                $q = $request->string('q')->toString();
+                $query->where(function ($sub) use ($q) {
+                    $sub->where('title', 'like', "%{$q}%")
+                        ->orWhere('subtitle', 'like', "%{$q}%");
+                });
+            }
+            if ($request->filled('status')) {
+                $query->where('is_active', $request->get('status') === 'active');
+            }
+            $items = $query->orderBy('display_order')->orderBy('id')->paginate(20)->withQueryString();
+
+            return Inertia::render('admin/sliders/index', [
+                'items' => $items->items(),
+                'pagination' => [
+                    'total' => $items->total(),
+                    'per_page' => $items->perPage(),
+                    'current_page' => $items->currentPage(),
+                    'last_page' => $items->lastPage(),
+                ],
+                'filters' => [
+                    'q' => $request->get('q'),
+                    'status' => $request->get('status'),
+                ],
+            ]);
+        })->middleware('permission:sliders.manage');
 
         Route::get('settings', function () {
             return Inertia::render('admin/settings/index', [
@@ -1240,3 +1222,44 @@ Route::get('/test-mail', function () {
 });
 require __DIR__.'/settings.php';
 require __DIR__.'/auth.php';
+
+// Vendor catalog JSON (session + bearer)
+Route::prefix('api')->middleware(['auth:web,api', 'verified'])->group(function () {
+    Route::prefix('admin')->group(function () {
+        Route::get('categories', [\App\Http\Controllers\Admin\CategoryController::class, 'index'])->middleware('permission:categories.manage');
+        Route::post('categories', [\App\Http\Controllers\Admin\CategoryController::class, 'store'])->middleware('permission:categories.manage');
+        Route::get('categories/{category}', [\App\Http\Controllers\Admin\CategoryController::class, 'show'])->middleware('permission:categories.manage');
+        Route::patch('categories/{category}', [\App\Http\Controllers\Admin\CategoryController::class, 'update'])->middleware('permission:categories.manage');
+        Route::delete('categories/{category}', [\App\Http\Controllers\Admin\CategoryController::class, 'destroy'])->middleware('permission:categories.manage');
+
+        Route::get('subcategories', [\App\Http\Controllers\Admin\SubcategoryController::class, 'index'])->middleware('permission:subcategories.manage');
+        Route::post('subcategories', [\App\Http\Controllers\Admin\SubcategoryController::class, 'store'])->middleware('permission:subcategories.manage');
+        Route::get('subcategories/{subcategory}', [\App\Http\Controllers\Admin\SubcategoryController::class, 'show'])->middleware('permission:subcategories.manage');
+        Route::patch('subcategories/{subcategory}', [\App\Http\Controllers\Admin\SubcategoryController::class, 'update'])->middleware('permission:subcategories.manage');
+        Route::delete('subcategories/{subcategory}', [\App\Http\Controllers\Admin\SubcategoryController::class, 'destroy'])->middleware('permission:subcategories.manage');
+
+        Route::get('articles', [\App\Http\Controllers\Admin\ArticleController::class, 'index'])->middleware('permission:articles.manage');
+        Route::post('articles', [\App\Http\Controllers\Admin\ArticleController::class, 'store'])->middleware('permission:articles.manage');
+        Route::get('articles/{article}', [\App\Http\Controllers\Admin\ArticleController::class, 'show'])->middleware('permission:articles.manage');
+        Route::patch('articles/{article}', [\App\Http\Controllers\Admin\ArticleController::class, 'update'])->middleware('permission:articles.manage');
+        Route::delete('articles/{article}', [\App\Http\Controllers\Admin\ArticleController::class, 'destroy'])->middleware('permission:articles.manage');
+
+        Route::get('brands', [\App\Http\Controllers\Admin\BrandController::class, 'index'])->middleware('permission:brands.manage');
+        Route::post('brands', [\App\Http\Controllers\Admin\BrandController::class, 'store'])->middleware('permission:brands.manage');
+        Route::get('brands/{brand}', [\App\Http\Controllers\Admin\BrandController::class, 'show'])->middleware('permission:brands.manage');
+        Route::patch('brands/{brand}', [\App\Http\Controllers\Admin\BrandController::class, 'update'])->middleware('permission:brands.manage');
+        Route::delete('brands/{brand}', [\App\Http\Controllers\Admin\BrandController::class, 'destroy'])->middleware('permission:brands.manage');
+
+        Route::get('products', [\App\Http\Controllers\Admin\ProductController::class, 'index'])->middleware('permission:products.view');
+        Route::get('products/subcategories', [\App\Http\Controllers\Admin\ProductController::class, 'subcategories'])->middleware('permission:products.view');
+        Route::get('products/articles', [\App\Http\Controllers\Admin\ProductController::class, 'articles'])->middleware('permission:products.view');
+        Route::post('products', [\App\Http\Controllers\Admin\ProductController::class, 'store'])->middleware('permission:products.create');
+        Route::get('products/{product}', [\App\Http\Controllers\Admin\ProductController::class, 'show'])->middleware('permission:products.view');
+        Route::patch('products/{product}', [\App\Http\Controllers\Admin\ProductController::class, 'update'])->middleware('permission:products.update');
+        Route::delete('products/{product}', [\App\Http\Controllers\Admin\ProductController::class, 'destroy'])->middleware('permission:products.delete');
+        Route::post('products/{product}/publish', [\App\Http\Controllers\Admin\ProductController::class, 'publish'])->middleware('permission:products.publish');
+        Route::post('products/{product}/unpublish', [\App\Http\Controllers\Admin\ProductController::class, 'unpublish'])->middleware('permission:products.publish');
+        Route::post('products/{product}/feature-image', [\App\Http\Controllers\Admin\ProductController::class, 'uploadFeatureImage'])->middleware('permission:products.update');
+    });
+});
+

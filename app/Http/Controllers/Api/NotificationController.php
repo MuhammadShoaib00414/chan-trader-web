@@ -5,14 +5,17 @@ namespace App\Http\Controllers\Api;
 use App\Enums\NotificationAction;
 use App\Http\Controllers\AppBaseController;
 use App\Http\Requests\Api\SendNotificationRequest;
+use App\Http\Requests\Api\SendTokenNotificationRequest;
 use App\Models\User;
 use App\Services\Notifications\AppNotificationService;
+use App\Services\Notifications\PushNotificationService;
 use Illuminate\Http\JsonResponse;
 
 class NotificationController extends AppBaseController
 {
     public function __construct(
         private AppNotificationService $notifications,
+        private PushNotificationService $push,
     ) {}
 
     /**
@@ -66,5 +69,34 @@ class NotificationController extends AppBaseController
             'action' => $action->value,
             'user_id' => $user->id,
         ], 'Notification dispatched');
+    }
+
+    /**
+     * Send a push notification directly to an FCM device token.
+     *
+     * @group Notifications
+     *
+     * @bodyParam token string required FCM device token. Example: ddsYPs1PTY...
+     * @bodyParam title string required Notification title. Example: Hello
+     * @bodyParam body string required Notification body. Example: Test message
+     * @bodyParam data object optional Key-value string pairs attached to the message.
+     *
+     * @authenticated
+     */
+    public function sendToToken(SendTokenNotificationRequest $request): JsonResponse
+    {
+        $validated = $request->validated();
+
+        $sent = $this->push->sendRaw(
+            $validated['token'],
+            $validated['title'],
+            $validated['body'],
+            $validated['data'] ?? [],
+        );
+
+        return $this->successResponse([
+            'sent'  => $sent,
+            'token' => $validated['token'],
+        ], $sent ? 'Push notification sent' : 'Push notification failed (check FCM config)');
     }
 }

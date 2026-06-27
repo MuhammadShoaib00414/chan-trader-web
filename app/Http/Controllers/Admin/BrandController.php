@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Brand;
+use App\Support\VendorCatalogScope;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
@@ -45,6 +46,7 @@ class BrandController extends Controller
     public function index(Request $request)
     {
         $query = Brand::query();
+        VendorCatalogScope::applyUserScope($query, $request);
         if ($request->filled('q')) {
             $q = $request->string('q')->toString();
             $query->where('name', 'like', "%{$q}%");
@@ -78,18 +80,21 @@ class BrandController extends Controller
         if (! array_key_exists('sort_order', $validated) || $validated['sort_order'] === null) {
             $validated['sort_order'] = (Brand::max('sort_order') ?? 0) + 1;
         }
+        $validated = VendorCatalogScope::assignUserId($validated, $request);
         $brand = Brand::create($validated);
 
         return response()->json(['success' => true, 'message' => 'Brand created.', 'data' => $brand], 201);
     }
 
-    public function show(Brand $brand)
+    public function show(Brand $brand, Request $request)
     {
+        VendorCatalogScope::authorizeUserOwned($brand, $request);
         return response()->json(['success' => true, 'data' => $brand]);
     }
 
     public function update(Request $request, Brand $brand)
     {
+        VendorCatalogScope::authorizeUserOwned($brand, $request);
         $rules = [
             'name' => ['sometimes', 'string', 'max:120', Rule::unique('brands', 'name')->ignore($brand->id)],
             'slug' => ['sometimes', 'string', 'max:140', Rule::unique('brands', 'slug')->ignore($brand->id)],
@@ -109,8 +114,9 @@ class BrandController extends Controller
         return response()->json(['success' => true, 'message' => 'Brand updated.', 'data' => $brand]);
     }
 
-    public function destroy(Brand $brand)
+    public function destroy(Brand $brand, Request $request)
     {
+        VendorCatalogScope::authorizeUserOwned($brand, $request);
         $brand->delete();
 
         return response()->json(['success' => true, 'message' => 'Brand deleted.']);

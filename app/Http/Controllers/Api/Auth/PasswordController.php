@@ -2,11 +2,13 @@
 
 namespace App\Http\Controllers\Api\Auth;
 
+use App\Enums\NotificationAction;
 use App\Http\Controllers\AppBaseController;
 use App\Http\Requests\Api\ResetPasswordRequest;
 use App\Http\Requests\Auth\ChangePasswordRequest;
 use App\Http\Resources\UserResource;
 use App\Models\User;
+use App\Services\Notifications\AppNotificationService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 
@@ -47,6 +49,8 @@ class PasswordController extends AppBaseController
 
         // Revoke all existing tokens for security
         $user->tokens()->delete();
+
+        app(AppNotificationService::class)->notify($user, NotificationAction::PasswordChanged);
 
         return $this->successResponse(null, 'Password changed successfully. Please log in again.');
     }
@@ -119,6 +123,8 @@ class PasswordController extends AppBaseController
 
         // Revoke all existing tokens for security
         $user->tokens()->delete();
+
+        app(AppNotificationService::class)->notify($user, NotificationAction::PasswordReset, [], true, false);
 
         return $this->successResponse([
             'user' => new UserResource($user),

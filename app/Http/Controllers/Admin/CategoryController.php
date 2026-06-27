@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Category;
+use App\Support\VendorCatalogScope;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
@@ -14,39 +15,10 @@ class CategoryController extends Controller
         $this->middleware('permission:categories.manage')->only(['index', 'store', 'show', 'update', 'destroy']);
     }
 
-    /**
-     * List categories (filterable)
-     *
-     * @group Admin Categories
-     *
-     * @queryParam q string Search by category name (partial match). Example: capacitors
-     * @queryParam page integer Page number for pagination. Example: 3
-     *
-     * @response 200 scenario="success" {
-     *   "success": true,
-     *   "data": [
-     *     {
-     *       "id": 9,
-     *       "name": "Capacitors",
-     *       "slug": "capacitors",
-     *       "icon": "icons/capacitor.svg",
-     *       "sort_order": 20,
-     *       "is_active": true
-     *     }
-     *   ],
-     *   "pagination": {
-     *     "total": 18,
-     *     "per_page": 20,
-     *     "current_page": 1,
-     *     "last_page": 1
-     *   }
-     * }
-     *
-     * @authenticated
-     */
     public function index(Request $request)
     {
         $query = Category::query();
+        VendorCatalogScope::applyUserScope($query, $request);
         if ($request->filled('q')) {
             $q = $request->string('q')->toString();
             $query->where('name', 'like', "%{$q}%");
@@ -81,18 +53,22 @@ class CategoryController extends Controller
         if (! array_key_exists('sort_order', $validated) || $validated['sort_order'] === null) {
             $validated['sort_order'] = (Category::max('sort_order') ?? 0) + 1;
         }
+        $validated = VendorCatalogScope::assignUserId($validated, $request);
         $category = Category::create($validated);
 
         return response()->json(['success' => true, 'message' => 'Category created.', 'data' => $category], 201);
     }
 
-    public function show(Category $category)
+    public function show(Category $category, Request $request)
     {
+        VendorCatalogScope::authorizeUserOwned($category, $request);
+
         return response()->json(['success' => true, 'data' => $category]);
     }
 
     public function update(Request $request, Category $category)
     {
+        VendorCatalogScope::authorizeUserOwned($category, $request);
         $validated = $request->validate([
             'parent_id' => ['nullable', 'exists:categories,id'],
             'name' => ['sometimes', 'string', 'max:120'],
@@ -113,8 +89,9 @@ class CategoryController extends Controller
         return response()->json(['success' => true, 'message' => 'Category updated.', 'data' => $category]);
     }
 
-    public function destroy(Category $category)
+    public function destroy(Category $category, Request $request)
     {
+        VendorCatalogScope::authorizeUserOwned($category, $request);
         $category->delete();
 
         return response()->json(['success' => true, 'message' => 'Category deleted.']);

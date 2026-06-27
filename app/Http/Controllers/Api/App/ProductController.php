@@ -6,6 +6,7 @@ use App\Http\Controllers\AppBaseController;
 use App\Models\Article;
 use App\Models\Product;
 use App\Models\Store;
+use App\Support\ProductVisibility;
 use Illuminate\Http\Request;
 
 class ProductController extends AppBaseController
@@ -56,7 +57,7 @@ class ProductController extends AppBaseController
      */
     public function index(Request $request)
     {
-        $query = $this->appProductQuery();
+        $query = $this->appProductQuery($request);
 
         if ($request->filled('q')) {
             $q = $request->string('q')->toString();
@@ -162,9 +163,9 @@ class ProductController extends AppBaseController
      *
      * @unauthenticated
      */
-    public function show($id)
+    public function show(Request $request, $id)
     {
-        $product = $this->appProductQuery()->find($id);
+        $product = $this->appProductQuery($request)->find($id);
 
         if (!$product) {
             return $this->errorResponse('Product not found or not available', 404);
@@ -173,7 +174,7 @@ class ProductController extends AppBaseController
         $relatedProducts = collect();
 
         if ($product->subcategory_id !== null) {
-            $relatedProducts = $this->appProductQuery()
+            $relatedProducts = $this->appProductQuery($request)
                 ->where('category_id', $product->category_id)
                 ->where('subcategory_id', $product->subcategory_id)
                 ->where('id', '!=', $product->id)
@@ -196,14 +197,14 @@ class ProductController extends AppBaseController
      * 
      * @group APP APIs
      */
-    public function home()
+    public function home(Request $request)
     {
         $categories = \App\Models\Category::where('is_active', true)
             ->orderBy('sort_order')
             ->limit(8)
             ->get(['id', 'name', 'slug', 'image']);
 
-        $topSelling = $this->appProductQuery()
+        $topSelling = $this->appProductQuery($request)
             ->where('is_top_selling', true)
             ->latest()
             ->limit(10)
@@ -211,7 +212,7 @@ class ProductController extends AppBaseController
             ->map(fn ($product) => $this->formatAppProduct($product))
             ->values();
 
-        $featured = $this->appProductQuery()
+        $featured = $this->appProductQuery($request)
             ->where('is_featured', true)
             ->latest()
             ->limit(10)
@@ -219,7 +220,7 @@ class ProductController extends AppBaseController
             ->map(fn ($product) => $this->formatAppProduct($product))
             ->values();
 
-        $popularStores = $this->popularStoresQuery()
+        $popularStores = $this->popularStoresQuery($request)
             ->orderByDesc('rating_avg')
             ->limit(5)
             ->get()
@@ -239,11 +240,12 @@ class ProductController extends AppBaseController
      *
      * @group APP APIs
      */
-    public function categoryCounts()
+    public function categoryCounts(Request $request)
     {
         $counts = \App\Models\Category::where('is_active', true)
             ->withCount(['products' => function ($query) {
                 $query->where('is_published', true);
+                ProductVisibility::applyPlatformFilter($query, $this->resolveAppPlatform($request));
             }])
             ->orderBy('sort_order')
             ->get(['id', 'name', 'products_count']);
@@ -253,11 +255,37 @@ class ProductController extends AppBaseController
         ], 'Category product counts retrieved');
     }
 
-    private function appProductQuery()
+    private function appProductQuery(Request $request)
     {
-        return Product::query()
-            ->where('is_published', true)
-            ->with($this->appProductRelations());
+        $platform = $this->resolveAppPlatform($request);
+
+        $query = Product::query()
+            ->where('is_published', true);
+
+        ProductVisibility::applyPlatformFilter($query, $platform);
+
+        return $query->with($this->appProductRelations());
+    }
+
+    private function resolveAppPlatform(Request $request): string
+    {
+        $platform = strtolower((string) $request->query('platform', ''));
+
+        if (in_array($platform, ['website', 'web'], true)) {
+            return 'website';
+        }
+
+        if (in_array($platform, ['mobile', 'app'], true)) {
+            return 'mobile';
+        }
+
+        $referer = strtolower((string) $request->headers->get('referer', ''));
+
+        if ($referer !== '' && str_contains($referer, 'chantrader.com') && ! str_contains($referer, 'admin.chantrader.com')) {
+            return 'website';
+        }
+
+        return 'mobile';
     }
 
     /**
@@ -310,6 +338,7 @@ class ProductController extends AppBaseController
             'is_featured' => $product->is_featured,
             'is_top_selling' => $product->is_top_selling,
             'is_published' => $product->is_published,
+            'visibility' => $product->visibility ?? ProductVisibility::DEFAULT,
             'rating_avg' => $product->rating_avg,
             'rating_count' => $product->rating_count,
             'images' => $product->images->map(fn ($image) => [
@@ -366,7 +395,7 @@ class ProductController extends AppBaseController
         return Store::query()
             ->where('status', 'active')
             ->withCount([
-                'products as products_count' => fn ($products) => $products->where('is_published', true),
+                'products as products_count' => fn ($products) => ProductVisibility::applyPlatformFilter($products->where('is_published', true), $this->resolveAppPlatform($request)),
             ]);
     }
 

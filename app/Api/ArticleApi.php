@@ -9,9 +9,13 @@ use Illuminate\Support\Arr;
 
 class ArticleApi
 {
-    public function listForAdmin(array $filters): LengthAwarePaginator
+    public function listForAdmin(array $filters, ?int $vendorUserId = null): LengthAwarePaginator
     {
         $query = Article::query()->with(['subcategory:id,category_id,name', 'subcategory.category:id,name']);
+
+        if ($vendorUserId) {
+            $query->where('user_id', $vendorUserId);
+        }
 
         if (! empty($filters['q'])) {
             $q = (string) $filters['q'];
@@ -46,7 +50,7 @@ class ArticleApi
     /**
      * @return Collection<int, Article>
      */
-    public function listForApp(?int $categoryId = null, ?int $subcategoryId = null, ?string $queryText = null): Collection
+    public function listForApp(?int $categoryId = null, ?int $subcategoryId = null, ?string $queryText = null, ?int $userId = null): Collection
     {
         $query = Article::query()
             ->where('is_active', true)
@@ -56,6 +60,10 @@ class ArticleApi
 
         if ($subcategoryId) {
             $query->where('subcategory_id', $subcategoryId);
+        }
+
+        if ($userId) {
+            $query->where('user_id', $userId);
         }
 
         if ($categoryId) {
@@ -70,6 +78,7 @@ class ArticleApi
 
         return $query->get([
             'id',
+            'user_id',
             'subcategory_id',
             'name',
             'slug',
@@ -89,7 +98,7 @@ class ArticleApi
                 ->max('sort_order') + 1;
         }
 
-        return Article::create(Arr::only($data, ['subcategory_id', 'name', 'slug', 'sort_order', 'is_active']));
+        return Article::create(Arr::only($data, ['user_id', 'subcategory_id', 'name', 'slug', 'sort_order', 'is_active']));
     }
 
     /**

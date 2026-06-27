@@ -10,9 +10,13 @@ use Illuminate\Support\Arr;
 
 class SubcategoryApi
 {
-    public function listForAdmin(array $filters): LengthAwarePaginator
+    public function listForAdmin(array $filters, ?int $vendorUserId = null): LengthAwarePaginator
     {
         $query = Subcategory::query()->with('category:id,name');
+
+        if ($vendorUserId) {
+            $query->where('user_id', $vendorUserId);
+        }
 
         if (! empty($filters['q'])) {
             $q = (string) $filters['q'];
@@ -36,10 +40,7 @@ class SubcategoryApi
         return $query->paginate(20)->withQueryString();
     }
 
-    /**
-     * @return Collection<int, Subcategory>
-     */
-    public function listForApp(?int $categoryId = null): Collection
+    public function listForApp(?int $categoryId = null, ?int $userId = null): Collection
     {
         $query = Subcategory::query()
             ->where('is_active', true)
@@ -50,12 +51,13 @@ class SubcategoryApi
             $query->where('category_id', $categoryId);
         }
 
-        return $query->get(['id', 'category_id', 'name', 'slug', 'image', 'sort_order', 'is_active']);
+        if ($userId) {
+            $query->where('user_id', $userId);
+        }
+
+        return $query->get(['id', 'user_id', 'category_id', 'name', 'slug', 'image', 'sort_order', 'is_active']);
     }
 
-    /**
-     * @param  array{category_id?:mixed,name?:mixed,slug?:mixed,sort_order?:mixed,is_active?:mixed,image?:mixed}  $data
-     */
     public function create(array $data): Subcategory
     {
         if (isset($data['image']) && $data['image'] instanceof UploadedFile) {
@@ -66,19 +68,16 @@ class SubcategoryApi
             $data['sort_order'] = (Subcategory::max('sort_order') ?? 0) + 1;
         }
 
-        return Subcategory::create(Arr::only($data, ['category_id', 'name', 'slug', 'image', 'sort_order', 'is_active']));
+        return Subcategory::create(Arr::only($data, ['user_id', 'category_id', 'name', 'slug', 'image', 'sort_order', 'is_active']));
     }
 
-    /**
-     * @param  array{category_id?:mixed,name?:mixed,slug?:mixed,sort_order?:mixed,is_active?:mixed,image?:mixed}  $data
-     */
     public function update(Subcategory $subcategory, array $data): Subcategory
     {
         if (isset($data['image']) && $data['image'] instanceof UploadedFile) {
             $data['image'] = $data['image']->store('subcategory-images', 'public');
         }
 
-        $subcategory->update(Arr::only($data, ['category_id', 'name', 'slug', 'image', 'sort_order', 'is_active']));
+        $subcategory->update(Arr::only($data, ['user_id', 'category_id', 'name', 'slug', 'image', 'sort_order', 'is_active']));
 
         return $subcategory;
     }

@@ -18,6 +18,7 @@ class ArticleController extends AppBaseController
      * @queryParam q string Search by article name (partial match). Example: article 101
      * @queryParam category_id integer Filter by category id. Example: 3
      * @queryParam subcategory_id integer Filter by subcategory id. Example: 8
+     * @queryParam user_id integer Filter by owner user id. Example: 7
      *
      * @unauthenticated
      */
@@ -26,11 +27,13 @@ class ArticleController extends AppBaseController
         $categoryId = $request->filled('category_id') ? (int) $request->get('category_id') : null;
         $subcategoryId = $request->filled('subcategory_id') ? (int) $request->get('subcategory_id') : null;
         $queryText = $request->filled('q') ? $request->string('q')->toString() : null;
+        $userId = $request->filled('user_id') ? (int) $request->get('user_id') : null;
 
         $items = $this->articles
-            ->listForApp($categoryId, $subcategoryId, $queryText)
+            ->listForApp($categoryId, $subcategoryId, $queryText, $userId)
             ->map(fn ($article) => [
                 'id' => $article->id,
+                'user_id' => $article->user_id,
                 'subcategory_id' => $article->subcategory_id,
                 'name' => $article->name,
                 'slug' => $article->slug,

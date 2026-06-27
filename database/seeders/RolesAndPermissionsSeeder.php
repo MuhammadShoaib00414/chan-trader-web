@@ -92,6 +92,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'coupons.manage',
             'banners.manage',
             'pages.manage',
+            'sliders.manage',
 
             // Settings
             'view settings',
@@ -133,6 +134,8 @@ class RolesAndPermissionsSeeder extends Seeder
             'view payments', 'create payments', 'edit payments', 'delete payments',
             // Promotions
             'view promotions', 'create promotions', 'edit promotions', 'delete promotions',
+            // Sliders
+            'view sliders', 'create sliders', 'edit sliders', 'delete sliders',
             // Settings
             'view settings', 'edit settings',
         ];
@@ -186,6 +189,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'coupons.manage',
             'banners.manage',
             'pages.manage',
+            'sliders.manage',
             'promotions.manage',
             'promotions.view',
             'view settings',

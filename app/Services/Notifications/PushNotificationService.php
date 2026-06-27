@@ -45,13 +45,8 @@ class PushNotificationService
      */
     public function sendToToken(string $token, NotificationAction $action, array $payload = []): bool
     {
-        $accessToken = $this->resolveAccessToken();
-        if (! $accessToken) {
-            return false;
-        }
-
-        $projectId = config('fcm.project_id');
-        if (! $projectId) {
+        [$accessToken, $projectId] = $this->resolveAuth();
+        if (! $accessToken || ! $projectId) {
             return false;
         }
 
@@ -61,16 +56,35 @@ class PushNotificationService
             ->map(fn ($value) => is_scalar($value) ? (string) $value : json_encode($value))
             ->all();
 
+        // Deep-link target used by web (desktop/browser) notifications on click.
+        // For order notifications the admin dashboard order details page is opened.
+        $link = $payload['link'] ?? (! empty($payload['order_id'])
+            ? url('/admin/orders/' . $payload['order_id'])
+            : null);
+
+        if ($link) {
+            $data['link'] = (string) $link;
+        }
+
+        $message = [
+            'token' => $token,
+            'notification' => [
+                'title' => $action->pushTitle(),
+                'body' => $body,
+            ],
+            'data' => array_merge(['action' => $action->value], $data),
+        ];
+
+        if ($link) {
+            // FCM HTTP v1 webpush config: opens this URL when the notification is clicked.
+            $message['webpush'] = [
+                'fcm_options' => ['link' => (string) $link],
+            ];
+        }
+
         $response = Http::withToken($accessToken)
             ->post("https://fcm.googleapis.com/v1/projects/{$projectId}/messages:send", [
-                'message' => [
-                    'token' => $token,
-                    'notification' => [
-                        'title' => $action->pushTitle(),
-                        'body' => $body,
-                    ],
-                    'data' => array_merge(['action' => $action->value], $data),
-                ],
+                'message' => $message,
             ]);
 
         if (! $response->successful()) {
@@ -85,16 +99,66 @@ class PushNotificationService
         return true;
     }
 
-    private function resolveAccessToken(): ?string
+    /**
+     * Send a raw push notification to any FCM token with a custom title and body.
+     *
+     * @param  array<string, string>  $data
+     */
+    public function sendRaw(string $token, string $title, string $body, array $data = []): bool
+    {
+        [$accessToken, $projectId] = $this->resolveAuth();
+        if (! $accessToken || ! $projectId) {
+            return false;
+        }
+
+        $message = [
+            'token'        => $token,
+            'notification' => compact('title', 'body'),
+        ];
+        if ($data) {
+            $message['data'] = $data;
+        }
+
+        $response = Http::withToken($accessToken)
+            ->post("https://fcm.googleapis.com/v1/projects/{$projectId}/messages:send", [
+                'message' => $message,
+            ]);
+
+        if (! $response->successful()) {
+            Log::warning('FCM raw push failed', [
+                'status' => $response->status(),
+                'body'   => $response->json(),
+            ]);
+
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * Returns [accessToken, projectId] from the credentials file.
+     * Using project_id from the credentials file avoids FCM_PROJECT_ID mismatches.
+     *
+     * @return array{0: string|null, 1: string|null}
+     */
+    private function resolveAuth(): array
     {
         $path = config('fcm.credentials_path');
         if (! $path || ! is_readable($path)) {
-            return null;
+            return [null, null];
         }
 
         $credentials = json_decode((string) file_get_contents($path), true);
         if (! is_array($credentials) || empty($credentials['client_email']) || empty($credentials['private_key'])) {
-            return null;
+            return [null, null];
+        }
+
+        // Prefer project_id from credentials file; fall back to config so existing deployments
+        // that set FCM_PROJECT_ID explicitly still work.
+        $projectId = $credentials['project_id'] ?? config('fcm.project_id');
+        if (! $projectId) {
+            return [null, null];
         }
 
         $now = time();
@@ -117,9 +181,14 @@ class PushNotificationService
         ]);
 
         if (! $tokenResponse->successful()) {
-            return null;
+            Log::warning('FCM OAuth token exchange failed', [
+                'status' => $tokenResponse->status(),
+                'body'   => $tokenResponse->json(),
+            ]);
+
+            return [null, null];
         }
 
-        return $tokenResponse->json('access_token');
+        return [$tokenResponse->json('access_token'), $projectId];
     }
 }

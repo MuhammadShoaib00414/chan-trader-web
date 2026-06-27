@@ -31,6 +31,13 @@ import {
 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 
+const VISIBILITY_OPTIONS = [
+    { value: 'website_only', label: 'Website Only' },
+    { value: 'mobile_app_only', label: 'Mobile App Only' },
+    { value: 'website_and_mobile', label: 'Website & Mobile App' },
+    { value: 'hidden', label: 'Hidden (Do Not Show)' },
+] as const;
+
 export default function ProductShow() {
     type Image = { id: number; path: string; is_primary: boolean };
     type ProductDetails = {
@@ -57,6 +64,7 @@ export default function ProductShow() {
         meta_description?: string | null;
         description?: string | null;
         warranty_text?: string | null;
+        visibility?: string | null;
         images: Image[];
     };
     type Ref = { id: number; name: string };
@@ -167,6 +175,9 @@ export default function ProductShow() {
         product.subcategory_id ?? 0,
     );
     const [pBrandId, setPBrandId] = useState<number>(product.brand_id ?? 0);
+    const [pVisibility, setPVisibility] = useState(
+        product.visibility ?? 'website_and_mobile',
+    );
     const [pMetaTitle, setPMetaTitle] = useState(product.meta_title ?? '');
     const [pMetaDescription, setPMetaDescription] = useState(
         product.meta_description ?? '',
@@ -228,6 +239,7 @@ export default function ProductShow() {
         meta_description?: string | null;
         description?: string | null;
         warranty_text?: string | null;
+        visibility?: string;
     };
 
     const filteredSubcategories = useMemo(
@@ -408,6 +420,7 @@ export default function ProductShow() {
             payload.meta_description = pMetaDescription || null;
         payload.description = pDescription || null;
         payload.warranty_text = pWarrantyText || null;
+        payload.visibility = pVisibility;
         if (pStock) payload.stock = Number(pStock);
         if (pLowStock) payload.low_stock_threshold = Number(pLowStock);
         if (pPrice) {
@@ -605,6 +618,7 @@ export default function ProductShow() {
         setPCategoryId(product.category_id ?? categories?.[0]?.id ?? 0);
         setPSubcategoryId(product.subcategory_id ?? 0);
         setPBrandId(product.brand_id ?? 0);
+        setPVisibility(product.visibility ?? 'website_and_mobile');
         setPMetaTitle(product.meta_title ?? '');
         setPMetaDescription(product.meta_description ?? '');
         setPDescription(product.description ?? '');
@@ -780,6 +794,7 @@ export default function ProductShow() {
             pMetaTitle !== (product.meta_title ?? '') ||
             pMetaDescription !== (product.meta_description ?? '') ||
             pDescription !== (product.description ?? '') ||
+            pVisibility !== (product.visibility ?? 'website_and_mobile') ||
             pWarrantyText !== (product.warranty_text ?? '') ||
             imgPath.trim() !== '' ||
             galleryFile !== null ||
@@ -1493,6 +1508,31 @@ export default function ProductShow() {
                                                     </select>
                                                 </div>
                                             </div>
+                                        </section>
+
+                                        <section
+                                            id="visibility-section"
+                                            className={sectionCardClassName}
+                                        >
+                                            <div className="mb-5">
+                                                <h2 className={sectionTitleClassName}>
+                                                    Product Visibility
+                                                </h2>
+                                                <p className={sectionDescriptionClassName}>
+                                                    Choose where this product should appear.
+                                                </p>
+                                            </div>
+                                            <select
+                                                className="w-full rounded-md border px-3 py-2"
+                                                value={pVisibility}
+                                                onChange={(e) => setPVisibility(e.target.value)}
+                                            >
+                                                {VISIBILITY_OPTIONS.map((option) => (
+                                                    <option key={option.value} value={option.value}>
+                                                        {option.label}
+                                                    </option>
+                                                ))}
+                                            </select>
                                         </section>
 
                                         <section

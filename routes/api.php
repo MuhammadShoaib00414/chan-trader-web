@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\App\CategoryController as AppCategoryController;
 use App\Http\Controllers\Api\App\ContentPageController as AppContentPageController;
 use App\Http\Controllers\Api\App\ProductController as AppProductController;
 use App\Http\Controllers\Api\App\PromotionController as AppPromotionController;
+use App\Http\Controllers\Api\App\SliderController as AppSliderController;
 use App\Http\Controllers\Api\App\StoreController as AppStoreController;
 use App\Http\Controllers\Api\App\SubcategoryController as AppSubcategoryController;
 use App\Http\Controllers\Api\App\SuggestionsController as AppSuggestionsController;
@@ -21,6 +22,7 @@ use App\Http\Controllers\Api\Auth\RegisterController;
 use App\Http\Controllers\Api\Auth\SocialLoginController;
 use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\UserController;
+use App\Http\Controllers\Api\UserNotificationController;
 use Illuminate\Support\Facades\Route;
 
 Route::name('api.')->group(function () {
@@ -74,6 +76,7 @@ Route::name('api.')->group(function () {
         Route::get('/products/{product}', [AppProductController::class, 'show']);
         Route::get('/products/category-counts', [AppProductController::class, 'categoryCounts']);
         Route::get('/promotions', [AppPromotionController::class, 'index']);
+        Route::get('/sliders', [AppSliderController::class, 'index']);
 
         Route::get('/content-pages', [AppContentPageController::class, 'index']);
         Route::get('/content-pages/{slug}', [AppContentPageController::class, 'show']);
@@ -85,6 +88,8 @@ Route::name('api.')->group(function () {
     });
 
     // Password change (requires authentication)
+    // Vendor catalog management moved to routes/web.php (session + bearer)
+
     Route::middleware(['auth:api', 'verified'])->group(function () {
         Route::post('/password/change', [PasswordController::class, 'changePassword'])
             ->middleware('throttle:5,1'); // Limit to 5 attempts per minute
@@ -102,6 +107,13 @@ Route::name('api.')->group(function () {
 
             Route::get('/notifications/actions', [NotificationController::class, 'actions']);
             Route::post('/notifications/send', [NotificationController::class, 'send']);
+            Route::post('/notifications/send-to-token', [NotificationController::class, 'sendToToken']);
+
+            // In-app notifications (user's own)
+            Route::get('/notifications', [UserNotificationController::class, 'index']);
+            Route::post('/notifications/read-all', [UserNotificationController::class, 'markAllRead']);
+            Route::post('/notifications/{id}/read', [UserNotificationController::class, 'markRead']);
+            Route::delete('/notifications/{id}', [UserNotificationController::class, 'destroy']);
         });
 
         // ********************* Search Suggestions *********************
@@ -126,6 +138,7 @@ Route::name('api.')->group(function () {
         Route::get('permissions', [\App\Http\Controllers\Api\PermissionController::class, 'index']);
         Route::get('permissions/grouped', [\App\Http\Controllers\Api\PermissionController::class, 'grouped']);
         Route::get('permissions/{permission}', [\App\Http\Controllers\Api\PermissionController::class, 'show']);
+
 
         // Super-admin vendor management (Passport)
         Route::prefix('admin')->middleware('role:super-admin')->group(function () {
@@ -159,6 +172,7 @@ Route::name('api.')->group(function () {
             Route::post('/payments/export', [\App\Http\Controllers\Admin\PaymentController::class, 'export']);
             Route::post('/payments/refund/{order}', [\App\Http\Controllers\Admin\PaymentController::class, 'refund']);
             Route::post('/payments/configure', [\App\Http\Controllers\Admin\PaymentController::class, 'configureGateway']);
+            Route::post('/payments/{order}', [\App\Http\Controllers\Admin\PaymentController::class, 'store']);
 
             // Supplier Management
             Route::apiResource('/suppliers', \App\Http\Controllers\Api\SupplierController::class);

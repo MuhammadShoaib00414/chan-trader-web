@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\Article;
 use App\Models\InventoryMovement;
 use App\Models\Product;
+use App\Support\ProductVisibility;
+use App\Support\VendorCatalogScope;
 use App\Models\Store;
 use App\Models\Subcategory;
 use App\Support\ResizedImageStore;
@@ -166,6 +168,7 @@ class ProductController extends Controller
             'meta_description' => ['nullable', 'string', 'max:160'],
             'is_featured' => ['nullable', 'boolean'],
             'is_top_selling' => ['nullable', 'boolean'],
+            'visibility' => ProductVisibility::validationRule(),
         ]);
 
         // Vendors can only create products for their own store(s)
@@ -179,6 +182,10 @@ class ProductController extends Controller
 
         $validated = $this->normalizeArticleSelection($validated);
 
+        if ($request->user()?->hasRole('vendor')) {
+            VendorCatalogScope::authorizeCategoryAccessible($request, (int) $validated['category_id']);
+        }
+
         if ($request->hasFile('feature_image')) {
             $path = ResizedImageStore::store($request->file('feature_image'), 'products/feature');
             $validated['feature_image'] = ResizedImageStore::publicUrl($path);
@@ -188,6 +195,10 @@ class ProductController extends Controller
 
         if (!array_key_exists('condition', $validated)) {
             $validated['condition'] = 'New';
+        }
+
+        if (! array_key_exists('visibility', $validated) || $validated['visibility'] === null) {
+            $validated['visibility'] = ProductVisibility::DEFAULT;
         }
 
         $product = DB::transaction(function () use ($validated) {
@@ -209,8 +220,9 @@ class ProductController extends Controller
         return response()->json(['success' => true, 'message' => 'Product created.', 'data' => $product], 201);
     }
 
-    public function show(Product $product)
+    public function show(Product $product, Request $request)
     {
+        VendorCatalogScope::authorizeProductOwned($product, $request);
         return response()->json(['success' => true, 'data' => $product]);
     }
 
@@ -220,8 +232,12 @@ class ProductController extends Controller
             'category_id' => ['required', 'exists:categories,id'],
         ]);
 
-        $items = Subcategory::query()
-            ->where('category_id', (int) $validated['category_id'])
+        VendorCatalogScope::authorizeCategoryAccessible($request, (int) $validated['category_id']);
+
+        $itemsQuery = Subcategory::query()
+            ->where('category_id', (int) $validated['category_id']);
+        VendorCatalogScope::applyCatalogUserScope($itemsQuery, $request);
+        $items = $itemsQuery
             ->orderBy('name')
             ->get(['id', 'name', 'category_id']);
 
@@ -237,8 +253,12 @@ class ProductController extends Controller
             'subcategory_id' => ['required', 'exists:subcategories,id'],
         ]);
 
-        $items = Article::query()
-            ->where('subcategory_id', (int) $validated['subcategory_id'])
+        VendorCatalogScope::authorizeSubcategoryOwned($request, (int) $validated['subcategory_id']);
+
+        $itemsQuery = Article::query()
+            ->where('subcategory_id', (int) $validated['subcategory_id']);
+        VendorCatalogScope::applyUserScope($itemsQuery, $request);
+        $items = $itemsQuery
             ->where('is_active', true)
             ->orderByRaw('coalesce(sort_order, 999999) asc')
             ->orderBy('name')
@@ -252,6 +272,7 @@ class ProductController extends Controller
 
     public function update(Request $request, Product $product)
     {
+        VendorCatalogScope::authorizeProductOwned($product, $request);
         $effectiveCategoryId = $request->has('category_id')
             ? $request->integer('category_id')
             : (int) $product->category_id;
@@ -286,6 +307,7 @@ class ProductController extends Controller
             'meta_description' => ['nullable', 'string', 'max:160'],
             'is_featured' => ['nullable', 'boolean'],
             'is_top_selling' => ['nullable', 'boolean'],
+            'visibility' => ProductVisibility::validationRule(),
         ]);
 
         if (
@@ -475,6 +497,7 @@ class ProductController extends Controller
 
     public function uploadFeatureImage(Request $request, Product $product)
     {
+        VendorCatalogScope::authorizeProductOwned($product, $request);
         $request->validate([
             'file' => ['required', 'file', 'mimes:jpg,jpeg,png,webp,gif', 'max:5120'],
         ]);
@@ -487,6 +510,7 @@ class ProductController extends Controller
 
     public function uploadTopImage(Request $request, Product $product)
     {
+        VendorCatalogScope::authorizeProductOwned($product, $request);
         $request->validate([
             'file' => ['required', 'file', 'mimes:jpg,jpeg,png,webp,gif', 'max:5120'],
         ]);
@@ -497,22 +521,25 @@ class ProductController extends Controller
         return response()->json(['success' => true, 'data' => ['top_image' => $product->top_image]]);
     }
 
-    public function destroy(Product $product)
+    public function destroy(Product $product, Request $request)
     {
+        VendorCatalogScope::authorizeProductOwned($product, $request);
         $product->delete();
 
         return response()->json(['success' => true, 'message' => 'Product deleted.']);
     }
 
-    public function publish(Product $product)
+    public function publish(Product $product, Request $request)
     {
+        VendorCatalogScope::authorizeProductOwned($product, $request);
         $product->update(['is_published' => true, 'published_at' => now()]);
 
         return response()->json(['success' => true, 'message' => 'Product published.', 'data' => $product]);
     }
 
-    public function unpublish(Product $product)
+    public function unpublish(Product $product, Request $request)
     {
+        VendorCatalogScope::authorizeProductOwned($product, $request);
         $product->update(['is_published' => false, 'published_at' => null]);
 
         return response()->json(['success' => true, 'message' => 'Product unpublished.', 'data' => $product]);
