@@ -38,8 +38,6 @@ enum NotificationAction: string
     public function supportsEmail(): bool
     {
         return match ($this) {
-            // Admins/super-admins receive an email when a new order is placed.
-            self::VendorNewOrder => false,
             default => true,
         };
     }

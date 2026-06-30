@@ -2,14 +2,13 @@
 
 namespace App\Http\Controllers\Api\Milestone2;
 
-use App\Enums\NotificationAction;
-use App\Http\Controllers\AppBaseController;
+use App\Jobs\SendOrderPlacementNotificationsJob;
 use App\Models\Address;
 use App\Models\CartItem;
 use App\Models\Order;
 use App\Models\OrderItem;
+use App\Http\Controllers\AppBaseController;
 use App\Models\Payment;
-use App\Services\Notifications\AppNotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
@@ -278,34 +277,10 @@ class CheckoutController extends AppBaseController
             return $order;
         });
 
-        // Load relationships for response + notifications
+        // Load relationships for response
         $order->load(['items.product', 'shippingAddress', 'payments']);
 
-        // Notifications (outside the transaction so DB records are committed first)
-        $notifications = app(AppNotificationService::class);
-        $orderPayload = [
-            'order_code' => $order->code,
-            'grand_total' => (string) $order->grand_total,
-            'currency' => $order->currency,
-            'message' => "Your order {$order->code} has been placed successfully.",
-        ];
-
-        $notifications->notify($user, NotificationAction::OrderPlaced, $orderPayload);
-
-        $notifications->notifyAdmins(NotificationAction::AdminNewOrder, [
-            'order_id' => $order->id,
-            'order_code' => $order->code,
-            'customer_name' => $user->name,
-            'grand_total' => (string) $order->grand_total,
-            'currency' => $order->currency,
-            'placed_at' => $order->created_at?->toDayDateTimeString(),
-            'message' => "New order {$order->code} placed by {$user->name}.",
-        ]);
-
-        $notifications->notifyVendorsForOrder($order, [
-            'order_code' => $order->code,
-            'message' => "New order {$order->code} received for your store.",
-        ]);
+        SendOrderPlacementNotificationsJob::dispatch($order->id, $user->id);
 
         return $this->successResponse([
             'order_id' => $order->id,

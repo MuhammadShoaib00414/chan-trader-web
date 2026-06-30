@@ -47,13 +47,23 @@ class UpdateProfileRequest extends FormRequest
                 return;
             }
 
-            $hasField = collect(['first_name', 'last_name', 'email', 'phone_number', 'avatar', 'cover_image'])
+            $hasField = collect([
+                'first_name',
+                'last_name',
+                'email',
+                'phone_number',
+                'shop_name',
+                'city_district',
+                'address',
+                'avatar',
+                'cover_image',
+            ])
                 ->contains(fn (string $key) => $this->filled($key) || $this->hasFile($key));
 
             if (! $hasField) {
                 $validator->errors()->add(
                     'profile',
-                    'Provide at least one of: first_name, last_name, email, phone_number, avatar, cover_image.'
+                    'Provide at least one of: first_name, last_name, email, phone_number, shop_name, city_district, address, avatar, cover_image.'
                 );
             }
         });
@@ -119,9 +129,13 @@ class UpdateProfileRequest extends FormRequest
             ],
             'phone_number' => [
                 'sometimes',
+                'nullable',
                 'regex:/^03\d{9}$/',
                 $phoneUnique,
             ],
+            'shop_name' => ['sometimes', 'nullable', 'string', 'max:150'],
+            'city_district' => ['sometimes', 'nullable', 'string', 'max:150'],
+            'address' => ['sometimes', 'nullable', 'string', 'max:255'],
             'avatar' => [
                 'sometimes',
                 'file',

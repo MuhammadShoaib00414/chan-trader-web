@@ -18,6 +18,7 @@ use App\Http\Controllers\Api\Auth\LoginController;
 use App\Http\Controllers\Api\Auth\OtpController;
 use App\Http\Controllers\Api\Auth\PasswordController;
 use App\Http\Controllers\Api\Auth\ProfileController;
+use App\Http\Controllers\Api\Auth\VendorStoreProfileController;
 use App\Http\Controllers\Api\Auth\RegisterController;
 use App\Http\Controllers\Api\Auth\SocialLoginController;
 use App\Http\Controllers\Api\NotificationController;
@@ -99,6 +100,8 @@ Route::name('api.')->group(function () {
         Route::group(['prefix' => 'user'], function () {
             Route::get('/', [UserController::class, 'me']);
             Route::post('/update-profile', [ProfileController::class, 'update']);
+            Route::get('/my-store', [VendorStoreProfileController::class, 'show']);
+            Route::post('/update-store-profile', [VendorStoreProfileController::class, 'update']);
             Route::post('/logout', [LoginController::class, 'logout']);
             Route::delete('/account', [UserController::class, 'deleteAccount']);
             Route::post('/fcm-token', [FcmTokenController::class, 'store']);

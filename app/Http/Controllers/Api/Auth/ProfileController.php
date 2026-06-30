@@ -37,6 +37,15 @@ class ProfileController extends AppBaseController
         if (array_key_exists('phone_number', $validated)) {
             $user->phone_number = $validated['phone_number'];
         }
+        if (array_key_exists('shop_name', $validated)) {
+            $user->shop_name = $validated['shop_name'];
+        }
+        if (array_key_exists('city_district', $validated)) {
+            $user->city_district = $validated['city_district'];
+        }
+        if (array_key_exists('address', $validated)) {
+            $user->address = $validated['address'];
+        }
         if (array_key_exists('email', $validated) && $validated['email'] !== $user->email) {
             $user->email = $validated['email'];
             // $user->email_verified_at = null;
@@ -54,6 +63,32 @@ class ProfileController extends AppBaseController
         }
 
         $user->save();
+
+        if ($user->hasRole('vendor')) {
+            $store = \App\Models\Store::query()
+                ->where('owner_id', $user->id)
+                ->orderBy('id')
+                ->first();
+
+            if ($store) {
+                $storeData = [];
+                if (array_key_exists('shop_name', $validated) && filled($validated['shop_name'])) {
+                    $storeData['name'] = $validated['shop_name'];
+                }
+                if (array_key_exists('city_district', $validated)) {
+                    $storeData['city'] = $validated['city_district'];
+                }
+                if (array_key_exists('address', $validated)) {
+                    $storeData['address'] = $validated['address'];
+                }
+                if (array_key_exists('phone_number', $validated)) {
+                    $storeData['phone'] = $validated['phone_number'];
+                }
+                if ($storeData !== []) {
+                    $store->update($storeData);
+                }
+            }
+        }
 
         return $this->successResponse([
             'user' => new UserResource($user->fresh()->load('roles.permissions')),

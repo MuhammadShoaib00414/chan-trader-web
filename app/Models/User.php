@@ -143,6 +143,11 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->hasMany(AppNotification::class);
     }
 
+    public function fcmTokens()
+    {
+        return $this->hasMany(UserFcmToken::class);
+    }
+
     /**
      * Get the user's full name.
      */

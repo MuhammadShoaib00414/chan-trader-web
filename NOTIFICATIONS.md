@@ -83,12 +83,13 @@ The notification system dispatches **in-app notifications** (stored in `app_noti
   | Recipient    | Action          | Email | Push | In-app |
   |--------------|-----------------|-------|------|--------|
   | Customer     | `OrderPlaced`   | ✓     | ✓    | ✓      |
-  | Admin/super-admin | `AdminNewOrder` | ✓ | ✓  | ✓      |
-  | Store owners (vendors) | `VendorNewOrder` | ✗ | ✓ | ✓ |
+  | Admin/super-admin | `AdminNewOrder` | ✓ | ✓ (web)  | ✓      |
+  | Store owners (vendors) | `VendorNewOrder` | ✓ | ✓ (mobile) | ✓ |
 
 - **Customer email subject:** "Order placed successfully"
 - **Admin email subject:** "New order received {code}" — rich `AdminNewOrderMail` (`resources/views/emails/admin-new-order.blade.php`) listing customer name, order number, line items, amount, date/time, and a "View Order Details" button linking to `/admin/orders/{id}`.
-- **Notes:** Vendor notification is sent to the owner of every store that has items in the order. Notifications are dispatched **after** the DB transaction commits. The admin payload carries `order_id` + `placed_at` so the email/push can deep-link to the order. Admin push uses FCM `webpush.fcm_options.link` so a clicked desktop notification opens the order page.
+- **Vendor email subject:** "New order for your store {code}" — `VendorNewOrderMail` (`resources/views/emails/vendor-new-order.blade.php`) listing only that vendor's line items and subtotal.
+- **Notes:** Vendor notification is sent to the owner of every store that has items in the order. Notifications are dispatched **after** the DB transaction commits via `SendOrderPlacementNotificationsJob` (queued). The admin payload carries `order_id` + `placed_at` so the email/push can deep-link to the order. Admin push targets **web** FCM tokens; vendor push targets **mobile** tokens.
 
 ---
 
@@ -253,7 +254,7 @@ All endpoints require `Authorization: Bearer {token}` (authenticated user).
 | `review_submitted`      | ✓     | ✓    | ✓      | Product review submitted        |
 | `account_deleted`       | ✓     | ✓    | ✓      | User account deleted            |
 | `admin_new_order`       | ✓     | ✓    | ✓      | New/cancelled order (to admins) |
-| `vendor_new_order`      | ✗     | ✓    | ✓      | New order (to store owners)     |
+| `vendor_new_order`      | ✓     | ✓    | ✓      | New order (to store owners)     |
 
 ---
 
@@ -261,17 +262,30 @@ All endpoints require `Authorization: Bearer {token}` (authenticated user).
 
 ```
 Controller
-  └─► AppNotificationService::notify(User, Action, Payload)
-        ├─► EmailNotificationService::send()     → queued Mail
-        ├─► PushNotificationService::send()      → FCM HTTP v1
-        └─► AppNotification::create()            → app_notifications table
+  └─► SendOrderPlacementNotificationsJob (queued)
+        └─► AppNotificationService::notify(User, Action, Payload)
+              ├─► EmailNotificationService::send()     → queued Mail
+              ├─► PushNotificationService::send()      → FCM HTTP v1 (per device token)
+              └─► AppNotification::create()            → app_notifications table
 
 AppNotificationService::notifyAdmins(Action, Payload)
-  └─► Loops all super-admin/admin users → notify() (push + in-app, no email)
+  └─► Loops all super-admin/admin users → notify() (web push + in-app + email)
 
 AppNotificationService::notifyVendorsForOrder(Order, Payload)
-  └─► Finds store owners from order items → notify() (push + in-app, no email)
+  └─► Finds store owners from order items → notify() (mobile push + in-app + email)
 ```
+
+### FCM device tokens (`user_fcm_tokens`)
+
+| Column        | Description                                      |
+|---------------|--------------------------------------------------|
+| `user_id`     | Token owner                                      |
+| `token`       | FCM registration token (unique)                  |
+| `platform`    | `mobile` or `web`                                |
+| `device_id`   | Optional stable device/browser identifier        |
+| `last_used_at`| Updated when a push is successfully delivered    |
+
+Mobile app registers via `POST /api/user/fcm-token` with `platform: mobile`. Admin dashboard registers via `POST /api/admin/fcm-token` with `platform: web`. Invalid/unregistered tokens are pruned automatically when FCM rejects them.
 
 ### Key Files
 

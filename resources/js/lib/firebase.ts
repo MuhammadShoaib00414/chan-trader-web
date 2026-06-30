@@ -48,7 +48,21 @@ export async function registerFcm(): Promise<void> {
     })
 
     if (token) {
-      await requestJson('POST', '/api/admin/fcm-token', { fcm_token: token })
+      const deviceId =
+        typeof window !== 'undefined'
+          ? window.localStorage.getItem('fcm_device_id') ??
+            (() => {
+              const id = crypto.randomUUID()
+              window.localStorage.setItem('fcm_device_id', id)
+              return id
+            })()
+          : undefined
+
+      await requestJson('POST', '/api/admin/fcm-token', {
+        fcm_token: token,
+        platform: 'web',
+        device_id: deviceId,
+      })
     }
 
     // Foreground messages: the SW only fires when the page is backgrounded, so
