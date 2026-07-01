@@ -19,6 +19,7 @@ class ProductRatingReviewController extends AppBaseController
      * Get all reviews and ratings for a specific product.
      *
      * @urlParam product_id integer required The ID of the product. Example: 1
+     *
      * @queryParam per_page integer Items per page. Example: 10
      * @queryParam page integer Page number. Example: 1
      *
@@ -78,7 +79,7 @@ class ProductRatingReviewController extends AppBaseController
                 'per_page' => $reviews->perPage(),
                 'current_page' => $reviews->currentPage(),
                 'last_page' => $reviews->lastPage(),
-            ]
+            ],
         ], 'Product reviews retrieved');
     }
 
@@ -86,6 +87,7 @@ class ProductRatingReviewController extends AppBaseController
      * Submit Product Review
      *
      * @urlParam product_id integer required The ID of the product. Example: 1
+     *
      * @bodyParam rating integer required The rating (1-5). Example: 5
      * @bodyParam comment string The review comment. Example: Great product!
      *
@@ -113,6 +115,21 @@ class ProductRatingReviewController extends AppBaseController
         }
 
         $product = Product::findOrFail($productId);
+
+        $canReview = auth()->user()
+            ->orders()
+            ->where('status', 'delivered')
+            ->whereHas('items', function ($q) use ($product) {
+                $q->where('product_id', $product->id);
+            })
+            ->exists();
+
+        if (! $canReview) {
+            return $this->errorResponse(
+                'Only customers who purchased and received this product can submit a review.',
+                403
+            );
+        }
 
         $review = ProductReview::updateOrCreate(
             ['user_id' => auth()->id(), 'product_id' => $product->id],

@@ -59,6 +59,7 @@ class VendorOrderController extends AppBaseController
                     'id' => $order->id,
                     'code' => $order->code,
                     'status' => $order->status,
+                    'payment_status' => $order->payment_status,
                     'created_at' => $order->created_at,
                     'vendor_subtotal' => $vendorSubtotal,
                     'grand_total' => (float) $order->grand_total,

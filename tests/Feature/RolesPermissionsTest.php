@@ -78,3 +78,27 @@ it('allows viewing permissions via api when authorized', function () {
     $response->assertOk();
     $response->assertJsonPath('success', true);
 });
+
+it('allows admin to update role permissions', function () {
+    $this->seed(RolesAndPermissionsSeeder::class);
+
+    $admin = User::factory()->create();
+    $admin->assignRole(Role::findByName('admin'));
+
+    $vendorRole = Role::findByName('vendor');
+
+    $this->actingAs($admin);
+
+    $response = $this->put("/api/roles/{$vendorRole->id}", [
+        'name' => 'vendor',
+        'permissions' => ['view orders', 'edit orders'],
+    ]);
+
+    $response->assertOk();
+    $response->assertJsonPath('success', true);
+
+    expect($vendorRole->fresh()->hasPermissionTo('view orders'))->toBeTrue();
+    expect($vendorRole->fresh()->hasPermissionTo('orders.view'))->toBeTrue();
+    expect($vendorRole->fresh()->hasPermissionTo('edit orders'))->toBeTrue();
+    expect($vendorRole->fresh()->hasPermissionTo('orders.update'))->toBeTrue();
+});

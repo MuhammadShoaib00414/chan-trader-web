@@ -18,9 +18,11 @@ use App\Http\Controllers\Api\Auth\LoginController;
 use App\Http\Controllers\Api\Auth\OtpController;
 use App\Http\Controllers\Api\Auth\PasswordController;
 use App\Http\Controllers\Api\Auth\ProfileController;
-use App\Http\Controllers\Api\Auth\VendorStoreProfileController;
 use App\Http\Controllers\Api\Auth\RegisterController;
 use App\Http\Controllers\Api\Auth\SocialLoginController;
+use App\Http\Controllers\Api\Auth\VendorDashboardController;
+use App\Http\Controllers\Api\Auth\VendorOrderController;
+use App\Http\Controllers\Api\Auth\VendorStoreProfileController;
 use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\UserNotificationController;
@@ -102,10 +104,14 @@ Route::name('api.')->group(function () {
             Route::post('/update-profile', [ProfileController::class, 'update']);
             Route::get('/my-store', [VendorStoreProfileController::class, 'show']);
             Route::post('/update-store-profile', [VendorStoreProfileController::class, 'update']);
+            Route::get('/vendor-dashboard', [VendorDashboardController::class, 'show']);
+            Route::get('/vendor-orders', [VendorOrderController::class, 'index']);
+            Route::get('/vendor-orders/{order}', [VendorOrderController::class, 'show']);
+            Route::patch('/vendor-orders/{order}/items/{item}/status', [VendorOrderController::class, 'updateItemStatus']);
             Route::post('/logout', [LoginController::class, 'logout']);
             Route::delete('/account', [UserController::class, 'deleteAccount']);
             Route::post('/fcm-token', [FcmTokenController::class, 'store']);
-            
+
             Route::delete('/fcm-token', [FcmTokenController::class, 'destroy']);
 
             Route::get('/notifications/actions', [NotificationController::class, 'actions']);
@@ -141,7 +147,6 @@ Route::name('api.')->group(function () {
         Route::get('permissions', [\App\Http\Controllers\Api\PermissionController::class, 'index']);
         Route::get('permissions/grouped', [\App\Http\Controllers\Api\PermissionController::class, 'grouped']);
         Route::get('permissions/{permission}', [\App\Http\Controllers\Api\PermissionController::class, 'show']);
-
 
         // Super-admin vendor management (Passport)
         Route::prefix('admin')->middleware('role:super-admin')->group(function () {
