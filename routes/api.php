@@ -107,6 +107,11 @@ Route::name('api.')->group(function () {
             Route::get('/vendor-dashboard', [VendorDashboardController::class, 'show']);
             Route::get('/vendor-orders', [VendorOrderController::class, 'index']);
             Route::get('/vendor-orders/{order}', [VendorOrderController::class, 'show']);
+            Route::patch('/vendor-orders/{order}/status', [VendorOrderController::class, 'updateStatus']);
+            Route::get('/vendor-orders/{order}/timeline', [VendorOrderController::class, 'timeline']);
+            Route::post('/vendor-orders/{order}/payments', [VendorOrderController::class, 'payments']);
+            Route::post('/vendor-orders/{order}/refund', [VendorOrderController::class, 'refund']);
+            Route::post('/vendor-orders/{order}/shipments', [VendorOrderController::class, 'shipments']);
             Route::patch('/vendor-orders/{order}/items/{item}/status', [VendorOrderController::class, 'updateItemStatus']);
             Route::post('/logout', [LoginController::class, 'logout']);
             Route::delete('/account', [UserController::class, 'deleteAccount']);

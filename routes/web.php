@@ -13,6 +13,7 @@ use App\Models\Subcategory;
 use App\Models\Supplier;
 use App\Models\SupplierPayment;
 use App\Models\SupplierTransaction;
+use App\Support\VendorCatalogScope;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
@@ -599,6 +600,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         Route::get('orders', function (Request $request) {
             $query = Order::query();
+            VendorCatalogScope::applyOrderScope($query, $request);
+
             if ($request->filled('q')) {
                 $q = $request->string('q')->toString();
                 $query->where('code', 'like', "%{$q}%");
@@ -623,12 +626,24 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ]);
         })->middleware('permission:orders.view');
 
-        Route::get('orders/{order}', function (Order $order) {
+        Route::get('orders/{order}', function (Request $request, Order $order) {
+            VendorCatalogScope::authorizeOrderAccessible($order, $request);
+
             $timeline = OrderStatusHistory::where('order_id', $order->id)->orderBy('created_at')->get(['from_status', 'to_status', 'comment', 'created_at']);
             $payments = Payment::where('order_id', $order->id)->latest()->get(['id', 'method', 'amount', 'status', 'paid_at']);
-            $shipments = Shipment::where('order_id', $order->id)->latest()->get(['id', 'store_id', 'carrier', 'tracking_no', 'status', 'shipped_at', 'delivered_at']);
+            $shipmentsQuery = Shipment::where('order_id', $order->id)->latest();
+            $vendorStoreIds = VendorCatalogScope::vendorStoreIds($request);
+            if ($vendorStoreIds !== []) {
+                $shipmentsQuery->whereIn('store_id', $vendorStoreIds);
+            }
+            $shipments = $shipmentsQuery->get(['id', 'store_id', 'carrier', 'tracking_no', 'status', 'shipped_at', 'delivered_at']);
 
             $order->load(['user:id,first_name,last_name,email,phone_number', 'shippingAddress:id,address_line_1,address_line_2,city,state,country,postal_code']);
+
+            $storesQuery = Store::orderBy('name');
+            if ($vendorStoreIds !== []) {
+                $storesQuery->whereIn('id', $vendorStoreIds);
+            }
 
             return Inertia::render('admin/orders/show', [
                 'order' => array_merge(
@@ -646,7 +661,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
                 'timeline' => $timeline,
                 'payments' => $payments,
                 'shipments' => $shipments,
-                'stores' => Store::orderBy('name')->get(['id', 'name']),
+                'stores' => $storesQuery->get(['id', 'name']),
             ]);
         })->middleware('permission:orders.view');
 
@@ -1262,4 +1277,3 @@ Route::prefix('api')->middleware(['auth:web,api', 'verified'])->group(function (
         Route::post('products/{product}/feature-image', [\App\Http\Controllers\Admin\ProductController::class, 'uploadFeatureImage'])->middleware('permission:products.update');
     });
 });
-

@@ -2,25 +2,30 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Enums\NotificationAction;
 use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Models\Payment;
-use App\Services\Notifications\AppNotificationService;
+use App\Services\OrderManagementService;
+use App\Support\VendorCatalogScope;
 use Illuminate\Http\Request;
 
 class PaymentController extends Controller
 {
-    public function __construct()
+    public function __construct(private readonly OrderManagementService $orderManagementService)
     {
         $this->middleware('permission:payments.view')->only(['index']);
         $this->middleware('permission:payments.capture')->only(['store']);
         $this->middleware('permission:orders.refund')->only(['refund']);
     }
 
+
     public function index(Request $request)
     {
         $query = Payment::query()->with('order.user');
+        $vendorStoreIds = VendorCatalogScope::vendorStoreIds($request);
+        if ($vendorStoreIds !== []) {
+            $query->whereHas('order.items', fn ($q) => $q->whereIn('store_id', $vendorStoreIds));
+        }
 
         if ($request->filled('order_id')) {
             $query->where('order_id', (int) $request->get('order_id'));
@@ -42,7 +47,7 @@ class PaymentController extends Controller
                 'per_page' => $items->perPage(),
                 'current_page' => $items->currentPage(),
                 'last_page' => $items->lastPage(),
-            ]
+            ],
         ]);
     }
 
@@ -50,7 +55,7 @@ class PaymentController extends Controller
     {
         return response()->json([
             'success' => true,
-            'data' => $payment->load('order.user')
+            'data' => $payment->load('order.user'),
         ]);
     }
 
@@ -63,8 +68,8 @@ class PaymentController extends Controller
             'success' => true,
             'message' => 'Payment transactions export generated',
             'data' => [
-                'url' => url('/api/admin/payments/export/csv')
-            ]
+                'url' => url('/api/admin/payments/export/csv'),
+            ],
         ]);
     }
 
@@ -80,68 +85,42 @@ class PaymentController extends Controller
         // Placeholder for updating config/database settings
         return response()->json([
             'success' => true,
-            'message' => "Gateway '{$validated['gateway']}' configuration updated"
+            'message' => "Gateway '{$validated['gateway']}' configuration updated",
         ]);
     }
 
     public function store(Request $request, Order $order)
     {
+        VendorCatalogScope::authorizeOrderAccessible($order, $request);
+
         $validated = $request->validate([
             'method' => ['required', 'in:cod,card,bank,wallet'],
             'amount' => ['required', 'numeric'],
             'provider_txn_id' => ['nullable', 'string', 'max:120'],
         ]);
-        $payment = Payment::create([
-            'order_id' => $order->id,
-            'method' => $validated['method'],
-            'amount' => $validated['amount'],
-            'status' => 'succeeded',
-            'provider_txn_id' => $validated['provider_txn_id'] ?? null,
-            'paid_at' => now(),
-        ]);
-        $order->update(['payment_status' => 'paid']);
-
-        if ($order->user) {
-            app(AppNotificationService::class)->notify(
-                $order->user,
-                NotificationAction::PaymentReceived,
-                [
-                    'order_code' => $order->code,
-                    'amount' => (string) $validated['amount'],
-                    'message' => "Payment of {$validated['amount']} received for order {$order->code}.",
-                ],
-            );
-        }
+        $payment = $this->orderManagementService->capturePayment(
+            $order,
+            $validated['method'],
+            (float) $validated['amount'],
+            $validated['provider_txn_id'] ?? null,
+        );
 
         return response()->json(['success' => true, 'data' => $payment], 201);
     }
 
     public function refund(Request $request, Order $order)
     {
+        VendorCatalogScope::authorizeOrderAccessible($order, $request);
+
         $validated = $request->validate([
             'amount' => ['required', 'numeric'],
             'reason' => ['nullable', 'string', 'max:255'],
         ]);
-        $payment = Payment::create([
-            'order_id' => $order->id,
-            'method' => 'card',
-            'amount' => $validated['amount'],
-            'status' => 'refunded',
-            'paid_at' => now(),
-        ]);
-        $order->update(['payment_status' => 'refunded']);
-
-        if ($order->user) {
-            app(AppNotificationService::class)->notify(
-                $order->user,
-                NotificationAction::PaymentRefunded,
-                [
-                    'order_code' => $order->code,
-                    'amount' => (string) $validated['amount'],
-                    'message' => "Refund of {$validated['amount']} processed for order {$order->code}.",
-                ],
-            );
-        }
+        $payment = $this->orderManagementService->refundPayment(
+            $order,
+            (float) $validated['amount'],
+            $validated['reason'] ?? null,
+        );
 
         return response()->json(['success' => true, 'data' => $payment]);
     }

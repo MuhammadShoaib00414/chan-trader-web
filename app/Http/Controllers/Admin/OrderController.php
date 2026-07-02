@@ -2,25 +2,27 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Enums\NotificationAction;
 use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Models\OrderStatusHistory;
-use App\Services\Notifications\AppNotificationService;
+use App\Services\OrderManagementService;
+use App\Support\VendorCatalogScope;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
 class OrderController extends Controller
 {
-    public function __construct()
+    public function __construct(private readonly OrderManagementService $orderManagementService)
     {
         $this->middleware('permission:orders.view')->only(['index', 'show', 'timeline']);
         $this->middleware('permission:orders.update')->only(['updateStatus']);
     }
 
+
     public function index(Request $request)
     {
         $query = Order::query()->with(['user:id,first_name,last_name,email', 'shippingAddress']);
+        VendorCatalogScope::applyOrderScope($query, $request);
 
         if ($request->filled('status')) {
             $query->where('status', $request->string('status')->toString());
@@ -56,8 +58,10 @@ class OrderController extends Controller
         ]);
     }
 
-    public function show(Order $order)
+    public function show(Request $request, Order $order)
     {
+        VendorCatalogScope::authorizeOrderAccessible($order, $request);
+
         return response()->json([
             'success' => true,
             'data' => $order->load(['user', 'shippingAddress', 'items.product', 'payments']),
@@ -66,57 +70,29 @@ class OrderController extends Controller
 
     public function updateStatus(Request $request, Order $order)
     {
+        VendorCatalogScope::authorizeOrderAccessible($order, $request);
+
         $validated = $request->validate([
             'to_status' => ['required', Rule::in(['pending', 'confirmed', 'packed', 'shipped', 'delivered', 'cancelled', 'refunded'])],
             'comment' => ['nullable', 'string', 'max:255'],
             'notify_customer' => ['nullable', 'boolean'],
         ]);
 
-        $from = $order->status;
-        $order->update(['status' => $validated['to_status']]);
-
-        OrderStatusHistory::create([
-            'order_id' => $order->id,
-            'from_status' => $from,
-            'to_status' => $validated['to_status'],
-            'changed_by' => $request->user()->id,
-            'comment' => $validated['comment'] ?? null,
-            'created_at' => now(),
-        ]);
-
-        if ($order->user) {
-            $action = match ($validated['to_status']) {
-                'confirmed' => NotificationAction::OrderConfirmed,
-                'shipped' => NotificationAction::OrderShipped,
-                'delivered' => NotificationAction::OrderDelivered,
-                'cancelled' => NotificationAction::OrderCancelled,
-                'refunded' => NotificationAction::PaymentRefunded,
-                default => NotificationAction::OrderStatusUpdated,
-            };
-
-            $payload = [
-                'message' => "Your order {$order->code} is now {$validated['to_status']}.",
-                'order_code' => $order->code,
-                'status' => $validated['to_status'],
-            ];
-
-            $notifyCustomer = $request->boolean('notify_customer');
-
-            // Always persist in-app notification; send email+push only when requested
-            app(AppNotificationService::class)->notify(
-                $order->user,
-                $action,
-                $payload,
-                $notifyCustomer,
-                $notifyCustomer,
-            );
-        }
+        $order = $this->orderManagementService->updateOrderStatus(
+            $order,
+            $validated['to_status'],
+            (int) $request->user()->id,
+            $validated['comment'] ?? null,
+            $request->boolean('notify_customer'),
+        );
 
         return response()->json(['success' => true, 'data' => $order->load('user')]);
     }
 
-    public function printInvoice(Order $order)
+    public function printInvoice(Request $request, Order $order)
     {
+        VendorCatalogScope::authorizeOrderAccessible($order, $request);
+
         return response()->json([
             'success' => true,
             'message' => 'Invoice generated',
@@ -126,8 +102,10 @@ class OrderController extends Controller
         ]);
     }
 
-    public function resendConfirmation(Order $order)
+    public function resendConfirmation(Request $request, Order $order)
     {
+        VendorCatalogScope::authorizeOrderAccessible($order, $request);
+
         if ($order->user) {
             app(AppNotificationService::class)->notify(
                 $order->user,
@@ -145,8 +123,10 @@ class OrderController extends Controller
         ]);
     }
 
-    public function cancel(Order $order)
+    public function cancel(Request $request, Order $order)
     {
+        VendorCatalogScope::authorizeOrderAccessible($order, $request);
+
         if ($order->status === 'shipped' || $order->status === 'delivered') {
             return response()->json([
                 'success' => false,
@@ -177,8 +157,10 @@ class OrderController extends Controller
         ]);
     }
 
-    public function timeline(Order $order)
+    public function timeline(Request $request, Order $order)
     {
+        VendorCatalogScope::authorizeOrderAccessible($order, $request);
+
         $items = OrderStatusHistory::where('order_id', $order->id)->orderBy('created_at')->get();
 
         return response()->json(['success' => true, 'data' => $items]);

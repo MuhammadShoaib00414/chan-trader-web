@@ -3,8 +3,9 @@
 namespace App\Support;
 
 use App\Models\Category;
-use App\Models\Subcategory;
+use App\Models\Order;
 use App\Models\Store;
+use App\Models\Subcategory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
@@ -118,6 +119,28 @@ class VendorCatalogScope
             $storeIds = self::vendorStoreIds($request);
 
             if ($storeIds === [] || ! in_array((int) $product->store_id, $storeIds, true)) {
+                abort(403, 'Unauthorized action.');
+            }
+        }
+    }
+
+    public static function applyOrderScope(Builder $query, Request $request): Builder
+    {
+        if ($vendorId = self::vendorUserId($request)) {
+            $query->whereHas('items.store', fn (Builder $q) => $q->where('owner_id', $vendorId));
+        }
+
+        return $query;
+    }
+
+    public static function authorizeOrderAccessible(Order $order, Request $request): void
+    {
+        if ($vendorId = self::vendorUserId($request)) {
+            $accessible = $order->items()
+                ->whereHas('store', fn (Builder $q) => $q->where('owner_id', $vendorId))
+                ->exists();
+
+            if (! $accessible) {
                 abort(403, 'Unauthorized action.');
             }
         }
